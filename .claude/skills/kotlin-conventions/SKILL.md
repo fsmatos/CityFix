@@ -12,7 +12,8 @@ Source of requirements: `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 - MVVM with unidirectional data flow: `UiState` (immutable data class) out via `StateFlow`, events in via ViewModel functions.
 - Stateful screen composable collects state (`collectAsStateWithLifecycle`) and passes it to a stateless content composable. Previews target the stateless one.
 - `data/` repositories wrap Firebase Auth, Firestore, Storage, FCM; ViewModels depend on repository interfaces so they are unit-testable with fakes.
-- `domain/` holds pure rules: ticket state machine (Open, Info request, In progress, Resolved, Closed), 5-day reopen window, 10 m report grouping, 10 km anonymous radius around Pr. Republica, 20 m geofence.
+- ViewModels and their `UiState` live in `viewmodel/`; composables in `ui/screens/` and `ui/components/`; navigation in `ui/navigation/`; stateless helpers (image compression, distance maths) in `utils/`.
+- `model/` holds entities, enums and pure rules: ticket state machine (Open, Info request, In progress, Resolved, Closed), 5-day reopen window, 10 m report grouping, 10 km anonymous radius around Pr. Republica, 20 m geofence.
 
 - Domain model: Option A (see `docs/decisions/0002-grouped-reports-single-ticket.md`, diagram in `docs/architecture/diagrams/`). Reports within 10 m with the same category + situation do not create a ticket: the citizen follows the existing one. There is no `Grupo` entity; do not add one.
 
@@ -28,7 +29,7 @@ Source of requirements: `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 - Strings in `res/values/strings.xml` (English) and `res/values-pt/strings.xml`. Support portrait and landscape. Accessibility: content descriptions, 48dp targets, sufficient contrast.
 
 ## Testing
-- Unit tests (JUnit) for `domain/` and ViewModels with fakes; Compose UI tests for stateless content composables.
+- Unit tests (JUnit) for `model/` rules and ViewModels with fakes; Compose UI tests for stateless content composables.
 
 ## Delivery
 - Before the ZIP: remove `.gradle`, `build`, `app/build`, `local.properties`. Include a PDF technical report.

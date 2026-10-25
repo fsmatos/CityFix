@@ -7,9 +7,11 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
 - Single Gradle module `:app`.
 
 ## Layers (MVVM)
-- `ui/`: stateful screens (collect `StateFlow<UiState>`) and stateless content composables.
+- `ui/screens/`: stateful screens (collect `StateFlow<UiState>`) and their stateless content composables; `ui/components/` reusable composables; `ui/navigation/` routes; `ui/theme/` theme.
+- `viewmodel/`: ViewModels and their `UiState`.
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload.
-- `domain/`: models and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
+- `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
+- `utils/`: stateless helpers (image compression and thumbnails, distance maths).
 
 ## Domain model
 Chosen model: **Option A, one ticket with several following citizens** (see [decision 0002](../decisions/0002-grouped-reports-single-ticket.md)). A report with the same category + situation within 10 m of an active ticket makes the citizen follow that ticket instead of creating a new one. There is no `Grupo` entity.
