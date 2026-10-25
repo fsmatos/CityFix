@@ -6,7 +6,7 @@ CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: cit
 
 ## Architecture map
 - Single Gradle module `:app`, package `pt.isec.amov.cityfix`, minSdk 24, targetSdk 37. Version catalog: `gradle/libs.versions.toml`.
-- MVVM with stateless/stateful composables. Layers: `ui/` (screens, components, theme), `data/` (repositories, Firebase, workers), `domain/` (models and pure rules).
+- MVVM with stateless/stateful composables. Folders: `ui/` (`screens/`, `components/`, `navigation/`, `theme/`), `viewmodel/`, `data/` (repositories, Firebase, workers), `model/` (entities, enums and pure rules), `utils/` (helpers such as image compression and distance maths).
 - Domain model (Option A: one ticket, several following citizens, no `Grupo`): `docs/architecture/diagrams/CityFix_Dominio_OpcaoA.png`, decision `docs/decisions/0002-grouped-reports-single-ticket.md`.
 - Details: `docs/architecture/overview.md`; decisions: `docs/decisions/`.
 
