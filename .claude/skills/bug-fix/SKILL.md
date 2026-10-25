@@ -1,13 +1,13 @@
 ---
 name: bug-fix
-description: Bug flow: reproduce, failing test first, minimal fix, review, test, docs.
+description: "Bug flow: reproduce, failing test first, minimal fix, review, test, docs."
 disable-model-invocation: true
 argument-hint: "<task-id | description>"
 ---
 
 # /bug-fix
 
-Same flow as `/feature-dev` (see that skill), with branch type `fix` and the `planner` in bug mode:
+Same flow as `/feature-dev` (see that skill), with commit type `fix` and the `planner` in bug mode:
 
 - Reproduce first and record exact steps in `00-plan.md` (`## Reproduction`).
 - Write the failing test before any fix.

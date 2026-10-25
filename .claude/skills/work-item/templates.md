@@ -58,9 +58,8 @@ Technical solutions, options chosen, improvement opportunities for the PDF repor
 
 ```markdown
 # <ID>: <title>
-Branch: <type>/<ID>-<slug> · Base: main @ <short sha>
-Where: in place | worktree .claude/worktrees/<ID>-<slug>
-Remote: not pushed | origin/<branch>
+Branch: dev/<name> · Base: <short sha when the task started>
+Remote: not pushed | origin/dev/<name>
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |

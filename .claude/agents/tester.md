@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Implements and runs the test plan beyond unit level (instrumented/Compose UI tests, failure modes). Never edits production code.
+description: "Implements and runs the test plan beyond unit level (instrumented/Compose UI tests, failure modes). Never edits production code."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 skills:

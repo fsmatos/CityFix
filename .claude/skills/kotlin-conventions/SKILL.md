@@ -1,6 +1,6 @@
 ---
 name: kotlin-conventions
-description: Kotlin, Jetpack Compose, MVVM and Firebase conventions for CityFix. Use when planning, implementing, or reviewing app code.
+description: "Kotlin, Jetpack Compose, MVVM and Firebase conventions for CityFix. Use when planning, implementing, or reviewing app code."
 user-invocable: false
 ---
 

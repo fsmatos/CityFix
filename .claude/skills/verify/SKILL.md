@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Quality gate before each commit: builds the debug app, runs Android lint and unit tests.
+description: "Quality gate before each commit: builds the debug app, runs Android lint and unit tests."
 ---
 
 # Verify

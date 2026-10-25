@@ -1,6 +1,6 @@
 ---
 name: code
-description: Implements the approved coding plan, all slices or one.
+description: "Implements the approved coding plan, all slices or one."
 disable-model-invocation: true
 argument-hint: "[task-id] [slice]"
 ---

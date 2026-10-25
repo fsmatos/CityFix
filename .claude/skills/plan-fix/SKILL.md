@@ -1,6 +1,6 @@
 ---
 name: plan-fix
-description: Runs the planner in bug mode (reproduction, root cause, minimal fix) and holds Gate 1.
+description: "Runs the planner in bug mode (reproduction, root cause, minimal fix) and holds Gate 1."
 disable-model-invocation: true
 argument-hint: "[task-id]"
 ---

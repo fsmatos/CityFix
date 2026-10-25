@@ -1,10 +1,10 @@
 ---
 name: work-status
-description: One line per task: phase, branch, where it is checked out, pushed or not.
+description: "One line per task: phase, who owns it, pushed or merged."
 disable-model-invocation: true
 argument-hint: "[task-id]"
 ---
 
 # /work-status
 
-For each local task branch (`<type>/T-...`), read its state with `git show <branch>:docs/work/<ID>-<slug>/state.md` (works without checking out). Print one line: ID, title, current phase, branch, where it is checked out (here, a worktree from `git worktree list`, or nowhere), pushed or not.
+Read `state.md` from `docs/work/*/` on the current branch, and from `origin/dev/Francisco`, `origin/dev/Diogo` and `origin/main` with `git show <ref>:docs/work/<ID>-<slug>/state.md` (after `git fetch origin`). Print one line per task: ID, title, current phase, owner dev branch, pushed or not, merged into main or not.

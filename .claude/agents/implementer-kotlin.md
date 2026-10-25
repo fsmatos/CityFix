@@ -1,6 +1,6 @@
 ---
 name: implementer-kotlin
-description: Implements Kotlin/Compose slices of an approved coding plan, with unit tests, committing per slice. Use after Gate 1.
+description: "Implements Kotlin/Compose slices of an approved coding plan, with unit tests, committing per slice. Use after Gate 1."
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 skills:

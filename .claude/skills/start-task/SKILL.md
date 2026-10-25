@@ -1,15 +1,16 @@
 ---
 name: start-task
-description: Allocates a task ID and slug, creates the task branch (or worktree) and state.md.
+description: "Allocates a task ID and slug on your dev branch and creates state.md."
 disable-model-invocation: true
-argument-hint: "[task-id | description] [type] [--worktree]"
+argument-hint: "[task-file | description]"
 ---
 
 # /start-task
 
-Follow `git-workflow` ("Where tasks run", "Finding the current task") and `work-item`.
+Follow `git-workflow` and `work-item`.
 
-1. Resolve the task: a file in `docs/tasks/`, a given ID, or a description. Allocate the `T-` ID and slug; default type `feat`.
-2. In place (default): on `main` with a clean tree, `git fetch origin main`, `git pull --ff-only`, `git switch -c <type>/<ID>-<slug>`. With uncommitted changes ask: carry, stash, or stop. On another non-task branch ask: adopt it, branch from it, or branch from `main`. On an existing task branch, say which task it is and continue it.
-3. With `--worktree`: create the worktree from `origin/main`, copy `.worktreeinclude` files, run `./gradlew --version`, enter it with `EnterWorktree`.
-4. Create `docs/work/<ID>-<slug>/state.md` from the template; commit `chore(<ID>): start` and stop.
+1. Check the current branch is `dev/<name>`. If it is `main` or something else, stop and ask which dev branch to use; never start a task on `main`.
+2. Resolve the task: a file in `docs/tasks/` or a description. Allocate the ID (first letter of `<name>` + counter, e.g. `F-001`) and a slug (lowercase, hyphens, max 5 words).
+3. Ensure the tree is clean (or ask: commit, stash, stop), `git fetch origin`, and show whether `origin/main` has commits not in the dev branch; offer `/merge` first.
+4. Create `docs/work/<ID>-<slug>/state.md` from the template, with `Branch: dev/<name>` and `Base:` the current short sha.
+5. Commit `chore(<ID>): start` and stop.
