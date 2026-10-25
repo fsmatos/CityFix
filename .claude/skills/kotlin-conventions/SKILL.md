@@ -14,6 +14,8 @@ Source of requirements: `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 - `data/` repositories wrap Firebase Auth, Firestore, Storage, FCM; ViewModels depend on repository interfaces so they are unit-testable with fakes.
 - `domain/` holds pure rules: ticket state machine (Open, Info request, In progress, Resolved, Closed), 5-day reopen window, 10 m report grouping, 10 km anonymous radius around Pr. Republica, 20 m geofence.
 
+- Domain model: Option A (see `docs/decisions/0002-grouped-reports-single-ticket.md`, diagram in `docs/architecture/diagrams/`). Reports within 10 m with the same category + situation do not create a ticket: the citizen follows the existing one. There is no `Grupo` entity; do not add one.
+
 ## Firebase
 - Firestore offline persistence stays on; reads and writes must work offline.
 - Media: compress and create thumbnails locally, then upload via WorkManager with a network constraint. Never upload on the main thread.
