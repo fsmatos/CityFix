@@ -34,7 +34,7 @@ Steps:
 1. Preflight: fetch, clean tree, show `git log --oneline <target>..<source>` and `git diff --stat`.
 2. `git merge --no-ff --no-commit <source>`.
 3. Conflicts (`git diff --name-only --diff-filter=U`): read base/ours/theirs (`git show :1:`, `:2:`, `:3:`), the commits and plans on each side. Combine independent changes; ask when both sides changed the same behavior. Version catalog/lockfiles: take one side and re-run Gradle. Generated files: regenerate. Delete/modify, renames, binaries: ask.
-4. Before committing: `git diff --cached --check`, search for conflict markers, run `verify` and the full tests, show a resolution table (file, type, resolution, why) for approval.
+4. Before committing: `git diff --cached --check`, search for conflict markers, run `verify`, show a resolution table (file, type, resolution, why) for approval.
 5. Commit `merge: <source> into <target>`, summarizing the table. Append to the affected tasks' `state.md` log. Don't push.
 `git merge --abort` only when the person asks.
 

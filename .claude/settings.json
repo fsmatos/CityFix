@@ -4,7 +4,6 @@
     "allow": [
       "Bash(./gradlew assembleDebug*)",
       "Bash(./gradlew lint*)",
-      "Bash(./gradlew testDebugUnitTest*)",
       "Bash(./gradlew --version*)",
       "Bash(git status *)",
       "Bash(git diff *)",
