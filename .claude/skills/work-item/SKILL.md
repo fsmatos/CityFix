@@ -7,7 +7,7 @@ user-invocable: false
 # Work items
 
 Each task has a folder `docs/work/<ID>-<slug>/`, committed on the person's dev branch:
-`00-plan.md`, `01-coding-plan.md`, `02-test-plan.md`, `03-docs-plan.md`, `state.md`, `review.md` (after review).
+`00-plan.md`, `01-coding-plan.md`, `03-docs-plan.md`, `state.md`, `review.md` (after review).
 
 Templates: [templates.md](templates.md).
 

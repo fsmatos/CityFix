@@ -1,6 +1,6 @@
 ---
 name: bug-fix
-description: "Bug flow: reproduce, failing test first, minimal fix, review, test, docs."
+description: "Bug flow: reproduce, minimal fix, review, docs."
 disable-model-invocation: true
 argument-hint: "<task-id | description>"
 ---
@@ -10,8 +10,7 @@ argument-hint: "<task-id | description>"
 Same flow as `/feature-dev` (see that skill), with commit type `fix` and the `planner` in bug mode:
 
 - Reproduce first and record exact steps in `00-plan.md` (`## Reproduction`).
-- Write the failing test before any fix.
 - Record the root cause (`## Root cause`).
-- Keep the change minimal and keep the regression test.
+- Keep the change minimal.
 
 Gate 1 approves the reproduction, root cause and fix plan before code.

@@ -10,7 +10,7 @@ Labels: <by-hand, ...>
 ## Problem
 ## Outcome
 ## Acceptance checks
-- [ ] Each one observable and testable
+- [ ] Each one observable (checked manually)
 ## Approach
 The chosen approach, and alternatives considered.
 ## Architecture impact
@@ -32,17 +32,6 @@ Bugs: add `## Reproduction` and `## Root cause` before Approach. Refactors: add 
 One per slice: what changes, the commit message, how it is verified.
 ## Conventions
 ## Do not touch
-```
-
-## 02-test-plan.md
-
-```markdown
-## Acceptance check → test
-| Check | Test | Level |
-## Unit and UI tests
-## Failure-mode tests
-Offline, permission denied, invalid input, boundary values (10 m, 20 m, 5 days).
-## Commands
 ```
 
 ## 03-docs-plan.md
@@ -68,7 +57,6 @@ Remote: not pushed | origin/dev/<name>
 | Gate 1: plan approved | | | |
 | Code | | | |
 | Review | | | |
-| Test | | | |
 | Docs | | | |
 | Pushed | | | |
 | Merged | | | |
