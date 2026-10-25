@@ -1,6 +1,6 @@
 ---
 name: merge-resolver
-description: Resolves one conflicted file at a time during a merge, explaining the intent of both sides. Never commits.
+description: "Resolves one conflicted file at a time during a merge, explaining the intent of both sides. Never commits."
 tools: Read, Grep, Glob, Edit, Bash
 model: inherit
 skills:

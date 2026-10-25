@@ -1,15 +1,14 @@
 ---
 name: finish-task
-description: Cleans up after a task branch has been merged into main.
+description: "Marks a task merged once your dev branch has been merged into main, and syncs your dev branch."
 disable-model-invocation: true
 argument-hint: "[task-id]"
 ---
 
 # /finish-task
 
-Follow `git-workflow` ("Finishing"). Precondition: the branch is listed by `git branch --merged main`; otherwise refuse and say to merge first.
+Follow `git-workflow` ("Finishing"). Precondition: the task's commits are in `origin/main` (`git branch -r --contains <commit>` lists `origin/main`); otherwise refuse and say to merge dev into main first.
 
-1. Worktree: `ExitWorktree`, then `git worktree remove`. In place: `git switch main` (tree must be clean).
-2. `git pull --ff-only`, then `git branch -d <branch>` (never `-D`).
-3. Ask before deleting the remote branch.
-4. Mark Merged in `state.md` if it is still reachable.
+1. `git fetch origin`; on `dev/<name>` with a clean tree, merge `origin/main` into it with the `/merge` procedure if it is behind.
+2. Mark Merged: done in the task's `state.md` and commit `chore(<ID>): merged`.
+3. Never delete the dev branch.

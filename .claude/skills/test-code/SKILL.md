@@ -1,6 +1,6 @@
 ---
 name: test-code
-description: Runs the tester on a task: implements the test plan and runs the suites.
+description: "Runs the tester on a task: implements the test plan and runs the suites."
 disable-model-invocation: true
 argument-hint: "[task-id]"
 ---

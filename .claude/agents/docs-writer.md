@@ -1,6 +1,6 @@
 ---
 name: docs-writer
-description: Executes the docs plan: architecture notes, decision records, and material for the technical report.
+description: "Executes the docs plan: architecture notes, decision records, and material for the technical report."
 tools: Read, Grep, Glob, Edit, Write
 model: inherit
 skills:

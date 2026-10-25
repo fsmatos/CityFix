@@ -16,15 +16,15 @@ Source of truth for regenerating the factory. Brief: `docs/brief/AMov.ProjetoKot
 - **A4** Brief PDF in `docs/brief/`.
 
 ## Workflow
-- **W1** No tracker. Tasks are Markdown files the person provides in `docs/tasks/`. Local IDs `T-001`, `T-002`...
+- **W1** No tracker. Tasks are Markdown files the person provides in `docs/tasks/`. IDs per person: first letter of the dev branch + counter (`F-001` for `dev/Francisco`, `D-001` for `dev/Diogo`).
 - **W2** UI design: none.
 - **W3** Gate 1 only: plan approved before code. No Gate 2.
 - **W4** `by-hand` label; no exams.
-- **W5** Branches `<type>/<ID>-<slug>` (feat, fix, refactor, chore); base `main`; remote `origin`.
-- **W6** In place. Worktrees only with `--worktree`. `.worktreeinclude`: `local.properties`, `app/google-services.json`. Setup command: `./gradlew --version`.
-- **W7** Push only (`git push -u`), no PR.
-- **W8** Merge commit `--no-ff`. Only the person merges, or `/merge` when asked. The factory never pushes `main`.
-- **W9** Conventional Commits with task ID, e.g. `feat(T-001): add login screen`. No Claude attribution.
+- **W5** Each person works directly on their own branch `dev/Francisco` or `dev/Diogo`; no per-task branches. Integration branch `main`; remote `origin`.
+- **W6** Always in place, on the person's dev branch. No worktrees.
+- **W7** Push only (`git push -u origin dev/<name>`), no PR. Only your own dev branch.
+- **W8** Merge commit `--no-ff`. `/merge` brings `origin/main` into the dev branch; dev into `main` only when the person asks. The factory never pushes `main` and never touches the other person's dev branch.
+- **W9** Conventional Commits with task ID, e.g. `feat(F-001): add login screen`. No Claude attribution.
 
 ## Quality
 - **Q1** Format: none. Lint: `./gradlew lint`. Test: `./gradlew testDebugUnitTest`. Build: `./gradlew assembleDebug`. No coverage goal.

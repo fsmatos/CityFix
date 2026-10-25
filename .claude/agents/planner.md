@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Reads a task spec and the code, then writes the four plans (overall, coding, test, docs) in the work-item folder. Use for planning any feature, fix or refactor.
+description: "Reads a task spec and the code, then writes the four plans (overall, coding, test, docs) in the work-item folder. Use for planning any feature, fix or refactor."
 tools: Read, Grep, Glob, Write, Edit, WebFetch, WebSearch
 model: inherit
 skills:

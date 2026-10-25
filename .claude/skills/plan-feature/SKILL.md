@@ -1,6 +1,6 @@
 ---
 name: plan-feature
-description: Runs the planner on a started task and holds Gate 1.
+description: "Runs the planner on a started task and holds Gate 1."
 disable-model-invocation: true
 argument-hint: "[task-id]"
 ---

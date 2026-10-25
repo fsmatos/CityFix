@@ -1,6 +1,5 @@
 {
   "attribution": { "commit": "", "pr": "" },
-  "worktree": { "baseRef": "fresh" },
   "permissions": {
     "allow": [
       "Bash(./gradlew assembleDebug*)",
@@ -10,12 +9,10 @@
       "Bash(git status *)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Bash(git worktree list *)",
       "Bash(git fetch *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git switch *)",
-      "Bash(git worktree add *)"
+      "Bash(git switch *)"
     ],
     "ask": [
       "Bash(git push *)",
@@ -24,7 +21,6 @@
       "Bash(git branch -m *)",
       "Bash(git branch -f *)",
       "Bash(git branch -d *)",
-      "Bash(git worktree remove *)",
       "Bash(firebase deploy*)",
       "Bash(firebase firestore*)",
       "Edit(**/google-services.json)",

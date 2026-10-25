@@ -17,12 +17,12 @@ CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: cit
 - No formatter or CI is configured.
 
 ## Workflow
-- Tasks are Markdown files the person puts in `docs/tasks/`; IDs are local (`T-001`, ...). No tracker.
-- Every task has its own branch `<type>/<ID>-<slug>` (feat, fix, refactor, chore), worked on in the current checkout (worktree only with `--worktree`).
+- Tasks are Markdown files the person puts in `docs/tasks/`; IDs are per person: first letter of your dev branch + counter (`F-001` for `dev/Francisco`, `D-001` for `dev/Diogo`). No tracker.
+- Each person works directly on their own branch: `dev/Francisco` or `dev/Diogo`. No per-task branches, no worktrees. `main` is the integration branch.
 - Plans live in `docs/work/<ID>-<slug>/` (`00-plan`, `01-coding-plan`, `02-test-plan`, `03-docs-plan`, `state.md`, `review.md`).
 - **Gate 1** (only gate): the person approves the plan before any code.
-- `/push-task` pushes the task branch (no PR). The person merges into `main`.
-- Commits: Conventional Commits with task ID, e.g. `feat(T-001): add login screen`.
+- `/push-task` pushes your own dev branch (no PR). `/merge` brings `origin/main` into your dev branch; merging a dev branch into `main` happens only when the person asks.
+- Commits: Conventional Commits with task ID, e.g. `feat(F-001): add login screen`.
 - Fresh clone: run `git config core.hooksPath .githooks` once.
 
 ## Non-negotiable rules
@@ -37,7 +37,7 @@ CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: cit
 ## Commands cheat sheet
 | Command | Purpose |
 | --- | --- |
-| `/feature-dev [task] [--worktree]` | Full flow: start, plan, Gate 1, code, review, test, docs |
+| `/feature-dev [task]` | Full flow: start, plan, Gate 1, code, review, test, docs |
 | `/bug-fix <task>` | Same flow for bugs (failing test first) |
 | `/refactor <desc>` | Same flow, behavior unchanged |
 | `/plan-feature`, `/plan-fix` | Planner + Gate 1 |
