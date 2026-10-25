@@ -7,4 +7,4 @@ argument-hint: "[task-id]"
 
 # /write-docs
 
-Precondition: Test passed. Delegate to `docs-writer`. Update the Docs row in `state.md`.
+Precondition: review has no open blocking findings. Delegate to `docs-writer`. Update the Docs row in `state.md`.

@@ -7,4 +7,4 @@ argument-hint: "[task-id]"
 
 # /plan-fix
 
-Same as `/plan-feature`, with the planner in bug mode: exact reproduction, the failing test that proves it, root cause, minimal fix. Precondition: task started. Ends with Gate 1.
+Same as `/plan-feature`, with the planner in bug mode: exact reproduction, root cause, minimal fix. Precondition: task started. Ends with Gate 1.

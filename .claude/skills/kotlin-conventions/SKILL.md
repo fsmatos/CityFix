@@ -17,6 +17,14 @@ Source of requirements: `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 
 - Domain model: Option A (see `docs/decisions/0002-grouped-reports-single-ticket.md`, diagram in `docs/architecture/diagrams/`). Reports within 10 m with the same category + situation do not create a ticket: the citizen follows the existing one. There is no `Grupo` entity; do not add one.
 
+## Course stack (practical sheets P01-P07 and the ContactsApp example)
+- No XML layouts: Compose only. Pure Kotlin entities in `model/`, free of UI frameworks.
+- Navigation Compose 2.8+ with `@Serializable` route classes (Kotlin Serialization plugin applied in Gradle).
+- ViewModel + `StateFlow` survives rotation; keep screen state there, not in the composable.
+- Lists: `LazyColumn` with stable `key`s over stateless content; locale-aware sorting with `java.text.Collator` when sorting text.
+- Media and location as taught: TakePicture contract with `FileProvider`, Coil 3 `AsyncImage`, FusedLocationProvider, Maps Compose/OSM.
+- Adaptive UI: use window size / orientation to split layouts in landscape (P07), per screen.
+
 ## Firebase
 - Firestore offline persistence stays on; reads and writes must work offline.
 - Media: compress and create thumbnails locally, then upload via WorkManager with a network constraint. Never upload on the main thread.
@@ -26,10 +34,10 @@ Source of requirements: `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 ## Android
 - Runtime permissions: location (foreground then background), camera, notifications; rationale first, handle denial.
 - Impact detection: accelerometer vertical axis, only when the user enabled it; suggest opening an issue, never open one silently.
-- Strings in `res/values/strings.xml` (English) and `res/values-pt/strings.xml`. Support portrait and landscape. Accessibility: content descriptions, 48dp targets, sufficient contrast.
+- Strings in `res/values/strings.xml` (English) and `res/values-pt/strings.xml`. English is the default language; the extra language (PT) follows the device setting. Support portrait and landscape without losing state or clipping content. Accessibility: content descriptions, 48dp targets, sufficient contrast.
 
 ## Testing
-- Unit tests (JUnit) for `model/` rules and ViewModels with fakes; Compose UI tests for stateless content composables.
+- No automated tests in this project; verify by building, linting and running the app. Keep `model/` rules pure and ViewModels behind repository interfaces anyway.
 
 ## Delivery
 - Before the ZIP: remove `.gradle`, `build`, `app/build`, `local.properties`. Include a PDF technical report.

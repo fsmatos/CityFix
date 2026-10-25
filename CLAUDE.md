@@ -13,13 +13,12 @@ CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: cit
 ## Commands
 - Build: `./gradlew assembleDebug`
 - Lint: `./gradlew lint`
-- Unit tests: `./gradlew testDebugUnitTest`
-- No formatter or CI is configured.
+- No automated tests (not required for this assignment). No formatter or CI is configured.
 
 ## Workflow
 - Tasks are Markdown files the person puts in `docs/tasks/`; IDs are per person: first letter of your dev branch + counter (`F-001` for `dev/Francisco`, `D-001` for `dev/Diogo`). No tracker.
 - Each person works directly on their own branch: `dev/Francisco` or `dev/Diogo`. No per-task branches, no worktrees. `main` is the integration branch.
-- Plans live in `docs/work/<ID>-<slug>/` (`00-plan`, `01-coding-plan`, `02-test-plan`, `03-docs-plan`, `state.md`, `review.md`).
+- Plans live in `docs/work/<ID>-<slug>/` (`00-plan`, `01-coding-plan`, `03-docs-plan`, `state.md`, `review.md`).
 - **Gate 1** (only gate): the person approves the plan before any code.
 - `/push-task` pushes your own dev branch (no PR). `/merge` brings `origin/main` into your dev branch; merging a dev branch into `main` happens only when the person asks.
 - Commits: Conventional Commits with task ID, e.g. `feat(F-001): add login screen`.
@@ -37,13 +36,13 @@ CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: cit
 ## Commands cheat sheet
 | Command | Purpose |
 | --- | --- |
-| `/feature-dev [task]` | Full flow: start, plan, Gate 1, code, review, test, docs |
-| `/bug-fix <task>` | Same flow for bugs (failing test first) |
+| `/feature-dev [task]` | Full flow: start, plan, Gate 1, code, review, docs |
+| `/bug-fix <task>` | Same flow for bugs |
 | `/refactor <desc>` | Same flow, behavior unchanged |
 | `/plan-feature`, `/plan-fix` | Planner + Gate 1 |
 | `/code [id] [slice]` | Implement the approved plan |
-| `/review-code`, `/test-code`, `/write-docs` | Single phases |
+| `/review-code`, `/write-docs` | Single phases |
 | `/start-task`, `/push-task`, `/merge`, `/finish-task` | Git commands |
 | `/work-status` | Where every task stands |
 
-Agents: planner, implementer-kotlin, reviewer, tester, docs-writer, merge-resolver (`.claude/agents/`). Skills `kotlin-conventions`, `work-item`, `git-workflow` are background knowledge; `verify` runs before commits.
+Agents: planner, implementer-kotlin, reviewer, docs-writer, merge-resolver (`.claude/agents/`). Skills `kotlin-conventions`, `work-item`, `git-workflow` are background knowledge; `verify` runs before commits.
