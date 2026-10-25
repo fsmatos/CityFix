@@ -1,0 +1,8 @@
+#!/bin/sh
+# Removes AI attribution lines from commit messages.
+msg_file="$1"
+tmp="$(mktemp)"
+grep -v -i -E '^(co-authored-by:.*(claude|anthropic\.com)|claude-session:|.*generated with \[?claude code)' "$msg_file" > "$tmp" || true
+# Drop trailing blank lines left behind by the removed trailers.
+awk 'NF { for (i = 0; i < blank; i++) print ""; blank = 0; print; next } { blank++ }' "$tmp" > "$msg_file"
+rm -f "$tmp"

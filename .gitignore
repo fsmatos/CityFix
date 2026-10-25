@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+app/google-services.json
