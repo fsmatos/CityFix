@@ -11,6 +11,7 @@ data class Ticket(
     val description: String = "",
     val situation: Situation = Situation.DAMAGE,
     val scope: Scope = Scope.PRIVATE,
+    /** Exact report location. Anonymous views must not show it: coarse map zoom only (brief I.1.C). */
     val location: Coordinates = Coordinates(),
     /**
      * Denormalised copy of the last [statusHistory] entry. Kept so lists, filters and Firestore
@@ -22,13 +23,16 @@ data class Ticket(
     val categoryId: String = "",
     /** Snapshot of the category name, so lists show it offline without a lookup. */
     val categoryName: String = "",
+    /** User id of the citizen who opened the ticket. Not shown to anonymous users (brief I.1.C). */
     val creatorId: String = "",
     /**
      * Option A: citizens who reported the same category + situation within 10 m. They follow
-     * this ticket instead of opening a new one. Does not include [creatorId].
+     * this ticket instead of opening a new one. Does not include [creatorId]; no duplicates.
+     * Not shown to anonymous users (brief I.1.C).
      */
     val followerIds: List<String> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
+    /** Thread between citizens and the municipality; registered participants and operators only (brief I.1.C). */
     val messages: List<Message> = emptyList(),
     val statusHistory: List<StatusHistory> = emptyList(),
 )
