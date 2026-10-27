@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-10-27 | 5 slices: 922c382, 811fe11, 2cc2df2, fffc6e1, 9c8835e; build + lint green after each |
 | Review | done | 2026-10-27 | review.md: approve; 0 blocking, 2 should-fix (KDoc), 6 nits, 4 coordination notes |
 | Docs | done | 2026-10-27 | overview Code mapping, decisions 0003 + 0004, docs/report/notes.md |
-| Pushed | done | 2026-10-27 | origin/dev/Diogo at deff86a (includes merge of origin/main) |
+| Pushed | done | 2026-10-27 | origin/dev/Diogo at b393841 (in sync with main) |
 | Merged | done | 2026-10-27 | main at 8f77838, pushed |
 
 ## Log
@@ -28,3 +28,4 @@ Remote: origin/dev/Diogo
 - 2026-10-27 Merge: dev/Diogo into main (approved by Diogo), no conflicts; verify green (assembleDebug + lint). main not pushed yet.
 - 2026-10-27 Push main: Diogo ran `git push origin main` (227567e..8f77838); the project settings deny Claude pushing main.
 - 2026-10-27 Merge: origin/main (8f77838) into dev/Diogo, no conflicts, only state.md changed. Verify not run: no code changed.
+- 2026-10-27 Push: `git push` of the sync merge succeeded (d0f3fa8..b393841). Verify not run: no code changed.
