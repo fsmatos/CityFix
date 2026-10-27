@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-27 | 5 slices: 922c382, 811fe11, 2cc2df2, fffc6e1, 9c8835e; build + lint green after each |
 | Review | done | 2026-10-27 | review.md: approve; 0 blocking, 2 should-fix (KDoc), 6 nits, 4 coordination notes |
 | Docs | done | 2026-10-27 | overview Code mapping, decisions 0003 + 0004, docs/report/notes.md |
-| Pushed | pending | | |
+| Pushed | blocked | 2026-10-27 | push failed: remote repository not found |
 | Merged | pending | | |
 
 ## Log
@@ -21,3 +21,4 @@ Remote: not pushed
 - 2026-10-27 Review: reviewer checked `git diff a280ab1..HEAD` against 00-plan, 01-coding-plan, Gate 1 decisions, the task spec, brief, overview, decision 0002, the Option A diagram and kotlin-conventions; re-ran `./gradlew assembleDebug` (green). Verdict approve, no blocking findings. Should-fix: S1 `Municipality` KDoc misstates the 10 km rule (it limits anonymous users, not tickets); S2 mark `Ticket.location`, `creatorId`, `followerIds`, `messages` as hidden from anonymous users. Coordination notes C1-C4 for D-002, D-003, F-002, F-005, F-006; nits N1-N6. `origin/dev/Francisco` not fetched, so guessed names on his side could not be checked. No code edited, nothing committed.
 - 2026-10-27 Review fixes: S1, S2, N2, N3 applied as KDoc-only changes in 1aa7742 (`fix(D-001): address review comments`); build + lint green. Non-blocking, so no re-review loop.
 - 2026-10-27 Docs: docs-writer added a "Code mapping" subsection to docs/architecture/overview.md, decisions 0003 (domain model representation) and 0004 (denormalised currentStatus), and a new shared docs/report/notes.md with the D-001 report notes. Review notes C1-C4, N1, N2, S1 and S2 are reflected in the docs.
+- 2026-10-27 Push attempt: verify green (assembleDebug + lint); `git push -u origin dev/Diogo` (approved by Diogo) failed with "remote: Repository not found" for https://github.com/fsmatos/CityFix.git (likely missing access/credentials for the private repo, or a wrong URL). Not pushed; main untouched.
