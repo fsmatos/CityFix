@@ -1,6 +1,6 @@
 # F-001: Theme, strings and accessibility base
 Branch: dev/Francisco · Base: eff85d0
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-27 | 2 slices; manual device checks pending |
 | Review | done | 2026-10-27 | approve; 0 blocking, 2 should-fix, 5 nits (review.md) |
 | Docs | done | 2026-10-27 | overview "UI foundation" section; no ADR |
-| Pushed | | | |
+| Pushed | done | 2026-10-27 | 8961726 to origin/dev/Francisco |
 | Merged | | | |
 
 ## Log
@@ -25,3 +25,4 @@ Append-only.
 - 2026-10-27: Review of 0dfdb78..HEAD (7d9e489, b172c4d) against plans, brief, overview and kotlin-conventions. Verdict: approve, no blocking. Should-fix: (1) `enableEdgeToEdge()` default auto bar style gives light status bar icons on dark-mode devices over the light-only theme; use `SystemBarStyle.light`; (2) manual acceptance checks (PT/EN, landscape, Android 12+ colours) still to run and log before push. Nits: gender-neutral PT greeting, XML header in values/strings.xml, EOF newline in MainActivity.kt, landscape cutout check, container roles. Findings in review.md. No code changed.
 - 2026-10-27: Review fixes (should-fix 1, nits 2 and 3) in commit `fix(F-001): keep light system bar icons with the light-only theme`. Deviation from the coding plan, added after review: `MainActivity.onCreate` now calls `enableEdgeToEdge` with `SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)` for status and navigation bars (`android.graphics.Color`, no Compose `Color` import in the file), because the light-only theme needs dark system bar icons even when the device is in dark mode. Also added the XML declaration to `values/strings.xml` and the trailing newline to `MainActivity.kt`. Verify: assembleDebug pass; lint pass (0 errors, same 10 pre-existing warnings). Still open: should-fix 2 (manual checks; add dark-mode status bar check in portrait and landscape) and nits 1, 4, 5.
 - 2026-10-27: Docs: added a "UI foundation" section to `docs/architecture/overview.md` (light-only template theme trio, `dynamicColor` default false and why, `SystemBarStyle.light` in `MainActivity` and why, strings rule EN/PT with same keys, `stringResource`, `app_name` non-translatable, strings added with their screen in EN and PT together, dp/sp, 48dp via M3 components, contentDescription rule, improvement items for the report). The system bar point is a deviation from 03-docs-plan, added because of the review fix. No ADR, as the docs plan says. Task file acceptance checks left unticked: manual device checks are still pending. Report notes stay in 03-docs-plan.md. Not committed (the person commits).
+- 2026-10-27: pushed dev/Francisco to origin (eff85d0..8961726) after verify (assembleDebug + lint) passed. Manual device checks still not run (review Should-fix 2).
