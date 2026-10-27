@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-10-27 | 5 slices: 922c382, 811fe11, 2cc2df2, fffc6e1, 9c8835e; build + lint green after each |
 | Review | done | 2026-10-27 | review.md: approve; 0 blocking, 2 should-fix (KDoc), 6 nits, 4 coordination notes |
 | Docs | done | 2026-10-27 | overview Code mapping, decisions 0003 + 0004, docs/report/notes.md |
-| Pushed | done | 2026-10-27 | origin/dev/Diogo at ea006da |
+| Pushed | done | 2026-10-27 | origin/dev/Diogo at deff86a (includes merge of origin/main) |
 | Merged | pending | | |
 
 ## Log
@@ -24,3 +24,4 @@ Remote: origin/dev/Diogo
 - 2026-10-27 Push attempt: verify green (assembleDebug + lint); `git push -u origin dev/Diogo` (approved by Diogo) failed with "remote: Repository not found" for https://github.com/fsmatos/CityFix.git (likely missing access/credentials for the private repo, or a wrong URL). Not pushed; main untouched.
 - 2026-10-27 Push: retried after access was fixed; `git push -u origin dev/Diogo` succeeded (522011d..ea006da). Verify not re-run: no code changed since the last green run.
 - 2026-10-27 Merge: origin/main (227567e) into dev/Diogo, no conflicts and no file changes (227567e has the same tree as 522011d). Verify not run: no code changed.
+- 2026-10-27 Push: `git push` of the origin/main merge succeeded (84342de..deff86a). Verify not run: no code changed.
