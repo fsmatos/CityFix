@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">CityFix</string>
+    <string name="app_name" translatable="false">CityFix</string>
+    <string name="welcome_message">Welcome to CityFix</string>
 </resources>
