@@ -1,6 +1,6 @@
 # D-001: Domain classes and enums
 Branch: dev/Diogo · Base: 522011d
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-27 | 5 slices: 922c382, 811fe11, 2cc2df2, fffc6e1, 9c8835e; build + lint green after each |
 | Review | done | 2026-10-27 | review.md: approve; 0 blocking, 2 should-fix (KDoc), 6 nits, 4 coordination notes |
 | Docs | done | 2026-10-27 | overview Code mapping, decisions 0003 + 0004, docs/report/notes.md |
-| Pushed | blocked | 2026-10-27 | push failed: remote repository not found |
+| Pushed | done | 2026-10-27 | origin/dev/Diogo at ea006da |
 | Merged | pending | | |
 
 ## Log
@@ -22,3 +22,4 @@ Remote: not pushed
 - 2026-10-27 Review fixes: S1, S2, N2, N3 applied as KDoc-only changes in 1aa7742 (`fix(D-001): address review comments`); build + lint green. Non-blocking, so no re-review loop.
 - 2026-10-27 Docs: docs-writer added a "Code mapping" subsection to docs/architecture/overview.md, decisions 0003 (domain model representation) and 0004 (denormalised currentStatus), and a new shared docs/report/notes.md with the D-001 report notes. Review notes C1-C4, N1, N2, S1 and S2 are reflected in the docs.
 - 2026-10-27 Push attempt: verify green (assembleDebug + lint); `git push -u origin dev/Diogo` (approved by Diogo) failed with "remote: Repository not found" for https://github.com/fsmatos/CityFix.git (likely missing access/credentials for the private repo, or a wrong URL). Not pushed; main untouched.
+- 2026-10-27 Push: retried after access was fixed; `git push -u origin dev/Diogo` succeeded (522011d..ea006da). Verify not re-run: no code changed since the last green run.
