@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-10-27 | review.md: approve; 0 blocking, 2 should-fix (KDoc), 6 nits, 4 coordination notes |
 | Docs | done | 2026-10-27 | overview Code mapping, decisions 0003 + 0004, docs/report/notes.md |
 | Pushed | done | 2026-10-27 | origin/dev/Diogo at deff86a (includes merge of origin/main) |
-| Merged | pending | | |
+| Merged | done | 2026-10-27 | |
 
 ## Log
 - 2026-10-27 Start: task D-001 started on dev/Diogo at 522011d. `git fetch origin` was declined by the person, so origin/main was not checked for new commits.
@@ -25,3 +25,4 @@ Remote: origin/dev/Diogo
 - 2026-10-27 Push: retried after access was fixed; `git push -u origin dev/Diogo` succeeded (522011d..ea006da). Verify not re-run: no code changed since the last green run.
 - 2026-10-27 Merge: origin/main (227567e) into dev/Diogo, no conflicts and no file changes (227567e has the same tree as 522011d). Verify not run: no code changed.
 - 2026-10-27 Push: `git push` of the origin/main merge succeeded (84342de..deff86a). Verify not run: no code changed.
+- 2026-10-27 Merge: dev/Diogo into main (approved by Diogo), no conflicts; verify green (assembleDebug + lint). main not pushed yet.
