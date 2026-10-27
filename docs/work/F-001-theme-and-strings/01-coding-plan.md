@@ -1,35 +1,32 @@
 ## Files
 | Path | Change | Why |
 | --- | --- | --- |
-| `app/src/main/res/values/strings.xml` | Add shared strings (EN, default) | Localisation base |
-| `app/src/main/res/values-pt/strings.xml` | New, same keys in Portuguese | PT support |
-| `app/src/main/java/pt/isec/amov/cityfix/MainActivity.kt` | Greeting uses `stringResource`; drop `name` param | No hard-coded text |
-| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Color.kt` | Replace template tokens with CityFix light/dark palette | Brand and contrast |
-| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Theme.kt` | Explicit light/dark schemes; `dynamicColor` default false | Material 3 theme |
-| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Type.kt` | Full M3 typography scale | Consistent text styles |
-| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Dimens.kt` | New: `MinTouchTarget = 48.dp`, spacing constants | Accessibility rule in one place |
-| `app/src/main/res/values-night/themes.xml` | New: `Theme.CityFix` with dark framework parent | No white flash in dark mode |
-| `app/src/main/res/values/colors.xml` | Remove unused template colours (after grep) | Cleanup |
+| `app/src/main/res/values/strings.xml` | `app_name` gets `translatable="false"`; add `welcome_message` (EN) | Localisation base, course practice |
+| `app/src/main/res/values-pt/strings.xml` | New: `welcome_message` in Portuguese | PT by device language |
+| `app/src/main/java/pt/isec/amov/cityfix/MainActivity.kt` | `Greeting(modifier)` uses `stringResource(R.string.welcome_message)`; drop the `name` param; update preview | No hard-coded text |
+| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Color.kt` | Replace the six purple vals with three CityFix colours | Brand palette |
+| `app/src/main/java/pt/isec/amov/cityfix/ui/theme/Theme.kt` | Remove dark scheme and `darkTheme`; `lightColorScheme(primary, secondary, tertiary)`; `dynamicColor` default `false`, dynamic branch light only | Light-only theme showing the brand colours |
+
+`Type.kt`, `res/values/themes.xml` and `res/values/colors.xml` are not changed (template as taught). Touch `colors.xml` only if lint fails on it, and record that in `state.md`.
 
 ## Interfaces
-- `CityFixTheme(darkTheme: Boolean = isSystemInDarkTheme(), dynamicColor: Boolean = false, content: @Composable () -> Unit)`.
-- `object Dimens { val MinTouchTarget = 48.dp; val SpaceXs/Sm/Md/Lg/Xl }` in `pt.isec.amov.cityfix.ui.theme`.
-- Palette vals in `Color.kt` are plain top-level vals; light and dark schemes defined as `private val CityFixLightColors/CityFixDarkColors` in `Theme.kt`.
-- Strings (initial set, snake_case, all with PT): `app_name`, `action_ok`, `action_cancel`, `action_retry`, `action_back`, `action_close`, `cd_back`, `cd_close`, `placeholder_welcome`. Group with `<!-- Common actions -->` style comments.
+- `CityFixTheme(dynamicColor: Boolean = false, content: @Composable () -> Unit)` in `pt.isec.amov.cityfix.ui.theme`.
+- `Color.kt`: top-level vals `CityFixBlue`, `CityFixTeal`, `CityFixOrange` (values per Q1 in 00-plan).
+- `Theme.kt`: `private val LightColorScheme = lightColorScheme(primary = CityFixBlue, secondary = CityFixTeal, tertiary = CityFixOrange)`; the commented "Other default colors to override" block from the template may stay.
+- Strings: `app_name` (`translatable="false"`, EN file only), `welcome_message` (EN + PT).
 
 ## Steps
-1. Strings base. Add keys to EN, create PT file (UTF-8, proper accents, escape apostrophes), change `Greeting` to `Greeting(modifier)` using `stringResource(R.string.placeholder_welcome)`, update preview. Commit: `feat(F-001): add EN/PT string resources and localise placeholder`. Verify: `./gradlew assembleDebug lint` (no `MissingTranslation`); manual: set device language to Portuguese, then English.
-2. Colours and typography. Define palette tokens, build `lightColorScheme`/`darkColorScheme` with all on-colours set explicitly, set `dynamicColor = false` default, define the full `Typography`. Compute the contrast ratio of each required pair (WCAG formula) and note the values in `state.md`; adjust colours if any is below 4.5:1. Commit: `feat(F-001): add CityFix Material 3 colour scheme and typography`. Verify: `./gradlew assembleDebug lint`; check previews in light and dark; set the largest font scale and confirm the placeholder is readable; rotate to landscape and back.
-3. Dimens and window theme. Add `Dimens.kt`, `values-night/themes.xml`, remove unused colours after confirming no reference with grep. Commit: `feat(F-001): add dimens, dark window theme and clean template colours`. Verify: `./gradlew assembleDebug lint`; launch in dark mode (no white flash); code review that `MinTouchTarget` is 48.dp and used by any interactive element.
+1. Strings base. In `values/strings.xml` mark `app_name` `translatable="false"` and add `welcome_message` ("Welcome to CityFix"). Create `values-pt/strings.xml` with `welcome_message` ("Bem-vindo ao CityFix"), UTF-8. Change `Greeting` to `Greeting(modifier: Modifier = Modifier)` with `Text(text = stringResource(R.string.welcome_message), ...)`; update the call in `MainActivity` and the preview. Commit: `feat(F-001): add EN/PT string resources and localise placeholder`. Verify: `./gradlew assembleDebug` and `./gradlew lint` (no `MissingTranslation` / `ExtraTranslation`); grep the touched Kotlin for string literals in `Text(`; on the emulator set the language to Portuguese, then English; rotate to landscape and back.
+2. Light colour scheme. Replace the colour vals in `Color.kt`; in `Theme.kt` delete `DarkColorScheme`, the `darkTheme` parameter, the `isSystemInDarkTheme`/`darkColorScheme`/`dynamicDarkColorScheme` imports; `colorScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicLightColorScheme(LocalContext.current) else LightColorScheme`; set `dynamicColor = false` with a one-line comment saying why. Commit: `feat(F-001): add CityFix light colour scheme`. Verify: `./gradlew assembleDebug` and `./gradlew lint`; preview and an Android 12+ emulator show the CityFix colours; text on coloured areas readable by eye.
 
 Record the outcome of each slice in `state.md`.
 
 ## Conventions
-- Strings only through `stringResource`/`R.string`; English default, PT in the same commit.
-- Key naming: `action_*`, `cd_*` (content descriptions), `label_*`, `msg_*`, `error_*`; screens later use `<screen>_*`.
-- Icons: always `contentDescription = stringResource(...)`, or `null` only for purely decorative icons next to text.
-- Interactive elements at least `Dimens.MinTouchTarget` (use `Modifier.minimumInteractiveComponentSize()` or `sizeIn`).
-- No new dependencies; `sp` for text, `dp` for layout.
+- Strings only through `stringResource` / `R.string`; English default, PT added in the same commit. Plain snake_case keys (`welcome_message`, `ok`, `cancel`), as in the course examples. Names that do not change between languages get `translatable="false"`.
+- Icons: `contentDescription = stringResource(...)`, or `null` only for decorative icons next to text.
+- 48dp: use Material 3 interactive components (`Button`, `IconButton`, `TextButton`, ...); no custom `clickable` smaller than `48.dp`.
+- Inline `.dp` for layout and `.sp` for text; colours and text styles through `MaterialTheme.colorScheme.*` / `MaterialTheme.typography.*`, never hard-coded `Color(...)` in screens.
+- No new dependencies.
 
 ## Do not touch
-`gradle/libs.versions.toml`, `app/build.gradle.kts`, `AndroidManifest.xml`, `google-services.json`, anything outside `app/src`, and other tasks' work folders.
+`gradle/libs.versions.toml`, `app/build.gradle.kts`, `AndroidManifest.xml`, `google-services.json`, `Type.kt`, `res/values/themes.xml`, anything outside `app/src`, and other tasks' work folders.

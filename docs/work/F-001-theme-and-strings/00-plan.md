@@ -3,63 +3,73 @@ Type: feature · Task file: docs/tasks/phase-1/F-001-theme-and-strings.md
 Labels: none
 
 ## Problem
-The app is still the Android Studio template: purple placeholder palette, default typography, one string (`app_name`), no `values-pt`, and `MainActivity` has a hard-coded `"Hello $name!"`. Every later screen needs a Material 3 theme, a localisation base (EN default, PT) and accessibility conventions (content descriptions, 48dp targets) to build on.
+The app is still the Android Studio template: purple placeholder palette, one string (`app_name`), no `values-pt`, and `MainActivity` has a hard-coded `"Hello $name!"`. Every later screen needs a Material 3 theme with the CityFix colours and a localisation base (EN default, PT) to build on, plus agreed accessibility conventions.
 
 ## Outcome
-- `CityFixTheme` with a CityFix light and dark colour scheme, full Material 3 typography and shared dimension constants (including the 48dp minimum touch target).
-- `values/strings.xml` (EN) and `values-pt/strings.xml` (PT) with the same keys: app name plus a small set of shared strings (common actions, generic content descriptions) that later tasks can reuse.
-- The template greeting no longer contains hard-coded user-visible text.
-- Window background does not flash white in dark mode.
+- `CityFixTheme` keeps the template trio `Color.kt` / `Theme.kt` / `Type.kt` as taught in the course, with a light-only CityFix palette (primary, secondary, tertiary) shown by default (dynamic colour off).
+- `values/strings.xml` (EN, default) and `values-pt/strings.xml` (PT) with the same translatable keys; `app_name` marked `translatable="false"`.
+- The placeholder screen has no hard-coded user-visible text.
+- Accessibility rules (contentDescription, 48dp through Material 3 components, `sp` for text) written down in the docs for later tasks.
 
 ## Acceptance checks
-- [ ] No hard-coded user-visible strings in new or touched code (`MainActivity` greeting uses `stringResource`). Check: grep for string literals in `Text(`/`contentDescription =` plus lint.
-- [ ] With device language set to Portuguese, the app name and the placeholder screen show Portuguese text; with English (or any other language) they show English.
-- [ ] `values/strings.xml` and `values-pt/strings.xml` have the same keys: `./gradlew lint` reports no `MissingTranslation` (manual check; also compare the key lists by eye in review).
-- [ ] Touch targets at least 48dp: `Dimens.MinTouchTarget = 48.dp` exists and the placeholder screen's interactive element (if any) uses it. Check by code review.
-- [ ] Light and dark schemes: primary/onPrimary, secondary/onSecondary, error/onError, surface/onSurface pairs reach contrast ratio >= 4.5:1. Check by eye in previews plus a quick WCAG calculation (relative luminance, (L1+0.05)/(L2+0.05)) for each pair; note the ratios in `state.md`.
-- [ ] Rotating the device to landscape and back (brief: portrait or landscape): the placeholder stays intact and nothing is clipped; the manifest does not lock the orientation.
-- [ ] Dark mode on a device/emulator: no white flash at launch, text readable.
-- [ ] Font scale set to the largest value in system settings: placeholder text stays readable and is not clipped.
+- [ ] No hard-coded user-visible strings in touched code: the placeholder uses `stringResource(R.string.welcome_message)`. Check: grep for string literals in `Text(` / `contentDescription =`, plus lint (`HardcodedText` does not cover Compose, so the grep is the real check).
+- [ ] Device language Portuguese: the placeholder shows Portuguese text; English (or any other language): English.
+- [ ] `values/strings.xml` and `values-pt/strings.xml` have the same translatable keys: `./gradlew lint` reports no `MissingTranslation`.
+- [ ] Touch targets at least 48dp: interactive elements use Material 3 components (`Button`, `IconButton`, ...), which enforce the 48dp minimum; no custom `clickable` smaller than `48.dp`. Check by code review (F-001 adds no interactive element; the rule is recorded for later tasks).
+- [ ] contentDescription rule recorded in `docs/architecture/overview.md`: every `Icon`/`Image` has `contentDescription = stringResource(...)`, or `null` only when decorative next to text.
+- [ ] Brand colours visible: on an Android 12+ emulator the app shows the CityFix primary colour, not the wallpaper colours. Text on primary/secondary/tertiary is readable (checked by eye in the preview and on the emulator).
+- [ ] Landscape: rotating to landscape and back keeps the placeholder intact and unclipped; the manifest does not lock the orientation (confirmed: no `screenOrientation`).
 - [ ] `./gradlew assembleDebug` and `./gradlew lint` pass for each slice.
 
 ## Approach
 Chosen:
-- Keep the existing file layout (`Color.kt`, `Type.kt`, `Theme.kt`) and add `Dimens.kt` in `ui/theme/`. Replace the template purple tokens with a civic palette (blue/teal primary, amber secondary, red error) defined as explicit light and dark schemes.
-- Dynamic colour: parameter kept but default `false`, so the brand palette and the verified contrast are what the authors see and defend; it can be enabled later.
-- Typography: define the full M3 scale on `FontFamily.Default` (no new font dependency).
-- Strings: a minimal shared set now (common actions such as OK/Cancel/Retry/Back, generic icon descriptions), grouped with XML comments. Feature strings are added by the task that owns each screen, EN and PT together.
-- Dark-mode window background: add `values-night/themes.xml` with a dark framework parent, because `Theme.CityFix` extends a Light framework theme.
-- Accessibility: encode the rules as `Dimens.MinTouchTarget` and document the contentDescription rule in the docs; no wrapper components yet (nothing to wrap).
+- Theme as taught: keep the template structure of `Color.kt` (top-level colour vals), `Theme.kt` (`lightColorScheme(primary, secondary, tertiary)` plus `MaterialTheme(colorScheme, typography, content)`) and `Type.kt` (unchanged, only `bodyLarge`). Screens use `MaterialTheme.colorScheme.*` and `MaterialTheme.typography.*`.
+- Light only: remove `DarkColorScheme`, the `darkTheme` parameter and `isSystemInDarkTheme()`. Chosen over "keep the signature and ignore `darkTheme`" because an unused parameter is harder to explain at the defence than a missing one; dark mode is not required by the brief.
+- `dynamicColor` parameter kept (template shape) but default `false`, and its branch uses only `dynamicLightColorScheme`. This is the one deviation from the course template: with `true`, Android 12+ devices replace the brand colours with wallpaper colours, so the CityFix palette would never be seen.
+- Palette: dark enough primary/secondary/tertiary that the M3 default on-colours (white) stay readable, so no on-colour overrides are needed (proposal in Q1). Other roles (background, surface, containers) keep the M3 baseline defaults, as in the template.
+- Strings: EN default plus `values-pt` with the same keys, accessed with `stringResource`. Plain snake_case keys as in the course examples (`welcome_message`). `app_name` is `translatable="false"` (same name in PT, course practice) and is not repeated in the PT file. Only strings with a consumer are added now; shared actions (OK, Cancel, ...) and icon descriptions are added by the first task that uses them (see Q2).
+- Dimensions: inline `.dp` / `.sp` in composables, as in the course Compose code. No `Dimens` object, no `dimens.xml`.
+- `res/values/themes.xml` and `res/values/colors.xml` stay as they are (light framework parent fits a light-only app; course projects leave `colors.xml`). Only touched if lint fails on them.
 
 Alternatives considered:
-- Add the `com.google.android.material` library for an XML Material 3 theme: extra dependency, not needed for Compose.
-- Bundle a custom font: dependency/asset cost with no requirement behind it.
-- Per-app language switcher (`LocaleManager`/AppCompat): not requested; device language is enough for the acceptance check.
-- Dynamic colour on by default: contrast not controllable, rejected.
+- Full custom typography scale or bundled font: not in the course material, no requirement behind it.
+- Dark scheme and `values-night/themes.xml`: not a must/should in the brief; dropped.
+- Kotlin `Dimens` object with a 48dp constant: not in the course material; M3 components already guarantee 48dp.
+- WCAG contrast calculations: not used in the course; readability is checked by eye.
+- In-app language picker (`LocaleManager`/AppCompat per-app locales): brief asks for device language only.
+
+## Course alignment
+- Theme: ContactsApp_Prof, P6/Aula6, AMOV_SMS and slides 04_JetPackCompose ("Configuring the Material 3 theme") all keep the template trio with `lightColorScheme(primary, secondary, tertiary)` and `Type.kt` with only `bodyLarge`. This plan keeps that shape; deviations: light only (no dark branch) and `dynamicColor = false`.
+- Strings: slides 04_UI_StateManagement ("No-Hardcoding Rule": user-visible text in `res/values/strings.xml`, `values-pt` loaded for Portuguese devices, fallback to default). Example AMOV_ResourcesMenusNotify: `values-pt/`, `translatable="false"` on `app_name`, plain snake_case keys. Access with `stringResource` / `R.string`.
+- Dimensions: slides teach `dp` for layout and `sp` for text (scales with the accessibility font size); course Compose code uses inline `.dp`.
+- Accessibility: slides mention modifiers carrying accessibility labels and `contentDescription` on `Icon` (`null` when decorative next to text); M3 `Button`/`IconButton` enforce 48dp.
+- Previews: `@Preview` as in 04_JetPackCompose (no `uiMode` night preview, since there is no dark theme).
+- Package layout: P07 (`model`, `viewmodel`, `data`, `utils`, `ui.navigation`, `ui.components`, `ui.screens`, `ui.theme`) already matches the project.
+- Brief (`docs/brief/AMov.ProjetoKotlin_PT.pdf`, about lines 132-138): English default plus one extra language by device setting; portrait or landscape; accessibility mechanisms. No dark mode requirement.
 
 ## Architecture impact
-Only `ui/theme/` and `res/`. No new layers, no new dependencies, no version catalog change. `MainActivity` is touched only to remove the hard-coded string.
+Only `ui/theme/`, `res/values*/strings.xml` and the placeholder in `MainActivity`. No new files in Kotlin, no new layers, no new dependencies, no version catalog change.
 
 ## Failure modes
 - Missing PT key: falls back to English silently; guarded by lint `MissingTranslation`.
-- Format args differing between EN and PT (`%1$s`): none in the initial set; check by eye when args are added (lint also flags format mismatches).
-- Low contrast in dark scheme: checked by eye and a quick calculation noted in `state.md`.
-- Fonts scale 2x: text uses `sp`; checked manually with the largest font scale; layouts verified later per screen.
-- Device language `pt-BR`/`pt-PT`: both resolve to `values-pt`.
+- `app_name` added to `values-pt` by mistake while marked `translatable="false"`: lint `ExtraTranslation`; keep it only in `values/`.
+- Format args differing between EN and PT (`%1$s`): none now; lint flags mismatches when added.
+- Apostrophes or accents in PT: escape `'` as `\'`; file saved as UTF-8.
+- Device language `pt-BR` / `pt-PT`: both resolve to `values-pt`.
+- Large font scale: text uses `sp`; per-screen layouts are verified by the tasks that own them.
+- Dynamic colour accidentally passed as `true` by a caller: brand colours replaced on Android 12+; only `MainActivity` calls the theme, with the default.
 
 ## Risks and open questions
-- Risk: lint may flag the unused template colours in `res/values/colors.xml` (`purple_*`, `teal_*`); the plan removes those not referenced. Verify with grep before deleting.
-- Risk: `./gradlew` builds depend on AGP 9.4.1 / compileSdk 37 being installed locally; not verified here.
-- Q1: Confirm the palette direction (blue/teal civic) or give brand colours. Default if no answer: the proposed palette.
-- Q2: Dynamic colour default off: confirm.
-- Brief alignment: English is the default language and one extra language (PT) follows the device setting; portrait/landscape must work; accessibility is expected; MVVM with stateless/stateful split is graded (no impact here, theme only).
-- Q3: Should the placeholder screen stay (translated) or be removed? Default: keep as a translated placeholder until navigation exists (F-002 or later).
+- Risk: M3 baseline container roles (`primaryContainer`, `secondaryContainer`, ...) are not derived from our three colours, so components that use them (e.g. FAB, filled tonal button) may show the default purple tint. Acceptable now; revisit if a screen looks off (override the container roles then).
+- Risk: `./gradlew` builds depend on AGP / compileSdk 37 installed locally; not verified here.
+- Q1: Palette. Proposal: primary blue `0xFF1565C0`, secondary teal `0xFF00695C`, tertiary deep orange `0xFFBF360C` (all readable with white text). Confirm or give brand colours. Default if no answer: the proposal.
+- Q2: Shared strings. Proposal: add only `welcome_message` now; actions (`ok`, `cancel`, ...) and icon descriptions come with the first screen that uses them, so no unused resources. Alternative: add a small shared set now. Default: proposal.
+- Q3: Placeholder screen. Default: keep it as a translated placeholder until navigation exists (F-002 or later).
 
 ## Out of scope
-Navigation, real screens, adaptive/split landscape layouts (course P07, done per screen by the tasks that own them), in-app language picker, custom fonts, Firebase, feature-specific strings (added by their own tasks).
+Dark mode, navigation, real screens, adaptive/split landscape layouts (P07, per screen by the owning tasks), in-app language picker, custom fonts or typography scale, Firebase, feature-specific strings (added by their own tasks).
 
 ## Slices
 Each slice is verified by `./gradlew assembleDebug` and `./gradlew lint`.
-1. Strings base: EN `strings.xml`, new `values-pt/strings.xml`, `MainActivity` greeting uses `stringResource`.
-2. Colour scheme and typography: new palette in `Color.kt`, explicit schemes in `Theme.kt`, full scale in `Type.kt`; contrast checked by eye and calculation.
-3. Dimens and dark window theme: `Dimens.kt` (48dp target, spacing), `values-night/themes.xml`, remove unused template colours.
+1. Strings base: `app_name` marked `translatable="false"`, `welcome_message` in EN, new `values-pt/strings.xml`, placeholder uses `stringResource`.
+2. Light colour scheme: CityFix palette in `Color.kt`, `Theme.kt` light only with `dynamicColor = false`; `Type.kt` unchanged.
