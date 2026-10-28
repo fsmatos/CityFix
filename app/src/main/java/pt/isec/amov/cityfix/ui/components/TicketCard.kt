@@ -26,6 +26,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.formatDate
 
 /** Returns the string resource id with the localised label of [situation]. */
 fun situationLabelRes(situation: Situation): Int = when (situation) {
@@ -35,7 +36,7 @@ fun situationLabelRes(situation: Situation): Int = when (situation) {
     Situation.THEFT -> R.string.situation_theft
 }
 
-/** Clickable summary of a ticket: thumbnail, category, situation and status (brief I.1.B). */
+/** Clickable ticket summary (brief I.1.B); [isExpanded] also shows the description and date. */
 @Composable
 fun TicketCard(
     ticket: Ticket,
@@ -67,6 +68,24 @@ fun TicketCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 StatusBadge(ticket.currentStatus)
+                if (isExpanded) {
+                    if (ticket.description.isNotBlank()) {
+                        Text(
+                            text = ticket.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    // 0L is the "not set" default; skip it instead of showing 1 Jan 1970
+                    if (ticket.createdAt > 0L) {
+                        Text(
+                            text = stringResource(R.string.ticket_reported_on, formatDate(ticket.createdAt)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -92,6 +111,7 @@ private fun TicketThumbnail() {
 private val previewTickets = listOf(
     Ticket(
         id = "t1",
+        description = "Large pothole in front of the bus stop.",
         categoryName = "Pavement",
         situation = Situation.DAMAGE,
         currentStatus = TicketStatus.OPEN,
@@ -99,6 +119,9 @@ private val previewTickets = listOf(
     ),
     Ticket(
         id = "t2",
+        description = "Three street lamps have been off for a week. The avenue is completely dark at night, " +
+            "which makes crossing at the pedestrian crossing dangerous, especially for older people " +
+            "walking home from the market after closing time.",
         categoryName = "Public lighting on the long avenue next to the municipal market",
         situation = Situation.BREAKDOWN,
         currentStatus = TicketStatus.INFO_REQUESTED,
@@ -106,6 +129,7 @@ private val previewTickets = listOf(
     ),
     Ticket(
         id = "t3",
+        description = "Bench broken in half near the playground.",
         categoryName = "Benches",
         situation = Situation.DESTRUCTION,
         currentStatus = TicketStatus.IN_PROGRESS,
@@ -113,6 +137,7 @@ private val previewTickets = listOf(
     ),
     Ticket(
         id = "t4",
+        description = "Stop sign missing at the roundabout exit.",
         categoryName = "Traffic signs",
         situation = Situation.THEFT,
         currentStatus = TicketStatus.RESOLVED,
@@ -123,7 +148,8 @@ private val previewTickets = listOf(
         categoryName = "",
         situation = Situation.DAMAGE,
         currentStatus = TicketStatus.CLOSED,
-        createdAt = 1_790_400_000_000L,
+        // No date set: the expanded card skips the date line
+        createdAt = 0L,
     ),
 )
 
@@ -138,6 +164,22 @@ private fun TicketCardListPreview() {
         ) {
             previewTickets.forEach { ticket ->
                 TicketCard(ticket = ticket, isExpanded = false, onClick = {})
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Composable
+private fun TicketCardExpandedPreview() {
+    CityFixTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            previewTickets.forEach { ticket ->
+                TicketCard(ticket = ticket, isExpanded = true, onClick = {})
             }
         }
     }

@@ -12,6 +12,7 @@
     <!-- Ticket card -->
     <string name="ticket_thumbnail_description">Fotografia da ocorrência</string>
     <string name="ticket_no_category">Sem categoria</string>
+    <string name="ticket_reported_on">Reportado em %1$s</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

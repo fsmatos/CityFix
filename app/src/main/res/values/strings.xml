@@ -13,6 +13,7 @@
     <!-- Ticket card -->
     <string name="ticket_thumbnail_description">Ticket photo</string>
     <string name="ticket_no_category">No category</string>
+    <string name="ticket_reported_on">Reported on %1$s</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
