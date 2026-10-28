@@ -7,6 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import pt.isec.amov.cityfix.utils.haversineMeters
+import kotlin.math.cos
 
 class TicketsListTest {
 
@@ -18,6 +19,12 @@ class TicketsListTest {
     /** Moves [meters] north of [from] (about 111 195 m per degree of latitude). */
     private fun north(from: Coordinates, meters: Double) =
         Coordinates(from.latitude + meters / 111_195.0, from.longitude)
+
+    /** Moves [meters] east of [from]: a degree of longitude shrinks with cos(latitude). */
+    private fun east(from: Coordinates, meters: Double) = Coordinates(
+        from.latitude,
+        from.longitude + meters / (111_195.0 * cos(Math.toRadians(from.latitude))),
+    )
 
     private fun ticket(
         id: String,
@@ -50,6 +57,18 @@ class TicketsListTest {
     @Test
     fun findNearby_ignores_ticket_11m_away() {
         val list = TicketsList(listOf(ticket("a", location = north(anchor, 11.0))))
+        assertNull(list.findNearby(anchor, category, Situation.DAMAGE))
+    }
+
+    @Test
+    fun findNearby_finds_ticket_9m_east() {
+        val list = TicketsList(listOf(ticket("a", location = east(anchor, 9.0))))
+        assertEquals("a", list.findNearby(anchor, category, Situation.DAMAGE)?.id)
+    }
+
+    @Test
+    fun findNearby_ignores_ticket_11m_east() {
+        val list = TicketsList(listOf(ticket("a", location = east(anchor, 11.0))))
         assertNull(list.findNearby(anchor, category, Situation.DAMAGE))
     }
 
@@ -125,6 +144,24 @@ class TicketsListTest {
     }
 
     @Test
+    fun publicActive_is_newest_first_and_a_copy() {
+        val list = TicketsList(
+            listOf(
+                ticket("old", createdAt = 1_000L),
+                ticket("new", createdAt = 3_000L),
+                ticket("middle", createdAt = 2_000L),
+                ticket("private", createdAt = 4_000L, scope = Scope.PRIVATE),
+            ),
+        )
+        val publicList = list.publicActive()
+        assertEquals(listOf("new", "middle", "old"), publicList.map { it.id })
+
+        // sortedWith returns a fixed-size list, so write an element instead of clearing it.
+        (publicList as MutableList<Ticket>)[0] = ticket("x")
+        assertEquals(listOf("new", "middle", "old"), list.publicActive().map { it.id })
+    }
+
+    @Test
     fun isActive_only_for_unrepaired_statuses() {
         assertTrue(Ticket(currentStatus = TicketStatus.OPEN).isActive)
         assertTrue(Ticket(currentStatus = TicketStatus.INFO_REQUESTED).isActive)
@@ -183,15 +220,53 @@ class TicketsListTest {
                     createdAt = 0L,
                     statusHistory = listOf(StatusHistory(TicketStatus.RESOLVED, 5 * hour)),
                 ),
+                // Resolved before it was created (bad data): skipped from the average.
+                ticket(
+                    "negative",
+                    status = TicketStatus.RESOLVED,
+                    createdAt = 20 * hour,
+                    statusHistory = listOf(StatusHistory(TicketStatus.RESOLVED, 19 * hour)),
+                ),
             ),
         )
 
         val stats = list.stats()
-        assertEquals(5, stats.totalTickets)
+        assertEquals(6, stats.totalTickets)
         assertEquals(2, stats.activeTickets)
         assertEquals(2, stats.resolvedTickets)
-        assertEquals(0.4, stats.activeRatio, 1e-9)
+        assertEquals(2.0 / 6.0, stats.activeRatio, 1e-9)
         assertEquals(4 * hour, stats.averageRepairTimeMillis)
+    }
+
+    @Test
+    fun stats_ignores_repair_time_of_reopened_active_ticket() {
+        val hour = 3_600_000L
+        val resolved = ticket(
+            "resolved",
+            status = TicketStatus.RESOLVED,
+            createdAt = 10 * hour,
+            statusHistory = listOf(
+                StatusHistory(TicketStatus.OPEN, 10 * hour),
+                StatusHistory(TicketStatus.RESOLVED, 12 * hour),
+            ),
+        )
+        // Reopened after a resolve: not yet repaired, so no repair time.
+        val reopened = ticket(
+            "reopened",
+            status = TicketStatus.OPEN,
+            createdAt = 10 * hour,
+            statusHistory = listOf(
+                StatusHistory(TicketStatus.OPEN, 10 * hour),
+                StatusHistory(TicketStatus.RESOLVED, 11 * hour),
+                StatusHistory(TicketStatus.OPEN, 12 * hour),
+            ),
+        )
+
+        val stats = TicketsList(listOf(resolved, reopened)).stats()
+        assertEquals(2, stats.totalTickets)
+        assertEquals(1, stats.activeTickets)
+        assertEquals(1, stats.resolvedTickets)
+        assertEquals(2 * hour, stats.averageRepairTimeMillis)
     }
 
     // add and copies
@@ -206,7 +281,31 @@ class TicketsListTest {
     }
 
     @Test
-    fun rawList_is_a_copy() {
+    fun getAllSorted_is_newest_first_then_id_and_a_copy() {
+        val list = TicketsList(
+            listOf(
+                ticket("b", createdAt = 1_000L),
+                ticket("a", createdAt = 1_000L),
+                ticket("c", createdAt = 2_000L),
+            ),
+        )
+        val sorted = list.getAllSorted()
+        assertEquals(listOf("c", "a", "b"), sorted.map { it.id })
+
+        // sortedWith returns a fixed-size list, so write an element instead of clearing it.
+        (sorted as MutableList<Ticket>)[0] = ticket("x")
+        assertEquals(listOf("c", "a", "b"), list.getAllSorted().map { it.id })
+    }
+
+    @Test
+    fun rawList_mutation_does_not_change_the_collection() {
+        val list = TicketsList(listOf(ticket("a"), ticket("b")))
+        (list.rawList as MutableList<Ticket>).clear()
+        assertEquals(2, list.rawList.size)
+    }
+
+    @Test
+    fun rawList_snapshot_does_not_change_after_add() {
         val list = TicketsList(listOf(ticket("a")))
         val before = list.rawList
         list.add(ticket("b"))
@@ -220,5 +319,11 @@ class TicketsListTest {
     @Test
     fun one_degree_of_latitude_is_about_111195m() {
         assertEquals(111_195.0, haversineMeters(40.0, -8.0, 41.0, -8.0), 1.0)
+    }
+
+    @Test
+    fun one_degree_of_longitude_at_60N_is_about_55597m() {
+        // cos 60 = 0.5, so half a degree of latitude: exercises the longitude term.
+        assertEquals(55_596.9, haversineMeters(60.0, 0.0, 60.0, 1.0), 1.0)
     }
 }
