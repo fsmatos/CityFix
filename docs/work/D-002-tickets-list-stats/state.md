@@ -39,3 +39,4 @@ Append-only.
   - Note for the person: CLAUDE.md ("No automated tests") and the kotlin-conventions skill's "Testing" section are now inaccurate, since JUnit 4 tests are committed and run with `./gradlew testDebugUnitTest`. Not edited by the docs-writer; the person decides.
   - Deviation: the docs-writer session had no shell, so the commit `docs(D-002): update architecture docs and decisions` was not made here; it must be made without attribution lines and without staging `.idea/`. Not pushed.
 - 2026-10-28 Push: approved by Diogo; `git push -u origin dev/Diogo` succeeded (3c4fe6d..ad08f5f). Verify not re-run: only docs changed since the last green run.
+- 2026-10-28 Merge: dev/Diogo into main (approved by Diogo) as a0c47e6, no conflicts; assembleDebug, lint and testDebugUnitTest green. main not pushed yet.
