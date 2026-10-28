@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-10-28 | Approve with should-fix: 0 blocking, 4 should-fix (S1-S4), 4 nits; see review.md |
 | Docs | done | 2026-10-28 | overview.md, decision 0005, report notes; committed by the orchestrator (docs-writer had no shell) |
 | Pushed | done | 2026-10-28 | origin/dev/Diogo at ad08f5f |
-| Merged | pending | | |
+| Merged | done | 2026-10-28 | main at a0c47e6, pushed |
 
 ## Log
 Append-only.
@@ -40,3 +40,5 @@ Append-only.
   - Deviation: the docs-writer session had no shell, so the commit `docs(D-002): update architecture docs and decisions` was not made here; it must be made without attribution lines and without staging `.idea/`. Not pushed.
 - 2026-10-28 Push: approved by Diogo; `git push -u origin dev/Diogo` succeeded (3c4fe6d..ad08f5f). Verify not re-run: only docs changed since the last green run.
 - 2026-10-28 Merge: dev/Diogo into main (approved by Diogo) as a0c47e6, no conflicts; assembleDebug, lint and testDebugUnitTest green. main not pushed yet.
+- 2026-10-28 Push main: Diogo ran `git push origin main` (8f77838..a0c47e6).
+- 2026-10-28 Merge: origin/main (a0c47e6) into dev/Diogo, no conflicts, no code changes. Verify not run: no code changed.
