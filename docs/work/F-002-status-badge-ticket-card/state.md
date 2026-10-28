@@ -7,7 +7,7 @@ Remote: not pushed
 | Start | done | 2026-10-28 | |
 | Plan | done | 2026-10-28 | 3 slices; open questions Q1-Q6 with defaults |
 | Gate 1: plan approved | done | 2026-10-28 | approved after brief fixes and @StringRes removal; defaults Q1-Q5 |
-| Code | pending | 2026-10-28 | slice 1/3 done |
+| Code | pending | 2026-10-28 | slices 1-2 of 3 done |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -21,3 +21,4 @@ Append-only.
 - 2026-10-28: Plan revised at the person's request: removed the `@StringRes` annotation from `statusLabelRes` and `situationLabelRes` (not used in the course material); both still return the `R.string` id as a plain `Int`. Gate 1 still pending.
 - 2026-10-28: Gate 1 approved by the person with the revised plan (brief corrections, no `@StringRes`) and the defaults for Q1-Q5 (Q6 verified against the brief).
 - 2026-10-28: Code slice 1 (StatusBadge): added the five `status_*` strings (EN + PT, PT wording from the brief), `CityFixGreen` in `Color.kt` (Q1 default), `ui/components/StatusBadge.kt` with `statusLabelRes` (plain `Int`, exhaustive `when`), `StatusBadge` (Surface + Text, Q1 colours) and the private `StatusBadgePreview` (portrait + landscape `spec:` device). Removed `ui/components/.gitkeep`. Verify: `assembleDebug` pass; `lint` pass, 10 warnings, all from earlier work (7 UnusedResources template colours, GradleDependency, NewerVersionAvailable, RedundantLabel), none from F-002, no `MissingTranslation`. grep `\.name` in `ui/components/` empty. No deviation.
+- 2026-10-28: Code slice 2 (TicketCard collapsed): added `res/drawable/ic_image_placeholder.xml`, the `ticket_thumbnail_description`, `ticket_no_category` and four `situation_*` strings (EN + PT, PT from brief I.2.E), and `ui/components/TicketCard.kt` with `situationLabelRes` (plain `Int`, exhaustive `when`), `TicketCard` (Card(onClick) > Row: private `TicketThumbnail` + Column with category, situation, `StatusBadge`) and the private `TicketCardListPreview` (t1-t5, one per status, t2 with a long category, t5 with a blank category to show the fallback; portrait + landscape). `isExpanded` is in the signature, unused until slice 3. Verify: `assembleDebug` pass; `lint` pass, same 10 earlier warnings, none from F-002, no `MissingTranslation`. grep `location|creatorId|followerIds|messages` in `TicketCard.kt` empty; grep `\.name` in `ui/components/` empty. Deviation: the plan says to import the placeholder with Android Studio's Vector Asset tool; the implementer agent cannot run Android Studio, so the vector was written by hand with the standard Material Icons "image" (outlined) 24dp path, no `android:tint` (tint is set in Compose). Same result as the Vector Asset import; check it renders in the preview.

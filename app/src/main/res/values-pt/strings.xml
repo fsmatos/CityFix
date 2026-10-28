@@ -8,4 +8,14 @@
     <string name="status_in_progress">Em resolução</string>
     <string name="status_resolved">Resolvido</string>
     <string name="status_closed">Encerrado</string>
+
+    <!-- Ticket card -->
+    <string name="ticket_thumbnail_description">Fotografia da ocorrência</string>
+    <string name="ticket_no_category">Sem categoria</string>
+
+    <!-- Situation labels -->
+    <string name="situation_damage">Dano</string>
+    <string name="situation_breakdown">Avaria</string>
+    <string name="situation_destruction">Destruição</string>
+    <string name="situation_theft">Roubo</string>
 </resources>
