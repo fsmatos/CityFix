@@ -20,9 +20,6 @@ val Ticket.isActive: Boolean
 class TicketsList(initial: List<Ticket> = emptyList()) {
     private val tickets = mutableListOf<Ticket>()
 
-    /** Newest first, then by id so the order is stable. */
-    private val newestFirst = compareByDescending<Ticket> { it.createdAt }.thenBy { it.id }
-
     init {
         initial.forEach { add(it) }
     }
@@ -43,7 +40,12 @@ class TicketsList(initial: List<Ticket> = emptyList()) {
     /** All tickets, newest first. */
     fun getAllSorted(): List<Ticket> = tickets.sortedWith(newestFirst)
 
-    /** Public active tickets for anonymous users (brief I.1.B), newest first. */
+    /**
+     * Public active tickets for anonymous users (brief I.1.B), newest first.
+     * Filters which tickets, not which fields: each Ticket still has creatorId, followerIds,
+     * messages and the exact location. Callers serving anonymous users must drop those and
+     * coarsen the location (decision 0003).
+     */
     fun publicActive(): List<Ticket> =
         tickets.filter { it.scope == Scope.PUBLIC && it.isActive }.sortedWith(newestFirst)
 
@@ -83,15 +85,16 @@ class TicketsList(initial: List<Ticket> = emptyList()) {
 
     /**
      * Anonymous dashboard figures (brief I.1.A) over every ticket, private ones included.
-     * Repair time of a ticket = last RESOLVED history entry - createdAt. Tickets with no RESOLVED
-     * entry, an unset createdAt or a negative duration are left out of the average.
+     * Repair time of a ticket = last RESOLVED history entry - createdAt. Tickets that are active
+     * (not yet repaired, e.g. reopened after a resolve), have no RESOLVED entry, an unset createdAt
+     * or a negative duration are left out of the average.
      */
     fun stats(): DashboardStats {
         val total = tickets.size
         val active = tickets.count { it.isActive }
 
         val durations = tickets.mapNotNull { ticket ->
-            if (ticket.createdAt <= 0) return@mapNotNull null
+            if (ticket.isActive || ticket.createdAt <= 0) return@mapNotNull null
             val end = ticket.statusHistory
                 .lastOrNull { it.status == TicketStatus.RESOLVED }
                 ?.dateTime
@@ -111,5 +114,8 @@ class TicketsList(initial: List<Ticket> = emptyList()) {
     companion object {
         /** Brief I.1 "Obs": same category + situation within 10 m joins the existing ticket. */
         const val GROUPING_RADIUS_METERS = 10.0
+
+        /** Newest first, then by id so the order is stable. Shared by every sorted list. */
+        private val newestFirst = compareByDescending<Ticket> { it.createdAt }.thenBy { it.id }
     }
 }

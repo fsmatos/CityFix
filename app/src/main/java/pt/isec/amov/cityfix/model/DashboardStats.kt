@@ -5,7 +5,7 @@ data class DashboardStats(
     val totalTickets: Int = 0,
     /** Tickets not yet repaired: OPEN, INFO_REQUESTED or IN_PROGRESS (see [isActive]). */
     val activeTickets: Int = 0,
-    /** Tickets that entered the average: they have a RESOLVED history entry. */
+    /** Tickets that entered the average: not active, with a RESOLVED history entry. */
     val resolvedTickets: Int = 0,
     /** Mean of (last RESOLVED dateTime - createdAt), in milliseconds. Null when no ticket was resolved. */
     val averageRepairTimeMillis: Long? = null,
