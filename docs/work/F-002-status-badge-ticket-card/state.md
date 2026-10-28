@@ -1,6 +1,6 @@
 # F-002: StatusBadge and TicketCard
 Branch: dev/Francisco · Base: a8be64a
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-28 | 3 slices: 5866200, 72283bb, 7bcdcd7, review fixes; manual preview/PT/landscape checks pending |
 | Review | done | 2026-10-28 | approve with should-fix: 0 blocking, 3 should-fix (S1-S3), 5 nits; see review.md |
 | Docs | done | 2026-10-28 | overview "Shared components" + CityFixGreen exception; report notes section; no ADR |
-| Pushed | | | |
+| Pushed | done | 2026-10-28 | c0c8957 to origin/dev/Francisco |
 | Merged | | | |
 
 ## Log
@@ -26,3 +26,4 @@ Append-only.
 - 2026-10-28: Review of 9ec32fe..HEAD (5866200, 72283bb, 7bcdcd7) against the plans, brief, overview and kotlin rules; lint re-run (pass, same 10 earlier warnings). Verdict: approve with should-fix, no blocking. S1: the expanded card shows the free-text description, which brief I.1.B/I.1.C keeps from anonymous users; document that anonymous callers pass `isExpanded = false` (KDoc, overview note, D-005/D-006, F-003). S2: CLOSED badge and thumbnail box use `surfaceVariant`, which is almost the same as the Card container colour; use `inverseSurface`/`inverseOnSurface` and `surface`. S3: the manual preview/PT/landscape checks are still pending; add a permanent `locale = "pt"` preview. Nits: placeholder contentDescription announces a photo that is not there (Q4), document the CityFixGreen raw colour exception, deferred `val` in StatusBadge to explain at the defence, label helpers split over two files, Code row missing slice-3 SHA 7bcdcd7. Details in `review.md`. No code changed.
 - 2026-10-28: Review fixes, by the person's decision. S1 not fixed (person's choice; the anonymous use of `isExpanded` is left to the screens that wire it). S2 fixed: CLOSED badge now `inverseSurface`/`inverseOnSurface`, thumbnail box `surface`, so both stand out on the Card container. S3 partly: added a permanent `@Preview(showBackground = true, locale = "pt")` to `TicketCardExpandedPreview` (dates in that preview still follow `Locale.getDefault()`); the manual Android Studio checks are still the person's to do. N5: Code row now names 7bcdcd7. Nits N1-N4 left as they are. Verify: assembleDebug pass; lint pass, same 10 earlier warnings.
 - 2026-10-28: Docs: `docs/architecture/overview.md`: `utils/` line now mentions date formatting; "UI foundation" gets the raw colour exception (`CityFixGreen` + white text for the RESOLVED badge, because the M3 scheme has no green role; review N2) and a new "Shared components" subsection (StatusBadge colours per status incl. CLOSED `inverseSurface`/`inverseOnSurface`, TicketCard collapsed/expanded content per brief I.1.B, `isExpanded` as the global toggle, fields the card reads, `statusLabelRes`/`situationLabelRes` with exhaustive `when` and plain `Int`, `utils/formatDate`). `docs/report/notes.md`: new "F-002: StatusBadge and TicketCard" section (technical solutions, options chosen, rejected, improvement opportunities; adds the S2 colour change and N1 as items). Deviation from 03-docs-plan, by the person's S1 decision: the docs do not say anonymous callers must pass `isExpanded = false` and do not describe the card as hiding the description from anonymous users; they state what collapsed and expanded show. No ADR, as the docs plan says. Task file acceptance checks left unticked (same rule as F-001): the manual Android Studio preview/PT/landscape checks are still pending. No code changed. Not committed (the person commits).
+- 2026-10-28: pushed dev/Francisco to origin (bec2052..c0c8957) after verify (assembleDebug + lint) passed. Manual Android Studio checks (previews portrait/landscape/PT, placeholder icon) still not run.
