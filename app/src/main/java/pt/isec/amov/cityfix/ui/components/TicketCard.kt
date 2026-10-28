@@ -97,7 +97,7 @@ private fun TicketThumbnail() {
         modifier = Modifier
             .size(64.dp)
             .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -171,6 +171,7 @@ private fun TicketCardListPreview() {
 
 @Preview(showBackground = true)
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Preview(showBackground = true, locale = "pt")
 @Composable
 private fun TicketCardExpandedPreview() {
     CityFixTheme {

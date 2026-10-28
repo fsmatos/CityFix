@@ -49,8 +49,8 @@ fun StatusBadge(status: TicketStatus, modifier: Modifier = Modifier) {
             textColor = Color.White
         }
         TicketStatus.CLOSED -> {
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-            textColor = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = MaterialTheme.colorScheme.inverseSurface
+            textColor = MaterialTheme.colorScheme.inverseOnSurface
         }
     }
 
