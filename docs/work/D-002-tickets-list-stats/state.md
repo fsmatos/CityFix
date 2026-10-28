@@ -1,6 +1,6 @@
 # D-002: TicketsList and dashboard stats
 Branch: dev/Diogo · Base: 3c4fe6d
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-28 | Slices 1-6: 25c2835, 4dd9007, 625336a, 5adb7fb, f64b7fe, 33701c9. assembleDebug + lint green after every slice; testDebugUnitTest 17/17 pass |
 | Review | done | 2026-10-28 | Approve with should-fix: 0 blocking, 4 should-fix (S1-S4), 4 nits; see review.md |
 | Docs | done | 2026-10-28 | overview.md, decision 0005, report notes; committed by the orchestrator (docs-writer had no shell) |
-| Pushed | pending | | |
+| Pushed | done | 2026-10-28 | origin/dev/Diogo at ad08f5f |
 | Merged | pending | | |
 
 ## Log
@@ -38,3 +38,4 @@ Append-only.
   - `docs/tasks/phase-1/README.md` not edited: the `DashboardStats` fields match `01-coding-plan.md`. Francisco still has to be sent them before `/push-task` (F-004); note that `resolvedTickets` now counts only non-active tickets (S1).
   - Note for the person: CLAUDE.md ("No automated tests") and the kotlin-conventions skill's "Testing" section are now inaccurate, since JUnit 4 tests are committed and run with `./gradlew testDebugUnitTest`. Not edited by the docs-writer; the person decides.
   - Deviation: the docs-writer session had no shell, so the commit `docs(D-002): update architecture docs and decisions` was not made here; it must be made without attribution lines and without staging `.idea/`. Not pushed.
+- 2026-10-28 Push: approved by Diogo; `git push -u origin dev/Diogo` succeeded (3c4fe6d..ad08f5f). Verify not re-run: only docs changed since the last green run.
