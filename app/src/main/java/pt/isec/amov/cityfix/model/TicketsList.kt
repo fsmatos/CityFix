@@ -81,6 +81,33 @@ class TicketsList(initial: List<Ticket> = emptyList()) {
             ?.first
     }
 
+    /**
+     * Anonymous dashboard figures (brief I.1.A) over every ticket, private ones included.
+     * Repair time of a ticket = last RESOLVED history entry - createdAt. Tickets with no RESOLVED
+     * entry, an unset createdAt or a negative duration are left out of the average.
+     */
+    fun stats(): DashboardStats {
+        val total = tickets.size
+        val active = tickets.count { it.isActive }
+
+        val durations = tickets.mapNotNull { ticket ->
+            if (ticket.createdAt <= 0) return@mapNotNull null
+            val end = ticket.statusHistory
+                .lastOrNull { it.status == TicketStatus.RESOLVED }
+                ?.dateTime
+                ?: return@mapNotNull null
+            val duration = end - ticket.createdAt
+            if (duration >= 0) duration else null
+        }
+
+        return DashboardStats(
+            totalTickets = total,
+            activeTickets = active,
+            resolvedTickets = durations.size,
+            averageRepairTimeMillis = if (durations.isEmpty()) null else durations.sum() / durations.size,
+        )
+    }
+
     companion object {
         /** Brief I.1 "Obs": same category + situation within 10 m joins the existing ticket. */
         const val GROUPING_RADIUS_METERS = 10.0
