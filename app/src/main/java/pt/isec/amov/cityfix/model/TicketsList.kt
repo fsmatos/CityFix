@@ -1,5 +1,10 @@
 package pt.isec.amov.cityfix.model
 
+import pt.isec.amov.cityfix.utils.haversineMeters
+
+/** True for the default (0, 0), which is not a real location (see [Coordinates]). */
+private fun Coordinates.isUnset() = latitude == 0.0 && longitude == 0.0
+
 /**
  * A ticket is active while the problem is not yet repaired: OPEN, INFO_REQUESTED or IN_PROGRESS.
  * RESOLVED and CLOSED are not active (brief I.1.A "% ocorrencias ativas"; brief I.2 "Obs", 20 m
@@ -41,6 +46,40 @@ class TicketsList(initial: List<Ticket> = emptyList()) {
     /** Public active tickets for anonymous users (brief I.1.B), newest first. */
     fun publicActive(): List<Ticket> =
         tickets.filter { it.scope == Scope.PUBLIC && it.isActive }.sortedWith(newestFirst)
+
+    /**
+     * Report grouping (brief I.1 "Obs", decision 0002): the nearest active ticket with the same
+     * [categoryId] and [situation] within [GROUPING_RADIUS_METERS] of [location], or null.
+     * Returns null when [location] is unset (0, 0) or [categoryId] is blank; tickets at (0, 0)
+     * never match. Scope is not filtered.
+     * May return a ticket the reporter created or already follows; the caller checks
+     * `creatorId`/`followerIds`.
+     */
+    fun findNearby(location: Coordinates, categoryId: String, situation: Situation): Ticket? {
+        if (location.isUnset() || categoryId.isBlank()) return null
+
+        val candidates = tickets.filter { ticket ->
+            ticket.isActive &&
+                ticket.categoryId == categoryId &&
+                ticket.situation == situation &&
+                !ticket.location.isUnset()
+        }
+
+        val withDistance = candidates.map { ticket ->
+            val meters = haversineMeters(
+                location.latitude,
+                location.longitude,
+                ticket.location.latitude,
+                ticket.location.longitude,
+            )
+            ticket to meters
+        }
+
+        return withDistance
+            .filter { (_, meters) -> meters <= GROUPING_RADIUS_METERS }
+            .minByOrNull { (_, meters) -> meters }
+            ?.first
+    }
 
     companion object {
         /** Brief I.1 "Obs": same category + situation within 10 m joins the existing ticket. */
