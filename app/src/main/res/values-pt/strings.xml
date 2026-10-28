@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="welcome_message">Bem-vindo ao CityFix</string>
+
+    <!-- Ticket status labels -->
+    <string name="status_open">Aberto</string>
+    <string name="status_info_requested">Pedido de informações</string>
+    <string name="status_in_progress">Em resolução</string>
+    <string name="status_resolved">Resolvido</string>
+    <string name="status_closed">Encerrado</string>
 </resources>

@@ -2,4 +2,11 @@
 <resources>
     <string name="app_name" translatable="false">CityFix</string>
     <string name="welcome_message">Welcome to CityFix</string>
+
+    <!-- Ticket status labels -->
+    <string name="status_open">Open</string>
+    <string name="status_info_requested">Info requested</string>
+    <string name="status_in_progress">In progress</string>
+    <string name="status_resolved">Resolved</string>
+    <string name="status_closed">Closed</string>
 </resources>

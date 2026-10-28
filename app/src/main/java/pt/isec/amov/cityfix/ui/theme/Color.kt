@@ -5,3 +5,4 @@ import androidx.compose.ui.graphics.Color
 val CityFixBlue = Color(0xFF1565C0)
 val CityFixTeal = Color(0xFF00695C)
 val CityFixOrange = Color(0xFFBF360C)
+val CityFixGreen = Color(0xFF2E7D32)
