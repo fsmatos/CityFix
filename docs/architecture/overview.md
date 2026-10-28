@@ -11,7 +11,7 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
 - `viewmodel/`: ViewModels and their `UiState`.
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload.
 - `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
-- `utils/`: stateless helpers (image compression and thumbnails, distance maths).
+- `utils/`: stateless helpers (date formatting; later image compression and thumbnails, distance maths).
 
 ## Domain model
 Chosen model: **Option A, one ticket with several following citizens** (see [decision 0002](../decisions/0002-grouped-reports-single-ticket.md)). A report with the same category + situation within 10 m of an active ticket makes the citizen follow that ticket instead of creating a new one. There is no `Grupo` entity.
@@ -80,7 +80,15 @@ Rejected alternative, kept for the technical report: [Option B, tickets grouped 
 - Sizes: `dp` for layout, `sp` for text (so text follows the font scale).
 - Touch targets: 48dp through Material 3 components (`Button`, `IconButton`, ...), which enforce the minimum size; no custom size constants.
 - `contentDescription`: meaningful icons use `stringResource(...)`; `null` only for decorative icons next to text that already says the same.
+- Raw colour exception: `CityFixGreen` (`Color.kt`) is used directly by the RESOLVED `StatusBadge`, with `Color.White` text. It is the one place outside `Theme.kt` that reads a raw colour, because the M3 colour scheme has no green role and "resolved" needs a colour distinct from primary, secondary and tertiary.
 - Later (report): dark theme, in-app language selector (per-app locales), dynamic colour toggle in settings, custom container colours.
+
+### Shared components
+Stateless composables in `ui/components/` (data in, events out; no ViewModel, `remember` or Firebase), reused by the list (F-003) and the detail screen (F-005). Task F-002.
+- `StatusBadge(status)`: non-clickable `Surface` + `Text` with one colour and the localised label per `TicketStatus`. Colours: OPEN `primary`, INFO_REQUESTED `tertiary`, IN_PROGRESS `secondary`, RESOLVED `CityFixGreen` (see the exception above), CLOSED `inverseSurface`/`inverseOnSurface` (stands out on the card container). The label is always shown, so status is never conveyed by colour only.
+- `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
+- Enum labels: `statusLabelRes` (`StatusBadge.kt`) and `situationLabelRes` (`TicketCard.kt`) map each constant to its `R.string` id (plain `Int`) with an exhaustive `when`, never `.name`; a new constant does not compile until it has a label. PT labels are the brief's wording (Aberto, Pedido de informações, Em resolução, Resolvido, Encerrado; Dano, Avaria, Destruição, Roubo).
+- Dates: `utils/formatDate(epochMillis)` uses `java.text.DateFormat.MEDIUM` in the device locale (works on minSdk 24 without desugaring).
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
