@@ -11,7 +11,7 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
 - `viewmodel/`: ViewModels and their `UiState`.
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload.
 - `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
-- `utils/`: stateless helpers (image compression and thumbnails, distance maths).
+- `utils/`: stateless helpers (image compression and thumbnails, distance maths). Code that `model/` imports (`haversineMeters` in `utils/Distance.kt`) must stay pure Kotlin, with no Android imports; the only package dependency is `model -> utils`.
 
 ## Domain model
 Chosen model: **Option A, one ticket with several following citizens** (see [decision 0002](../decisions/0002-grouped-reports-single-ticket.md)). A report with the same category + situation within 10 m of an active ticket makes the citizen follow that ticket instead of creating a new one. There is no `Grupo` entity.
@@ -71,6 +71,15 @@ Representation rules:
 The four unmapped associations were left out at Gate 1 of D-001 because the phase-1 spec does not list them; they are added in the Firebase/operator tasks.
 
 Rejected alternative, kept for the technical report: [Option B, tickets grouped by a `Grupo`](diagrams/CityFix_Dominio_OpcaoB.png).
+
+### Rules (D-002)
+Details and reasons: [decision 0005](../decisions/0005-tickets-list-rules.md).
+- `TicketsList` (`model/TicketsList.kt`) is the phase-1 in-memory source of tickets, owned by `TicketsViewModel` (D-003). It keeps a private mutable list and every read returns a copy. The Firebase phase replaces it with a repository that reuses the same pure rules.
+- `Ticket.isActive` is true for OPEN, INFO_REQUESTED or IN_PROGRESS only. RESOLVED and CLOSED are not active (Gate 1, Q3). The anonymous list, the grouping and the "% active" stat all use it.
+- `publicActive()` returns PUBLIC active tickets, newest first. It filters tickets, not fields: anonymous screens must still drop `creatorId`, `followerIds`, `messages` and the exact location.
+- The 10 m grouping is `findNearby(location, categoryId, situation)`: same `categoryId` + `situation`, active, at most 10 m by Haversine (inclusive, nearest wins), (0, 0) ignored, any scope. A report next to a RESOLVED ticket creates a new ticket. Following the found ticket is the caller's job.
+- `stats()` returns `DashboardStats` over every ticket, private ones included: `totalTickets`, `activeTickets`, `resolvedTickets` (tickets in the average), `averageRepairTimeMillis` (milliseconds, last RESOLVED entry minus `createdAt`, active tickets skipped, `null` when nothing is resolved) and the computed `activeRatio` (0.0..1.0, never NaN).
+- Unit tests: `app/src/test/java/pt/isec/amov/cityfix/model/TicketsListTest.kt` (JUnit 4, run with `./gradlew testDebugUnitTest`) covers these rules.
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
