@@ -9,6 +9,7 @@ argument-hint: "[task-id | description]"
 
 Follow the `work-item` and `git-workflow` skills. Run in the main conversation; delegate to agents.
 
+0. **Sync with main (always ask first):** before anything else, on your `dev/<name>` branch (Diogo or Francisco), `git fetch origin`, show how many commits `origin/main` has that the branch lacks (`git log --oneline HEAD..origin/main`), and AskUserQuestion whether to merge `origin/main` into the dev branch now. Ask even when it is already up to date. On yes, run the `/merge` procedure (`origin/main` into the dev branch) before starting the task; on no, record the choice in the task's `state.md` Log once it exists.
 1. **Load the task:** if an unfinished task exists on the current dev branch, offer to continue it from its `state.md`. Otherwise read the task file in `docs/tasks/` (or take the description), allocate the ID (first letter of the dev branch + counter), pick the slug and commit type.
 2. **Start:** run the `/start-task` procedure (on your `dev/<name>` branch). Create `docs/work/<ID>-<slug>/state.md`.
 3. **Plan:** delegate to the `planner`. Show a short summary: outcome, approach, slices, risks, open questions.
