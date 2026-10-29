@@ -146,3 +146,29 @@ Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md). Code: `view
 - Strip EXIF location at image compression and keep user ids out of Storage paths.
 - Cluster or offset coarse markers on the anonymous map.
 - Show category names from string resources for known `categoryId`s (`pavement`, `lighting`, `furniture`) and fall back to the stored `categoryName`, so sample categories are translated on a PT device.
+
+## D-004: Navigation routes
+No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs.versions.toml`, `build.gradle.kts`, `app/build.gradle.kts`. Overview: `docs/architecture/overview.md`, "Navigation (D-004)".
+
+### Type-safe navigation
+- The four phase-1 destinations are `@Serializable` route types (Navigation Compose 2.8+, as in the course) instead of string routes such as `"detail/{ticketId}"`: `DashboardRoute`, `TicketListRoute` and `ReportTicketRoute` are `data object`s, and `TicketDetailRoute(ticketId: String)` is a `data class`.
+- The compiler checks argument names and types, so a typo or a wrong type is a build error, not a runtime crash.
+- The destination rebuilds the arguments with `backStackEntry.toRoute<TicketDetailRoute>()` (D-006).
+- Rejected: string routes (not type-safe, not the course stack) and a `sealed interface Route` over all four (Navigation's `hasRoute<T>()` works on concrete classes, and nothing needs one type yet).
+
+### Only the id in the route
+- `TicketDetailRoute` carries only the ticket id. The back stack, which is saved across rotation and process death, never holds ticket content, so there is no stale copy and no personal data in saved state.
+- The screen reads the current ticket from the shared `TicketsViewModel` (the collected `tickets`), so it always shows the latest version.
+- Rejected: passing the whole `Ticket` (needs a custom `NavType` and puts ticket data in saved state).
+- The route is for ids from the visible list only: the id returned by `reportTicket` may belong to a PRIVATE ticket that the anonymous list does not contain.
+
+### Build setup
+- The Kotlin Serialization compiler plugin generates a serializer for each route; the `kotlinx-serialization-core` runtime provides the `@Serializable` annotation. Without the plugin the code still compiles but navigation fails at runtime ("Serializer for class ... is not found").
+- Under AGP 9 built-in Kotlin there is no `kotlin-android` plugin; the serialization plugin is applied like the Compose compiler plugin, with `version.ref = "kotlin"` so it always matches the compiler.
+- The runtime is pinned to 1.9.0, the line built for Kotlin 2.2, because the project uses Kotlin 2.2.10; newer releases are built with Kotlin 2.3 and may not be read cleanly. Lint flags both as `NewerVersionAvailable`; the warnings are accepted.
+- The runtime is declared explicitly rather than taken transitively from `navigation-compose`, so D-004 builds on its own and the direct use is documented. `navigation-compose` itself is added in D-006, which must check that it does not raise the runtime past 1.9.x (Gradle picks the highest requested version).
+
+### Improvement opportunities
+- Deep links to a ticket (for example from an FCM status-change notification) with `TicketDetailRoute`.
+- Nested navigation graphs per role (anonymous, registered citizen, operator) in later phases.
+- Bump kotlinx-serialization together with Kotlin 2.3.
