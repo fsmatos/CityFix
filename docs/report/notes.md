@@ -205,3 +205,36 @@ No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs
 - Deep links to a ticket (for example from an FCM status-change notification) with `TicketDetailRoute`.
 - Nested navigation graphs per role (anonymous, registered citizen, operator) in later phases.
 - Bump kotlinx-serialization together with Kotlin 2.3.
+
+## F-003: ListScreen
+No decision record (Gate 1 kept the defaults). Code: `ui/screens/ListScreen.kt`, `ticket_list_empty` in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens".
+
+### Technical solutions
+- Stateless screen `ListScreen(tickets, isExpanded, onTicketClick, modifier)` over a `LazyColumn`, which composes only the visible rows.
+- Stable keys: `items(tickets, key = { it.id })`, so Compose keeps each item's identity (and state) when the list changes, instead of matching rows by position. Ids are guaranteed unique and non-blank upstream (`TicketsList.add`).
+- Reuses `TicketCard` (F-002) for every row; the screen itself reads only `ticket.id`.
+- Empty state as a separate branch (`tickets.isEmpty()`): a centred, localised `Text` in `bodyLarge`/`onSurfaceVariant`, with horizontal padding so long PT text wraps.
+- `modifier` as the last parameter, applied to the root of the drawn branch, so the caller applies the `Scaffold` inner padding (edge-to-edge).
+- Scroll position survives rotation through the default saveable `rememberLazyListState()`; the list itself lives in the ViewModel.
+- Previews with private sample data (6 active PUBLIC tickets, already in anonymous form): collapsed in portrait and landscape, expanded, and empty in portrait, landscape and PT.
+
+### Options chosen
+- Filtering and the anonymous projection kept upstream: `TicketsList.publicActive()` holds the single "active" rule in `model/`, and `TicketsViewModel.tickets` applies `toAnonymousView()`, so privacy is enforced before the UI and the screen renders the list as received.
+- The click passes only the id (`(String) -> Unit`), matching the type-safe `TicketDetailRoute(ticketId: String)`.
+- One layout for both orientations (Gate 1, Q3): the card already fills the width with ellipsis, and the list scrolls in landscape.
+- Gate 1, Q1: no stateful wrapper; the agreed signature makes `ListScreen` the stateless half and D-006 collects `vm.tickets` in `composable<TicketListRoute>` (this is the stateful half graded by brief V).
+- Gate 1, Q2: `isExpanded` is passed through, so expanded cards show the description. This goes beyond brief I.1.B for anonymous users; the person accepted it, and D-005/D-006 must hide or force off the toggle for anonymous users once roles exist (handover recorded in the overview).
+
+### Rejected
+- Filtering by `Scope.PUBLIC`/`isActive` in the screen: duplicates the D-002 rule and could drift from it.
+- Passing the ViewModel (or a `UiState`) to the screen: breaks the agreed signature and the D-003 contract (one ViewModel above the `NavHost`), and the screen would no longer be previewable with plain data.
+- A `(Ticket) -> Unit` click callback: tempts the caller to put the ticket in the route, which D-004 forbids.
+- A stateful `ListScreen(viewModel)` + `ListContent` split in F-003: would change the agreed signature for all screens.
+
+### Improvement opportunities
+- Two-column adaptive grid (`LazyVerticalGrid(GridCells.Adaptive(320.dp))`) in landscape and on tablets.
+- Pull-to-refresh and filters by category/status once Firestore is in.
+- Empty state with an illustration and a "report an issue" action.
+- Hide the expand toggle (description) for anonymous users once roles exist.
+- Display-cutout insets in landscape (`WindowInsets.displayCutout`/`safeDrawing`).
+- PT preview with data and a landscape expanded preview (review N1, N2).

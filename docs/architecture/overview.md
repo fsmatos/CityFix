@@ -138,9 +138,31 @@ Code: `ui/navigation/Destinations.kt`. No decision record (D-004 Gate 1, Q5): ty
 ### Shared components
 Stateless composables in `ui/components/` (data in, events out; no ViewModel, `remember` or Firebase), reused by the list (F-003) and the detail screen (F-005). Task F-002.
 - `StatusBadge(status)`: non-clickable `Surface` + `Text` with one colour and the localised label per `TicketStatus`. Colours: OPEN `primary`, INFO_REQUESTED `tertiary`, IN_PROGRESS `secondary`, RESOLVED `CityFixGreen` (see the exception above), CLOSED `inverseSurface`/`inverseOnSurface` (stands out on the card container). The label is always shown, so status is never conveyed by colour only.
-- `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
+- `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. **Anonymous caveat:** `isExpanded = true` shows the free-text description, which brief I.1.B keeps out of the anonymous list (category, situation, thumbnail) and which may hold personal data; D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (see "Screens", `ListScreen`). The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
 - Enum labels: `statusLabelRes` (`StatusBadge.kt`) and `situationLabelRes` (`TicketCard.kt`) map each constant to its `R.string` id (plain `Int`) with an exhaustive `when`, never `.name`; a new constant does not compile until it has a label. PT labels are the brief's wording (Aberto, Pedido de informações, Em resolução, Resolvido, Encerrado; Dano, Avaria, Destruição, Roubo).
 - Dates: `utils/formatDate(epochMillis)` uses `java.text.DateFormat.MEDIUM` in the device locale (works on minSdk 24 without desugaring).
+
+### Screens
+Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, events out): the agreed signatures make the screen itself the stateless half, and the stateful half (collecting `TicketsViewModel` flows) lives in D-006's `composable<...>` blocks, with the single ViewModel created above the `NavHost` (see "ViewModel (D-003)").
+- `ListScreen(tickets, isExpanded, onTicketClick: (String) -> Unit, modifier)` (`ui/screens/ListScreen.kt`, F-003): the public list behind `TicketListRoute` (brief I.1.B).
+  - Renders the list exactly as received. Filtering (PUBLIC + `isActive`), newest-first order and `toAnonymousView()` happen upstream in `TicketsList.publicActive()` and `TicketsViewModel.tickets`; the screen does not filter, sort or check `isActive`, and reads only `ticket.id` itself.
+  - `LazyColumn` (16dp content padding, 8dp spacing) with `items(tickets, key = { it.id })`, one `TicketCard` per ticket. Stable keys keep item identity when the list changes; ids are unique and non-blank because `TicketsList.add` refuses others.
+  - Empty list: a centred, localised message (`ticket_list_empty`, EN + PT) instead of the `LazyColumn`.
+  - A tap calls `onTicketClick(ticket.id)`: only the id, ready for `navigate(TicketDetailRoute(id))`.
+  - `modifier` is applied to the root of whichever branch is drawn, so the caller passes the `Scaffold` inner padding.
+  - Same layout in portrait and landscape (Gate 1, Q3); the scroll position survives rotation through the default saveable `LazyListState`.
+  - No stateful wrapper (Gate 1, Q1): D-006 collects `vm.tickets`. `isExpanded` is passed straight through to every card (Gate 1, Q2).
+  - **Handover to D-005/D-006 (F-003 review S1):** `isExpanded = true` shows the free-text description on every card. In phase 1 every user is anonymous, so D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (brief I.1.B; CLAUDE.md: anonymous users never see the author's personal data). Until then, wiring the toggle unconditionally shows descriptions in the anonymous list.
+  - **Contract for D-006:**
+    ```kotlin
+    ListScreen(
+        tickets = vm.tickets.collectAsStateWithLifecycle().value,
+        isExpanded = expanded,
+        onTicketClick = { navController.navigate(TicketDetailRoute(it)) },
+        modifier = Modifier.padding(innerPadding),
+    )
+    ```
+    In landscape on a device with a camera cutout, check that no card sits under the notch; add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if needed (F-003 review N3).
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
