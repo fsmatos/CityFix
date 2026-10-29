@@ -1,6 +1,6 @@
 # D-003: TicketsViewModel
 Branch: dev/Diogo · Base: 19e7bc5
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -9,8 +9,8 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-10-29 | Approved as written; planner recommendations for Q1-Q14 (Q7 yes: slice 4 included) |
 | Code | done | 2026-10-29 | 4 slices: f0272b8, 95f1c86, 168f775, 13cacdf; assembleDebug + lint green after each |
 | Review | done | 2026-10-29 | Approve, 0 blocking; S1, S2, N2 fixed in 4d15b5d; N1, N3-N5 left for D-006/later |
-| Docs | done | 2026-10-29 | overview.md, phase-1 README, decision 0006, report notes; not committed |
-| Pushed | pending | | |
+| Docs | done | 2026-10-29 | overview.md, phase-1 README, decision 0006, report notes; committed as 542faf6 |
+| Pushed | done | 2026-10-29 | origin/dev/Diogo at 542faf6 |
 | Merged | pending | | |
 
 ## Log
@@ -23,3 +23,4 @@ Append-only.
 - 2026-10-29 Review: reviewer read `git diff b525154..HEAD` against the plans, the brief (I.1.A-C), overview.md, decisions 0002-0005 and kotlin-conventions; recomputed all 7 sample epoch constants (match) and the expected stats (3 / 2 / 1, 259 200 000 ms); `./gradlew assembleDebug lint` exit 0. Verdict: approve with should-fixes; 0 blocking, 2 should-fix (S1 `StatusHistory.justification` not blanked by `toAnonymousView()`; S2 document that media EXIF/Storage paths are outside the projection), 5 nits. Written to review.md; no code edited. No tests requested (Diogo's decision).
 - 2026-10-29 Review fixes: applied S1 (`toAnonymousView()` also sets every `StatusHistory.justification` to null; added to the KDoc list), S2 (KDoc on `toAnonymousView()`: media files are passed through, EXIF location must be stripped at compression and Storage paths must not contain user ids; no code change) and N2 (`reportTicket` trims description, categoryId and categoryName and returns null when any is blank; KDoc updated). N1, N3, N4, N5 left for D-006/the docs phase/later tasks as the coordinator asked. `./gradlew assembleDebug` and `./gradlew lint` green. Committed with review.md as `fix(D-003): address review comments`. Not pushed.
 - 2026-10-29 Docs: executed 03-docs-plan. `docs/architecture/overview.md`: new "ViewModel (D-003)" subsection (API, sample data, `toAnonymousView()` field list, D-006 contract), `viewmodel/` and `data/` layer bullets, pointers from the anonymous-fields rule and from `publicActive()`. `docs/tasks/phase-1/README.md`: ViewModel API line under the screen signatures. New `docs/decisions/0006-anonymous-projection-phase-1.md` (Q1-Q4, Q6, Q8, Q11). New "D-003: TicketsViewModel" section in `docs/report/notes.md`. Additions beyond the docs plan, from the review fixes: `StatusHistory.justification` in the projection's field list (S1); media files (EXIF GPS, Storage paths with user ids) recorded as outside the projection and left to the media-upload task (S2); `reportTicket` returns null when description, categoryId or categoryName is blank after trimming (N2); in the D-006 contract and README, do not navigate to a returned PRIVATE id (N1), take the detail ticket from the collected `tickets` (N4); coarse markers must be clustered on a future map (N3); category names from string resources with `categoryName` fallback as an improvement note (N5). Q6 and Q11 kept the recommendation, recorded in 0006 anyway. No tests mentioned (Diogo's decision). Not committed: the docs-writer has no shell. Coordination message for Francisco (not a file) still to send before `/push-task`.
+- 2026-10-29 Push: approved by Diogo; `git push -u origin dev/Diogo` succeeded (19e7bc5..542faf6). Francisco still to be sent the ViewModel API message (in the chat). Not merged into main.
