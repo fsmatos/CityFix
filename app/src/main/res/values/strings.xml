@@ -15,6 +15,9 @@
     <string name="ticket_no_category">No category</string>
     <string name="ticket_reported_on">Reported on %1$s</string>
 
+    <!-- Ticket list -->
+    <string name="ticket_list_empty">No active issues to show.</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
     <string name="situation_breakdown">Breakdown</string>
