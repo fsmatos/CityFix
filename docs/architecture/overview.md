@@ -7,7 +7,7 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
 - Single Gradle module `:app`.
 
 ## Layers (MVVM)
-- `ui/screens/`: stateful screens (collect `StateFlow<UiState>`) and their stateless content composables; `ui/components/` reusable composables; `ui/navigation/` routes; `ui/theme/` theme.
+- `ui/screens/`: stateful screens (collect `StateFlow<UiState>`) and their stateless content composables; `ui/components/` reusable composables; `ui/navigation/` type-safe `@Serializable` routes (D-004); `ui/theme/` theme.
 - `viewmodel/`: ViewModels and their `UiState`. Phase 1 has one, `TicketsViewModel` (D-003), which exposes two flows instead of one `UiState` (see "ViewModel (D-003)").
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload. In phase 1 it holds only `SampleTickets` (the 3 sample tickets); repositories come with Firebase.
 - `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
@@ -103,6 +103,26 @@ Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phas
   - Take the detail ticket from the collected `tickets` value (`tickets.firstOrNull { it.id == id }`, or `remember(id, tickets)`) rather than calling `getTicketById` once, so the detail screen recomposes when the list changes (review N4).
   - Do not navigate to the id that `reportTicket` returns: a PRIVATE report is not in `tickets`, so `getTicketById` returns `null` and the detail screen would show "Ticket not found" (review N1). Show a confirmation (for example a snackbar) instead, and handle a `null` return.
 - Screens receive tickets already projected (blank author fields, coarse location), so F-003/F-005 must not try to show the author.
+
+### Navigation (D-004)
+Code: `ui/navigation/Destinations.kt`. No decision record (D-004 Gate 1, Q5): type-safe routes are the course default, and the version pin is explained here.
+- Four `@Serializable` routes serve the phase-1 flow dashboard -> list -> detail -> report:
+  - `data object DashboardRoute` (start destination, dashboard figures);
+  - `data object TicketListRoute` (public active tickets);
+  - `data class TicketDetailRoute(val ticketId: String)` (one ticket);
+  - `data object ReportTicketRoute` (provisional report form).
+- `TicketDetailRoute` carries only `ticketId: String` (matching `Ticket.id`), never a `Ticket` or any other field. The detail screen takes the ticket from the collected `tickets` (see "ViewModel (D-003)"), so the back stack never stores ticket content, personal data or coordinates.
+- Build setup:
+  - the Kotlin Serialization compiler plugin (`org.jetbrains.kotlin.plugin.serialization`, catalog alias `kotlin-serialization`, `version.ref = "kotlin"`) generates the serializers. The root build declares it `apply false` and `:app` applies it, like `kotlin-compose` (AGP 9 built-in Kotlin, no `kotlin-android` plugin);
+  - the runtime `kotlinx-serialization-core` 1.9.0 provides `@Serializable`. It is pinned to 1.9.0 because that line is built for Kotlin 2.2, matching the project's Kotlin 2.2.10. Bump it together with Kotlin, not alone.
+- Checking the plugin ran: with AGP 9 built-in Kotlin the compiled classes are under `app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/` (not `app/build/tmp/kotlin-classes/debug/`). `pt/isec/amov/cityfix/ui/navigation/TicketDetailRoute$$serializer.class` must exist there.
+- Accepted lint warnings: lint reports newer versions as `NewerVersionAvailable` (not `GradleDependency`). D-004 adds two, both accepted while Kotlin stays at 2.2.10: `kotlinx-serialization-core` (1.9.0 vs newer) and the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs newer, the same warning `kotlin-compose` already has).
+- **Contract for D-006:**
+  - Add `androidx.navigation:navigation-compose` (suggested 2.9.8) through the version catalog. D-004 does not add it.
+  - After adding it, run `./gradlew :app:dependencies --configuration debugRuntimeClasspath` and check that `kotlinx-serialization-core` still resolves to 1.9.x. `navigation-compose` depends on it too, and Gradle picks the highest version requested, so a newer one would silently move the runtime past the Kotlin 2.2 pin.
+  - Build `NavHost(startDestination = DashboardRoute)` with `composable<DashboardRoute>`, `composable<TicketListRoute>`, `composable<TicketDetailRoute>` and `composable<ReportTicketRoute>`.
+  - In the detail destination, read the id with `backStackEntry.toRoute<TicketDetailRoute>().ticketId`.
+  - Never navigate to the id returned by `reportTicket` (see "ViewModel (D-003)").
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
