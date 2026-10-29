@@ -41,7 +41,8 @@ class TicketsViewModel : ViewModel() {
 
     /**
      * Opens a new ticket from the provisional report form (F-006). Returns its id, or null when
-     * description or categoryId is blank. No location yet, so no 10 m grouping (00-plan Q8).
+     * description, categoryId or categoryName is blank (all three are trimmed). No location yet,
+     * so no 10 m grouping (00-plan Q8).
      */
     fun reportTicket(
         description: String,
@@ -50,18 +51,21 @@ class TicketsViewModel : ViewModel() {
         situation: Situation,
         scope: Scope,
     ): String? {
-        if (description.isBlank() || categoryId.isBlank()) return null
+        val text = description.trim()
+        val cleanCategoryId = categoryId.trim()
+        val cleanCategoryName = categoryName.trim()
+        if (text.isBlank() || cleanCategoryId.isBlank() || cleanCategoryName.isBlank()) return null
 
         val now = System.currentTimeMillis()
         val ticket = Ticket(
             id = UUID.randomUUID().toString(),
-            description = description.trim(),
+            description = text,
             situation = situation,
             scope = scope,
             currentStatus = TicketStatus.OPEN,
             createdAt = now,
-            categoryId = categoryId,
-            categoryName = categoryName,
+            categoryId = cleanCategoryId,
+            categoryName = cleanCategoryName,
             creatorId = LOCAL_USER_ID,
             statusHistory = listOf(StatusHistory(TicketStatus.OPEN, now, null, LOCAL_USER_ID)),
         )

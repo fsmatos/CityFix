@@ -9,15 +9,18 @@ const val ANONYMOUS_COORDINATE_DECIMALS = 2
 /**
  * Copy of this ticket that is safe for anonymous users (CLAUDE.md, decision 0003).
  * Blanks creatorId, followerIds, messages, every StatusHistory.responsibleId (the first OPEN
- * entry holds the creator's id) and every Attachment.uploadedById, and rounds the location to
+ * entry holds the creator's id), every StatusHistory.justification (free text that may name
+ * the author) and every Attachment.uploadedById, and rounds the location to
  * [ANONYMOUS_COORDINATE_DECIMALS]. Update this when Ticket gains a field with personal data.
+ * Media files are passed through: EXIF location must be stripped at compression (utils/) and
+ * Storage paths must not contain user ids (media-upload task).
  */
 fun Ticket.toAnonymousView(): Ticket = copy(
     location = location.coarse(),
     creatorId = "",
     followerIds = emptyList(),
     messages = emptyList(),
-    statusHistory = statusHistory.map { it.copy(responsibleId = "") },
+    statusHistory = statusHistory.map { it.copy(responsibleId = "", justification = null) },
     attachments = attachments.map { it.copy(uploadedById = "") },
 )
 
