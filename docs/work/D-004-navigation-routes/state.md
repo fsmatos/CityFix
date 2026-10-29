@@ -1,6 +1,6 @@
 # D-004: Navigation routes
 Branch: dev/Diogo · Base: 9e9c229
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-29 | 2 slices: db86ab9, 8b04fa6; build and lint pass |
 | Review | done | 2026-10-29 | Approve; 0 blocking, 0 should-fix, 2 nits (review.md) |
 | Docs | done | 2026-10-29 | overview.md (Layers, "Navigation (D-004)"), report notes; no decision record; review N1, N2 covered |
-| Pushed | pending | | |
+| Pushed | done | 2026-10-29 | origin/dev/Diogo at 03550cb |
 | Merged | pending | | |
 
 ## Log
@@ -22,3 +22,4 @@ Append-only.
 - 2026-10-29 Code (correction): D-004 added two lint warnings, not one. There were 11 before. The new ones are the newer-version warnings for `kotlinx-serialization-core` (1.9.0 vs 1.12.0) and for the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs 2.4.21). The plugin warning comes from `version.ref = "kotlin"` and is the same one `kotlin-compose` already has. Both are accepted: Kotlin stays at 2.2.10 (00-plan Q2, Out of scope).
 - 2026-10-29 Review: reviewer checked `git diff 931c26c..HEAD` (db86ab9, 8b04fa6, 7952055, 103a954) against 00-plan, 01-coding-plan, the task file, overview.md and kotlin-conventions. `./gradlew assembleDebug lint`: BUILD SUCCESSFUL, 0 errors, 13 warnings. The two new ones are `NewerVersionAvailable` for kotlinx-serialization-core and the serialization plugin, as the correction entry says. `TicketDetailRoute$$serializer.class` is present under `built_in_kotlinc/`. Verdict: Approve. Blocking none, should-fix none. Nits: N1, the D-006 contract should check that `navigation-compose` does not raise `kotlinx-serialization-core` past 1.9.x; N2, overview.md should give the AGP 9 class path and the `NewerVersionAvailable` lint id. Both go to the Docs phase. No code edited.
 - 2026-10-29 Docs: executed 03-docs-plan. `docs/architecture/overview.md`: "Layers" now says `ui/navigation/` holds type-safe `@Serializable` routes (D-004); new "Navigation (D-004)" subsection after "ViewModel (D-003)" with the four routes and the flow, the id-only `TicketDetailRoute`, the build setup (plugin `version.ref = "kotlin"`, `kotlinx-serialization-core` 1.9.0 pinned to Kotlin 2.2.10), and the D-006 contract (`navigation-compose` 2.9.8, `startDestination = DashboardRoute`, `toRoute<TicketDetailRoute>()`, never navigate to the `reportTicket` id). Review N1: the D-006 contract adds the `./gradlew :app:dependencies --configuration debugRuntimeClasspath` check that `kotlinx-serialization-core` still resolves to 1.9.x. Review N2: the subsection gives the AGP 9 class path `app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/` and says the accepted lint warnings are `NewerVersionAvailable`. `docs/report/notes.md`: new "D-004: Navigation routes" section (type-safe navigation, id-only route, build setup, improvement opportunities). No decision record (Gate 1, Q5). `docs/tasks/phase-1/README.md` unchanged (navigation-compose stays in D-006). No coordination message for Francisco needed. Approved plan files not edited. Not committed (Diogo commits).
+- 2026-10-29 Push: approved by Diogo; verify (assembleDebug + lint) green; `git push -u origin dev/Diogo` succeeded (9e9c229..03550cb). Not merged into main.
