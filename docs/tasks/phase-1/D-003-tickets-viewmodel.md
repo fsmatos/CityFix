@@ -15,7 +15,7 @@ ViewModel that exposes the tickets to the UI with sample data (no Firebase in ph
 ## Acceptance checks
 - [ ] Exposes immutable `StateFlow`; composables never touch `TicketsList` directly.
 - [ ] `getTicketById` returns null for an unknown id (UI shows "Ticket not found").
-- [ ] Unit test with the 3 sample tickets.
+- ~~Unit test with the 3 sample tickets.~~ Removed by Diogo on 2026-10-29: no unit tests.
 
 ## References
 - Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`; domain model: `docs/architecture/overview.md` (Option A, decision 0002).
