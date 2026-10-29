@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-10-29 | Approve, 0 blocking; S1, S2, N2 fixed in 4d15b5d; N1, N3-N5 left for D-006/later |
 | Docs | done | 2026-10-29 | overview.md, phase-1 README, decision 0006, report notes; committed as 542faf6 |
 | Pushed | done | 2026-10-29 | origin/dev/Diogo at 542faf6 |
-| Merged | done | 2026-10-29 | main at c4430b8 (not pushed) |
+| Merged | done | 2026-10-29 | main at c4430b8, pushed |
 
 ## Log
 Append-only.
@@ -25,3 +25,4 @@ Append-only.
 - 2026-10-29 Docs: executed 03-docs-plan. `docs/architecture/overview.md`: new "ViewModel (D-003)" subsection (API, sample data, `toAnonymousView()` field list, D-006 contract), `viewmodel/` and `data/` layer bullets, pointers from the anonymous-fields rule and from `publicActive()`. `docs/tasks/phase-1/README.md`: ViewModel API line under the screen signatures. New `docs/decisions/0006-anonymous-projection-phase-1.md` (Q1-Q4, Q6, Q8, Q11). New "D-003: TicketsViewModel" section in `docs/report/notes.md`. Additions beyond the docs plan, from the review fixes: `StatusHistory.justification` in the projection's field list (S1); media files (EXIF GPS, Storage paths with user ids) recorded as outside the projection and left to the media-upload task (S2); `reportTicket` returns null when description, categoryId or categoryName is blank after trimming (N2); in the D-006 contract and README, do not navigate to a returned PRIVATE id (N1), take the detail ticket from the collected `tickets` (N4); coarse markers must be clustered on a future map (N3); category names from string resources with `categoryName` fallback as an improvement note (N5). Q6 and Q11 kept the recommendation, recorded in 0006 anyway. No tests mentioned (Diogo's decision). Not committed: the docs-writer has no shell. Coordination message for Francisco (not a file) still to send before `/push-task`.
 - 2026-10-29 Push: approved by Diogo; `git push -u origin dev/Diogo` succeeded (19e7bc5..542faf6). Francisco still to be sent the ViewModel API message (in the chat). Not merged into main.
 - 2026-10-29 Merge: dev/Diogo into main (asked by Diogo) as c4430b8, no conflicts (origin/main had nothing new); assembleDebug + lint green. main back into dev/Diogo as 924ba08. main not pushed yet.
+- 2026-10-29 Push main: Diogo ran `git push origin main` (a0c47e6..c4430b8).
