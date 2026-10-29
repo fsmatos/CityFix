@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-10-29 | 2 slices: 57f1abe, 2b31f47; manual Android Studio checks pending |
 | Review | done | 2026-10-29 | approve with should-fix: 0 blocking, 2 should-fix, 4 nits; review.md |
 | Docs | done | 2026-10-29 | overview "Screens" + TicketCard caveat (S1), report notes; no ADR; task checks left unticked (manual checks pending) |
-| Pushed | | | |
+| Pushed | done | 2026-10-29 | 487cac7 to origin/dev/Francisco |
 | Merged | | | |
 
 ## Log
@@ -24,3 +24,4 @@ Append-only.
 - 2026-10-29: Review decision by the person: act on S1 in the Docs phase only (overview + state.md handover note for D-005/D-006); no TicketCard KDoc change; nits N1-N4 left as recorded. S2 (manual Android Studio checks) stays with the person.
 - 2026-10-29: Docs. `docs/architecture/overview.md`: new "Screens" subsection after "Shared components" with the `ListScreen` entry (signature, renders as received with filtering/order/projection upstream, `LazyColumn` keyed by `Ticket.id`, empty state, id-only click, `modifier` for `Scaffold` padding, same layout in both orientations, Q1 no stateful wrapper, Q2 `isExpanded` passed through, D-006 call as the contract, review N3 cutout note); the `TicketCard` bullet in "Shared components" gets the anonymous caveat (review S1). `docs/report/notes.md`: new "F-003: ListScreen" section (technical solutions, options chosen, rejected, improvement opportunities). No ADR: Gate 1 kept the defaults for Q1/Q2. `docs/tasks/phase-1/F-003-list-screen.md` acceptance checks left unticked: the manual Android Studio checks (S2) are still pending, same rule as F-001/F-002. No code or TicketCard KDoc changed. Not committed.
 - 2026-10-29: Handover to Diogo (D-005/D-006), review S1: the overview is the handover. The `ListScreen` entry ("Screens", "Handover to D-005/D-006") and the `TicketCard` bullet ("Anonymous caveat") state that `isExpanded = true` shows the free-text description and that D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (brief I.1.B). The same entry carries the review N3 display-cutout check for D-006. Diogo reads it after the next merge of dev/Francisco into main.
+- 2026-10-29: pushed dev/Francisco to origin (ca22f44..487cac7) after verify (assembleDebug + lint) passed. Manual Android Studio checks (S2) still not run.
