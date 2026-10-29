@@ -6,9 +6,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import pt.isec.amov.cityfix.data.SampleTickets
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Scope
+import pt.isec.amov.cityfix.model.Situation
+import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
+import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.toAnonymousView
+import java.util.UUID
 
 /**
  * Phase-1 tickets for the UI. Owns an in-memory TicketsList seeded with SampleTickets; composables
@@ -33,6 +38,38 @@ class TicketsViewModel : ViewModel() {
 
     /** The visible (projected) ticket with this id, or null: unknown, private, resolved or closed. */
     fun getTicketById(id: String): Ticket? = _tickets.value.firstOrNull { it.id == id }
+
+    /**
+     * Opens a new ticket from the provisional report form (F-006). Returns its id, or null when
+     * description or categoryId is blank. No location yet, so no 10 m grouping (00-plan Q8).
+     */
+    fun reportTicket(
+        description: String,
+        categoryId: String,
+        categoryName: String,
+        situation: Situation,
+        scope: Scope,
+    ): String? {
+        if (description.isBlank() || categoryId.isBlank()) return null
+
+        val now = System.currentTimeMillis()
+        val ticket = Ticket(
+            id = UUID.randomUUID().toString(),
+            description = description.trim(),
+            situation = situation,
+            scope = scope,
+            currentStatus = TicketStatus.OPEN,
+            createdAt = now,
+            categoryId = categoryId,
+            categoryName = categoryName,
+            creatorId = LOCAL_USER_ID,
+            statusHistory = listOf(StatusHistory(TicketStatus.OPEN, now, null, LOCAL_USER_ID)),
+        )
+
+        if (!ticketsList.add(ticket)) return null
+        refresh()
+        return ticket.id
+    }
 
     private fun visibleTickets(): List<Ticket> =
         ticketsList.publicActive().map { it.toAnonymousView() }
