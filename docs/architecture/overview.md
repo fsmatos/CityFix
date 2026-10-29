@@ -79,7 +79,6 @@ Details and reasons: [decision 0005](../decisions/0005-tickets-list-rules.md).
 - `publicActive()` returns PUBLIC active tickets, newest first. It filters tickets, not fields: anonymous screens must still drop `creatorId`, `followerIds`, `messages` and the exact location.
 - The 10 m grouping is `findNearby(location, categoryId, situation)`: same `categoryId` + `situation`, active, at most 10 m by Haversine (inclusive, nearest wins), (0, 0) ignored, any scope. A report next to a RESOLVED ticket creates a new ticket. Following the found ticket is the caller's job.
 - `stats()` returns `DashboardStats` over every ticket, private ones included: `totalTickets`, `activeTickets`, `resolvedTickets` (tickets in the average), `averageRepairTimeMillis` (milliseconds, last RESOLVED entry minus `createdAt`, active tickets skipped, `null` when nothing is resolved) and the computed `activeRatio` (0.0..1.0, never NaN).
-- Unit tests: `app/src/test/java/pt/isec/amov/cityfix/model/TicketsListTest.kt` (JUnit 4, run with `./gradlew testDebugUnitTest`) covers these rules.
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.

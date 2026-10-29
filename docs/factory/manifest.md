@@ -27,7 +27,7 @@ Source of truth for regenerating the factory. Brief: `docs/brief/AMov.ProjetoKot
 - **W9** Conventional Commits with task ID, e.g. `feat(F-001): add login screen`. No Claude attribution.
 
 ## Quality
-- **Q1** Format: none. Lint: `./gradlew lint`. Test: `./gradlew testDebugUnitTest`. Build: `./gradlew assembleDebug`. No coverage goal.
+- **Q1** Format: none. Lint: `./gradlew lint`. Test: none (no automated tests). Build: `./gradlew assembleDebug`. No coverage goal.
 - **Q2** No CI.
 - **Q3** Not applicable.
 - **Q4** Ask first: `firebase deploy`, Firestore/Storage rules changes, anything touching `google-services.json` or keys. Denied: force-push, pushing `main`, `git reset --hard`, `rm -rf`.

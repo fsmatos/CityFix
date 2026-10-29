@@ -10,7 +10,7 @@ Phase 1 has no Firebase, but three rules from the brief do not need it:
 
 All three depend on what "active" means. The task spec (`docs/tasks/phase-1/D-002-tickets-list.md`) said "public, not closed", and the D-001 review note C1 said "not CLOSED". The brief also uses "ocorrência ativa" in I.2, "Obs": the 20 m geofence alerts authors when an operator comes near an active issue.
 
-The rules live in `model/TicketsList.kt` (`TicketsList`, `Ticket.isActive`), `model/DashboardStats.kt` and `utils/Distance.kt` (`haversineMeters`), and are covered by `app/src/test/java/pt/isec/amov/cityfix/model/TicketsListTest.kt`.
+The rules live in `model/TicketsList.kt` (`TicketsList`, `Ticket.isActive`), `model/DashboardStats.kt` and `utils/Distance.kt` (`haversineMeters`).
 
 ## Decision
 - **Active = OPEN, INFO_REQUESTED or IN_PROGRESS (Gate 1, Q3).** RESOLVED and CLOSED are not active.
@@ -28,7 +28,7 @@ The rules live in `model/TicketsList.kt` (`TicketsList`, `Ticket.isActive`), `mo
 - **`DashboardStats` fields (Q2).** `totalTickets`, `activeTickets`, `resolvedTickets`, `averageRepairTimeMillis: Long?` and the computed `activeRatio` (0.0..1.0, 0.0 when there are no tickets, never NaN). The brief requires only three values; `resolvedTickets` (tickets that entered the average) is an extra so the UI can say "based on N repairs".
 - **Haversine in `utils/` (Q10).** `haversineMeters(lat1, lon1, lat2, lon2)` takes four `Double`s, so the only package dependency is `model -> utils`, with no cycle. Mean Earth radius 6 371 000 m; the intermediate `a` is clamped to 0..1 so near-antipodal points cannot produce NaN. `utils/` must stay pure Kotlin because `model/` imports it.
 - **In-memory collection (Q4-Q6).** `TicketsList` follows P07's `ContactsList`: a private mutable list, and every read (`rawList`, `getAllSorted()`, `publicActive()`) returns a new list. `add` rejects a blank or duplicate id. Sorted lists are newest first by `createdAt`, then by `id`. Rejected: an immutable collection whose `add` returns a new instance (purer, but further from the course material).
-- **Unit tests for pure `model/` rules (Q1).** Plain JUnit 4 tests on the JVM (`./gradlew testDebugUnitTest`), 24 tests in `TicketsListTest.kt`. JUnit was already in the version catalog, so no dependency was added. No instrumented or UI tests. This is a deliberate exception to the project's earlier "no automated tests" stance.
+- **No unit tests (Q1, revised 2026-10-29).** D-002 first committed JUnit 4 tests (`TicketsListTest.kt`); Diogo removed them on 2026-10-29 (during D-003) to keep the project's "no automated tests" stance. The rules are checked by build, lint and manual testing.
 
 ## Consequences
 - A new report next to a RESOLVED ticket creates a new ticket instead of following it. Reopening within the 5-day window is a separate path (a later task).

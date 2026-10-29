@@ -61,7 +61,7 @@ Decisions: [0002](../decisions/0002-grouped-reports-single-ticket.md), [0003](..
 - Show a placeholder on other devices until an attachment's `uploadState` is `UPLOADED` (before that, `file` is a local URI only the author's device can open).
 
 ## D-002: Tickets list and dashboard rules
-Decision: [0005](../decisions/0005-tickets-list-rules.md). Code: `model/TicketsList.kt`, `model/DashboardStats.kt`, `utils/Distance.kt`; tests: `app/src/test/java/pt/isec/amov/cityfix/model/TicketsListTest.kt`.
+Decision: [0005](../decisions/0005-tickets-list-rules.md). Code: `model/TicketsList.kt`, `model/DashboardStats.kt`, `utils/Distance.kt`.
 
 ### In-memory collection as in P07
 - `TicketsList` mirrors `ContactsList`: a private mutable list, and every public member (`rawList`, `getAllSorted()`, `publicActive()`) returns a new list, so `StateFlow`/`UiState` only ever hold snapshots that do not change afterwards.
@@ -91,9 +91,8 @@ Decision: [0005](../decisions/0005-tickets-list-rules.md). Code: `model/TicketsL
 ### Privacy
 - `publicActive()` filters which tickets anonymous users see, not which fields. Each ticket still carries `creatorId`, `followerIds`, `messages` and the exact location, so the anonymous screens need a projection (drop those fields, coarsen the location). The KDoc says so explicitly.
 
-### Pure rules, easy to test
-- No Android or Firebase dependency, so the rules run on the JVM. 24 plain JUnit 4 tests (`./gradlew testDebugUnitTest`) prove the 9 m / 11 m boundary north and east, the longitude term of Haversine (1° at 60°N is about 55 597 m), the RESOLVED/CLOSED/private filters, the reopened-ticket case, the sort order, the defensive copies and the zero-ticket case.
-- A detail worth explaining: `sortedWith` returns a fixed-size list, so calling `clear()` on it throws `UnsupportedOperationException`. The copy tests for `getAllSorted()`/`publicActive()` therefore overwrite an element and check that the collection is unchanged.
+### Pure rules
+- No Android or Firebase dependency, so the rules could run on the JVM. The project has no automated tests (the JUnit tests first written for D-002 were removed); the rules are checked manually.
 
 ### Improvement opportunities
 - In the Firebase phase, pre-filter grouping candidates in the Firestore query (category, situation and a lat/lon bounding box or geohash) instead of scanning every ticket; then apply the same Haversine check.
