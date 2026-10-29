@@ -31,6 +31,7 @@ Source: Notion "Plano de trabalho – Fase 1 (modelo + UI base)". Phase 1 uses l
 4. D-006 last: it wires the screens together.
 
 Agree the screen signatures first (plan "Step 0"): `ListScreen(tickets, isExpanded, onTicketClick)`, `DashboardScreen(stats, ...)`, `ShowScreen(ticket?, ...)`, `TicketCard(ticket, isExpanded, onClick)`.
+- ViewModel API (D-003) that the screens are wired against in D-006: `tickets: StateFlow<List<Ticket>>`, `stats: StateFlow<DashboardStats>`, `getTicketById(id): Ticket?` and `reportTicket(description, categoryId, categoryName, situation, scope): String?` (`null` when description, category id or category name is blank after trimming). Tickets reach the screens already projected for anonymous users (blank author fields, location rounded to about 1 km), so screens must not show the author. The sample category ids are `pavement`, `lighting` and `furniture`; F-006's provisional category list should reuse them. D-006 creates one shared `TicketsViewModel` above the `NavHost`, takes the detail ticket from the collected `tickets`, and does not open the id returned by a PRIVATE report (it is not in the anonymous list). Details: `docs/architecture/overview.md`, "ViewModel (D-003)".
 
 ## Done when
 The app navigates dashboard -> list -> detail -> report, keeps state on rotation, shows EN/PT, and has previews in portrait and landscape. Integrate (merge `origin/main` into your dev branch) at least twice a week.

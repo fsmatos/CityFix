@@ -101,3 +101,48 @@ Decision: [0005](../decisions/0005-tickets-list-rules.md). Code: `model/TicketsL
 - Serve anonymous users a reduced-field public projection (or collection) instead of full tickets.
 - Consider a median repair time, or excluding the time a ticket spent reopened, if outliers skew the average.
 - Reuse `haversineMeters` for the 20 m geofence check and the 10 km anonymous radius.
+
+## D-003: TicketsViewModel
+Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md). Code: `viewmodel/TicketsViewModel.kt`, `model/TicketPrivacy.kt`, `data/SampleTickets.kt`. Overview: `docs/architecture/overview.md`, "ViewModel (D-003)".
+
+### MVVM as in P07
+- The ViewModel owns the in-memory `TicketsList`; composables never touch it.
+- State goes out as read-only `StateFlow`s (a private `MutableStateFlow` plus `asStateFlow()`): `tickets` and `stats`. Events come in as plain functions: `getTicketById` and `reportTicket`. After a successful report, one private `refresh()` recomputes both flows.
+- State survives rotation because a `ViewModel` outlives the activity's configuration change.
+- No coroutines are launched (no `viewModelScope`): all work is synchronous and in memory. The only Android import is `androidx.lifecycle.ViewModel`, and no dependency was added.
+- Two flows instead of one `UiState`: the list and the dashboard are separate screens and phase 1 has no loading or error state.
+
+### Privacy by projection
+- Phase 1 has no login, so every viewer is anonymous. `publicActive()` chooses the tickets; `Ticket.toAnonymousView()` chooses the fields. It blanks `creatorId`, `followerIds`, `messages`, every `StatusHistory.responsibleId` and `justification`, and every `Attachment.uploadedById`, and rounds the location to 2 decimals (about 1 km, the brief's "coarse map zoom").
+- Hidden leaks found on the way: the first OPEN history entry's `responsibleId` is the creator's id (found during planning), and `StatusHistory.justification` is free text that can name the author (found at review). Blanking `creatorId` alone would not have been enough; this is a good example for the report of why a privacy rule needs a field-by-field check against the model.
+- It keeps the `Ticket` type, so the screen signatures agreed between the two authors did not change. Rejected: a `PublicTicket` class (type-safe, but duplicated and breaking the agreed signatures) and projecting in the screens (the rule must hold below the UI).
+- Rejected for the location: 3 decimals (about 100 m, still a street) and zeroing (clashes with "(0, 0) = unset").
+- `getTicketById` searches only the visible list, so knowing an id does not open a private or resolved ticket.
+- Limits: media files are not covered (EXIF GPS and Storage paths must be handled by the media-upload task), and coarse locations collapse onto one grid point (a future map must cluster markers).
+
+### Sample data
+- 3 tickets near Pr. Republica in `data/SampleTickets.kt` (the layer Firestore replaces later): `sample-1` OPEN, `sample-2` IN_PROGRESS, `sample-3` RESOLVED 3 days after creation.
+- Fixed UTC epoch constants, each with its date in a comment, instead of `System.currentTimeMillis()`, so the dashboard is reproducible: total 3, active 2 (about 67%), average repair time 3 days.
+- Each sample keeps `currentStatus` equal to its last history entry (decision 0004), and the locations are hundreds of metres apart, so they never group.
+
+### Reporting a ticket
+- `reportTicket` trims description, category id and category name and returns `null` when any is blank, so the form must handle a rejected report. Otherwise it creates a ticket with a `UUID` id, OPEN status and one OPEN history entry, and returns the id.
+- No 10 m grouping yet: the provisional form has no location, so `findNearby` could never match. A fake location was rejected because fake points would group with each other.
+
+### One shared instance
+- The ViewModel is created once above the `NavHost` (D-006) and its state is passed down. If each destination called `viewModel()` itself, each back-stack entry would get its own instance and a reported ticket would not show in the list.
+- The detail screen takes its ticket from the collected `tickets` list rather than a one-off `getTicketById` call, so it updates when the list changes.
+
+### Verification
+- D-003 has no automated tests (Diogo's decision). It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice, by code review (which recomputed every sample epoch constant and the expected dashboard figures), and by running the app once D-006 wires the screens.
+
+### Improvement opportunities
+- A `TicketsRepository` interface with a Firestore and an in-memory implementation, so the ViewModel no longer owns the data.
+- One `UiState` with loading and error states once data is remote.
+- `SavedStateHandle` or Firestore offline persistence so reported tickets survive process death (today the samples come back).
+- Wire `findNearby` once reports carry a GPS location: follow the existing ticket, unless the reporter is the creator or already follows it.
+- A public reduced-field Firestore collection fed by the same `toAnonymousView()` projection.
+- Separate, unprojected views for registered citizens and operators.
+- Strip EXIF location at image compression and keep user ids out of Storage paths.
+- Cluster or offset coarse markers on the anonymous map.
+- Show category names from string resources for known `categoryId`s (`pavement`, `lighting`, `furniture`) and fall back to the stored `categoryName`, so sample categories are translated on a PT device.
