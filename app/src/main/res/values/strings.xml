@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">CityFix</string>
+    <string name="top_bar_title_dashboard">Dashboard</string>
+    <string name="top_bar_title_list">Tickets</string>
+    <string name="top_bar_title_detail">Ticket details</string>
+    <string name="top_bar_title_report">Report an issue</string>
+    <string name="cd_navigate_back">Go back</string>
+    <string name="cd_expand_tickets">Expand tickets</string>
+    <string name="cd_collapse_tickets">Collapse tickets</string>
+    <string name="cd_report_ticket">Report an issue</string>
 </resources>
