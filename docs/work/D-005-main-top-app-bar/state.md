@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-10-31 | 3 slices; verify passed on each; lint 0 errors, 13 warnings; preview pane check still to do by hand |
 | Review | done | 2026-10-31 | Approve after S1; 0 blocking, 1 should-fix, 5 nits; see review.md |
 | Docs | done | 2026-10-31 | overview.md and report notes updated; no decision record, as planned; review N1-N4 covered; N5 preview check still open |
-| Pushed | done | 2026-10-31 | origin/dev/Diogo at 4608d48 |
+| Pushed | done | 2026-10-31 | origin/dev/Diogo at 3707b66 |
 | Merged | pending | | |
 
 ## Log
@@ -33,3 +33,4 @@ Append-only.
 - 2026-10-31 Chore (asked by Diogo, outside the D-005 plan): removed `app/src/androidTest` (only the template `ExampleInstrumentedTest.kt`), `testInstrumentationRunner`, the test dependencies in `app/build.gradle.kts` and their catalog entries (`junit`, `androidx-junit`, `androidx-espresso-core`, `ui-test-manifest`, `ui-test-junit4`, and three versions). This finishes c401a5d, which removed only `app/src/test`. `ui-tooling` and `ui-tooling-preview` stay for the previews. Verify: assembleDebug and lint pass, 0 errors, 13 warnings.
 - 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; `git push -u origin dev/Diogo` succeeded at 4608d48. Not merged into main.
 - 2026-10-31 Chore (agreed by Diogo and Francisco, outside the D-005 plan): `kotlinxSerialization` moved from 1.9.0 to 1.11.0 to match the course (P08). This reverses D-004 Q2. Kotlin stays at 2.2.10 because the build does not need a change: `:app:compileDebugKotlin` has no compiler warnings, `kotlin-stdlib` resolves to 2.3.20 at runtime, and `TicketDetailRoute$$serializer.class` is still generated. Verify: assembleDebug and lint pass, 0 errors, 13 warnings. Not run on a device. `overview.md` and `docs/report/notes.md` updated.
+- 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; pushed the serialization bump at 3707b66. Not merged into main.
