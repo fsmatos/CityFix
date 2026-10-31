@@ -172,3 +172,38 @@ No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs
 - Deep links to a ticket (for example from an FCM status-change notification) with `TicketDetailRoute`.
 - Nested navigation graphs per role (anonymous, registered citizen, operator) in later phases.
 - Bump kotlinx-serialization together with Kotlin 2.3.
+
+## D-005: MainTopAppBar
+No decision record (docs plan). Code: `ui/navigation/MainTopAppBar.kt`, `res/values/strings.xml`, `res/values-pt/strings.xml`. Overview: `docs/architecture/overview.md`, "Top bar (D-005)".
+
+### Stateless top bar
+- The bar receives the screen and `canNavigateBack`, and sends clicks out as callbacks. It can be previewed with no `NavController`, and `MainActivity` stays the only place that knows about navigation.
+- Rejected: reading `NavBackStackEntry` in the bar, which needs `navigation-compose` now and ties the previews to a `NavController`.
+
+### Enum vs plain flags
+- `TopBarScreen` keeps the "which control on which route" rule in one file, where it can be previewed. Plain flags (`showToggle`, `showAdd`, `title`) would move that rule into `MainActivity`.
+- Limit of the enum: only the title is exhaustive. An exhaustive `when` makes a new screen a compile error until it has a title, but the controls use `if`, so a new screen silently gets the add button. Do not claim at the defence that the compiler forces a decision about the controls.
+- Rejected: a `sealed interface` over the routes. It needs edits to `Destinations.kt`, and D-006 would still have to pass the current route in.
+
+### Back arrow from the back stack, not the route
+- This is why `canNavigateBack` is separate from `screen`: the arrow depends on whether there is somewhere to go back to, not on which screen is showing.
+- Trap for D-006: `previousBackStackEntry` is not Compose state, so it must be read in the same scope as `currentBackStackEntryAsState()`, or the arrow can go stale.
+
+### Icons
+- `material3` 1.4 has no icons, so we use `material-icons-core`, not the much larger extended library. `KeyboardArrowUp`/`KeyboardArrowDown` replace `ExpandLess`/`ExpandMore`, which are only in the extended library.
+- The BOM sets 1.7.8, the library's frozen last release.
+- Rejected: hand-copied vector drawables (four more XML files and `painterResource` calls, and the course style uses `Icons`).
+
+### Accessibility and localisation
+- Content descriptions name the action, and the toggle's description changes with its state. `IconButton` gives 48dp targets (from its documented behaviour, not measured), and `AutoMirrored` flips the back arrow in right-to-left languages.
+- The Portuguese strings say "ocorrência(s)", the term the brief uses with users and the one in Francisco's strings. The first version said "tickets" and "problema", and the review changed it (S1), so one list does not show "Tickets" as its title and "ocorrências" in its empty state.
+- The title has `maxLines = 1` with an ellipsis, for long Portuguese titles in narrow bars.
+
+### Add button by role (requirement, not an option)
+- The brief lets only registered citizens open tickets, so the Auth phase must hide the add button by role. D-005 shows it to everyone because phase 1 has no login.
+
+### Verification
+- D-005 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice (0 errors, the 13-warning baseline) and by code review. The previews have not been rendered yet, and the bar cannot run on a device until D-006.
+
+### Improvement opportunities
+- Move to Material Symbols vectors, as the icons library is no longer updated.
