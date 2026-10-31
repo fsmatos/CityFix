@@ -7,7 +7,7 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
 - Single Gradle module `:app`.
 
 ## Layers (MVVM)
-- `ui/screens/`: stateful screens (collect `StateFlow<UiState>`) and their stateless content composables; `ui/components/` reusable composables; `ui/navigation/` type-safe `@Serializable` routes (D-004); `ui/theme/` theme.
+- `ui/screens/`: stateful screens (collect `StateFlow<UiState>`) and their stateless content composables; `ui/components/` reusable composables; `ui/navigation/` type-safe `@Serializable` routes (D-004) and the stateless `MainTopAppBar` (D-005); `ui/theme/` theme.
 - `viewmodel/`: ViewModels and their `UiState`. Phase 1 has one, `TicketsViewModel` (D-003), which exposes two flows instead of one `UiState` (see "ViewModel (D-003)").
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload. In phase 1 it holds only `SampleTickets` (the 3 sample tickets); repositories come with Firebase.
 - `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
@@ -114,15 +114,42 @@ Code: `ui/navigation/Destinations.kt`. No decision record (D-004 Gate 1, Q5): ty
 - `TicketDetailRoute` carries only `ticketId: String` (matching `Ticket.id`), never a `Ticket` or any other field. The detail screen takes the ticket from the collected `tickets` (see "ViewModel (D-003)"), so the back stack never stores ticket content, personal data or coordinates.
 - Build setup:
   - the Kotlin Serialization compiler plugin (`org.jetbrains.kotlin.plugin.serialization`, catalog alias `kotlin-serialization`, `version.ref = "kotlin"`) generates the serializers. The root build declares it `apply false` and `:app` applies it, like `kotlin-compose` (AGP 9 built-in Kotlin, no `kotlin-android` plugin);
-  - the runtime `kotlinx-serialization-core` 1.9.0 provides `@Serializable`. It is pinned to 1.9.0 because that line is built for Kotlin 2.2, matching the project's Kotlin 2.2.10. Bump it together with Kotlin, not alone.
+  - the runtime `kotlinx-serialization-core` 1.11.0 provides `@Serializable`, the version used in class (P08). It pulls `kotlin-stdlib` up to 2.3.20 at runtime, while the compiler stays at Kotlin 2.2.10; the build accepts this with no compiler warnings, so Kotlin was not changed.
 - Checking the plugin ran: with AGP 9 built-in Kotlin the compiled classes are under `app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/` (not `app/build/tmp/kotlin-classes/debug/`). `pt/isec/amov/cityfix/ui/navigation/TicketDetailRoute$$serializer.class` must exist there.
-- Accepted lint warnings: lint reports newer versions as `NewerVersionAvailable` (not `GradleDependency`). D-004 adds two, both accepted while Kotlin stays at 2.2.10: `kotlinx-serialization-core` (1.9.0 vs newer) and the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs newer, the same warning `kotlin-compose` already has).
+- Accepted lint warnings: lint reports newer versions as `NewerVersionAvailable` (not `GradleDependency`). D-004 adds two, both accepted: `kotlinx-serialization-core` (1.11.0 vs newer, kept to match the class) and the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs newer, the same warning `kotlin-compose` already has).
 - **Contract for D-006:**
   - Add `androidx.navigation:navigation-compose` (suggested 2.9.8) through the version catalog. D-004 does not add it.
-  - After adding it, run `./gradlew :app:dependencies --configuration debugRuntimeClasspath` and check that `kotlinx-serialization-core` still resolves to 1.9.x. `navigation-compose` depends on it too, and Gradle picks the highest version requested, so a newer one would silently move the runtime past the Kotlin 2.2 pin.
+  - After adding it, run `./gradlew :app:dependencies --configuration debugRuntimeClasspath` and check that `kotlinx-serialization-core` still resolves to 1.11.0. `navigation-compose` depends on it too, and Gradle picks the highest version requested, so a newer one would silently change the runtime.
   - Build `NavHost(startDestination = DashboardRoute)` with `composable<DashboardRoute>`, `composable<TicketListRoute>`, `composable<TicketDetailRoute>` and `composable<ReportTicketRoute>`.
   - In the detail destination, read the id with `backStackEntry.toRoute<TicketDetailRoute>().ticketId`.
   - Never navigate to the id returned by `reportTicket` (see "ViewModel (D-003)").
+
+### Top bar (D-005)
+Code: `ui/navigation/MainTopAppBar.kt`. No decision record (D-005 docs plan): these are local UI choices, explained here and in the report notes.
+- `MainTopAppBar` is stateless: the screen, `canNavigateBack` and `isExpanded` come in as parameters, and clicks go out as callbacks. It imports nothing from `androidx.navigation`, `viewmodel` or `model`, so it needs no navigation library and can be previewed with no `NavController`.
+- `TopBarScreen { DASHBOARD, LIST, DETAIL, REPORT }` has one value per route in `Destinations.kt`.
+- Controls per route:
+
+  | Route | `TopBarScreen` | Title (EN / PT) | Back arrow | Toggle | Add |
+  | --- | --- | --- | --- | --- | --- |
+  | `DashboardRoute` | `DASHBOARD` | Dashboard / Painel | if `canNavigateBack` (never in practice: start destination) | no | yes |
+  | `TicketListRoute` | `LIST` | Tickets / Ocorrências | if `canNavigateBack` | yes | yes |
+  | `TicketDetailRoute` | `DETAIL` | Ticket details / Detalhes da ocorrência | if `canNavigateBack` | no | yes |
+  | `ReportTicketRoute` | `REPORT` | Report an issue / Reportar ocorrência | if `canNavigateBack` | no | no |
+
+- The toggle switches the whole list between compact and expanded cards: one value, not one per card. Its icon and content description change with `isExpanded`, and the description names the action a tap will perform.
+- Adding a screen: only the title is exhaustive. It comes from a `when` with no `else`, so a new `TopBarScreen` value does not compile until it has a title. The controls use `if`, so the compiler does not ask about them: a new screen silently gets the add button and no toggle. Check both by hand.
+- **Requirement for the Auth phase:** the bar must hide the add button by role, because the brief lets only registered citizens open tickets. D-005 shows it to everyone because phase 1 has no login. No task file covers this yet, so it must go into the Auth task when that is written.
+- Icons: `androidx.compose.material:material-icons-core`, with no version in the catalog. The Compose BOM sets 1.7.8, the library's frozen last release, so this is not a mismatch with the other Compose libraries. It is needed because `material3` 1.4 no longer brings icons. `KeyboardArrowUp`/`KeyboardArrowDown` are used because `ExpandLess`/`ExpandMore` are only in the extended library.
+- Strings: titles use the `top_bar_` prefix and content descriptions the `cd_` prefix. The Portuguese strings say "ocorrência(s)", the brief's term and the one in Francisco's strings, never "ticket" or "problema" (D-005 review S1). The English strings keep "ticket", so the string names do too. D-005 created the first `values-pt/strings.xml`.
+- **Merge note (`origin/dev/Francisco`):** his branch also adds `values-pt/strings.xml`, so expect an add/add conflict. Keep both sides, except `app_name`: he marks it `translatable="false"` in `values/strings.xml`, so keep that line and delete `app_name` from `values-pt/strings.xml`, then run lint. Until that merge our file is correct: without `translatable="false"`, lint needs the translation.
+- **Contract for D-006:**
+  - Place the bar in the `Scaffold`. Nothing calls it before D-006, so it has not run on a device yet.
+  - Convert the current destination to `TopBarScreen` with `hasRoute<T>()`.
+  - Pass `canNavigateBack = navController.previousBackStackEntry != null`. `previousBackStackEntry` is not Compose state, so reading it alone does not cause a recomposition and the back arrow can go stale. Read it in the same scope as `currentBackStackEntryAsState()`, which `hasRoute` needs anyway.
+  - Keep `isExpanded` in `rememberSaveable` above the `NavHost`, and pass it to both the bar and `ListScreen`.
+  - Set `onBackClick = navController::navigateUp`; `onAddClick` navigates to `ReportTicketRoute` with `launchSingleTop = true`, as a double tap could otherwise open the form twice.
+  - Check landscape on an emulator with a display cutout: no controls should sit under it (D-005 review N5).
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
