@@ -8,7 +8,7 @@ Remote: not pushed
 | Plan | done | 2026-10-31 | 00-plan, 01-coding-plan, 03-docs-plan; 3 slices, no tests |
 | Gate 1: plan approved | done | 2026-10-31 | Approved by Diogo; planner recommendations for Q1-Q8 |
 | Code | done | 2026-10-31 | 3 slices; verify passed on each; lint 0 errors, 13 warnings; preview pane check still to do by hand |
-| Review | pending | | |
+| Review | done | 2026-10-31 | Approve after S1; 0 blocking, 1 should-fix, 5 nits; see review.md |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -25,3 +25,5 @@ Append-only.
 - 2026-10-31 Code slice 3 (top bar): created `ui/navigation/MainTopAppBar.kt` with `TopBarScreen`, `MainTopAppBar` and the previews. All four icons resolve from `material-icons-core`, so the vector drawable fallback was not needed. `assembleDebug` pass, `lint` pass, 0 errors, 13 warnings (back to baseline; none in the new file). No imports from `androidx.navigation`, `viewmodel` or `model`.
 - 2026-10-31 Code not verified: the Android Studio preview pane check from slice 3 was not done, because previews need the IDE. Diogo still has to check each screen in both orientations against the table in 00-plan.
 - 2026-10-31 Code deviations: no functional ones. `BarPreview` uses named arguments, and the preview functions use block bodies rather than the plan's one-line expression bodies. The plan's "do not touch state.md" was overridden by the task instruction to record this log here.
+- 2026-10-31 Review: reviewed 3b71343..HEAD against the plans, the task file, overview.md, kotlin-conventions, `.claude/rules/kotlin.md`, the brief (via `pdftotext`) and Francisco's strings at 693b05d. `./gradlew assembleDebug lint --rerun-tasks` pass, 0 errors, 13 warnings, none from D-005. Verdict: approve after S1 (Portuguese strings say "tickets" where the brief and Francisco's strings say "ocorrências"). 5 nits, including N1: at the merge, `app_name` must leave `values-pt` because Francisco marks it `translatable="false"`. Not verified: previews not rendered, 48dp targets not measured, bar not run on a device. Wrote `review.md`; no code edited, nothing committed.
+- 2026-10-31 Review fix S1: `values-pt/strings.xml` now says "ocorrência(s)" instead of "ticket(s)" and "problema", matching the brief and Francisco's strings. Deviation from the strings fixed in 01-coding-plan; English is unchanged. Verify: assembleDebug and lint pass, 0 errors, 13 warnings. The preview pane check is still Diogo's to do.
