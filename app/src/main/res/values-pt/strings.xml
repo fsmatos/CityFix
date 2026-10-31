@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">CityFix</string>
     <string name="top_bar_title_dashboard">Painel</string>
-    <string name="top_bar_title_list">Tickets</string>
-    <string name="top_bar_title_detail">Detalhes do ticket</string>
-    <string name="top_bar_title_report">Reportar problema</string>
+    <string name="top_bar_title_list">Ocorrências</string>
+    <string name="top_bar_title_detail">Detalhes da ocorrência</string>
+    <string name="top_bar_title_report">Reportar ocorrência</string>
     <string name="cd_navigate_back">Voltar</string>
-    <string name="cd_expand_tickets">Expandir tickets</string>
-    <string name="cd_collapse_tickets">Recolher tickets</string>
-    <string name="cd_report_ticket">Reportar problema</string>
+    <string name="cd_expand_tickets">Expandir ocorrências</string>
+    <string name="cd_collapse_tickets">Recolher ocorrências</string>
+    <string name="cd_report_ticket">Reportar ocorrência</string>
 </resources>
