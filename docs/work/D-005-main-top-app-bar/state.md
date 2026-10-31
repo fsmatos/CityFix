@@ -34,3 +34,4 @@ Append-only.
 - 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; `git push -u origin dev/Diogo` succeeded at 4608d48. Not merged into main.
 - 2026-10-31 Chore (agreed by Diogo and Francisco, outside the D-005 plan): `kotlinxSerialization` moved from 1.9.0 to 1.11.0 to match the course (P08). This reverses D-004 Q2. Kotlin stays at 2.2.10 because the build does not need a change: `:app:compileDebugKotlin` has no compiler warnings, `kotlin-stdlib` resolves to 2.3.20 at runtime, and `TicketDetailRoute$$serializer.class` is still generated. Verify: assembleDebug and lint pass, 0 errors, 13 warnings. Not run on a device. `overview.md` and `docs/report/notes.md` updated.
 - 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; pushed the serialization bump at 3707b66. Not merged into main.
+- 2026-10-31 Preview pane check (review N5): done by Diogo in Android Studio; previews seen and approved.
