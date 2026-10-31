@@ -1,6 +1,6 @@
 # D-005: MainTopAppBar
 Branch: dev/Diogo · Base: d910a26
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-10-31 | 3 slices; verify passed on each; lint 0 errors, 13 warnings; preview pane check still to do by hand |
 | Review | done | 2026-10-31 | Approve after S1; 0 blocking, 1 should-fix, 5 nits; see review.md |
 | Docs | done | 2026-10-31 | overview.md and report notes updated; no decision record, as planned; review N1-N4 covered; N5 preview check still open |
-| Pushed | pending | | |
+| Pushed | done | 2026-10-31 | origin/dev/Diogo at 4608d48 |
 | Merged | pending | | |
 
 ## Log
@@ -31,3 +31,4 @@ Append-only.
 - 2026-10-31 Docs deviations from 03-docs-plan and earlier wording, all from review: N1, the "keep both sides" merge rule in the Gate 1 entry above is corrected: `app_name` must be deleted from `values-pt` at the merge, because Francisco marks it `translatable="false"`; our file is correct until then. N2, the docs do not repeat the 00-plan claim about a `when` on controls: only the title is exhaustive, and a new screen silently gets the add button. N3, hiding the add button by role is written as an Auth-phase requirement, in `overview.md` and in the report notes, and removed from the plan's "Improvement opportunities"; no task file covers it yet. N4, the D-006 contract says to read `previousBackStackEntry` in the same scope as `currentBackStackEntryAsState()`. S1, the docs record that the Portuguese strings say "ocorrência(s)". The add/add merge note is in `overview.md`; `values-pt/strings.xml` was checked against it and not edited.
 - 2026-10-31 Docs still open: telling Francisco about `values-pt/strings.xml`, the taken `top_bar_*` and `cd_*` names and the `app_name` rule is Diogo's to do (push message or in person); no merge has resolved it. N5, the preview pane check, is still Diogo's to do and was due before Docs; it stays open and its cutout check is in the D-006 contract.
 - 2026-10-31 Chore (asked by Diogo, outside the D-005 plan): removed `app/src/androidTest` (only the template `ExampleInstrumentedTest.kt`), `testInstrumentationRunner`, the test dependencies in `app/build.gradle.kts` and their catalog entries (`junit`, `androidx-junit`, `androidx-espresso-core`, `ui-test-manifest`, `ui-test-junit4`, and three versions). This finishes c401a5d, which removed only `app/src/test`. `ui-tooling` and `ui-tooling-preview` stay for the previews. Verify: assembleDebug and lint pass, 0 errors, 13 warnings.
+- 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; `git push -u origin dev/Diogo` succeeded at 4608d48. Not merged into main.
