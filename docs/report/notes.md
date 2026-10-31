@@ -165,8 +165,8 @@ No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs
 ### Build setup
 - The Kotlin Serialization compiler plugin generates a serializer for each route; the `kotlinx-serialization-core` runtime provides the `@Serializable` annotation. Without the plugin the code still compiles but navigation fails at runtime ("Serializer for class ... is not found").
 - Under AGP 9 built-in Kotlin there is no `kotlin-android` plugin; the serialization plugin is applied like the Compose compiler plugin, with `version.ref = "kotlin"` so it always matches the compiler.
-- The runtime is pinned to 1.9.0, the line built for Kotlin 2.2, because the project uses Kotlin 2.2.10; newer releases are built with Kotlin 2.3 and may not be read cleanly. Lint flags both as `NewerVersionAvailable`; the warnings are accepted.
-- The runtime is declared explicitly rather than taken transitively from `navigation-compose`, so D-004 builds on its own and the direct use is documented. `navigation-compose` itself is added in D-006, which must check that it does not raise the runtime past 1.9.x (Gradle picks the highest requested version).
+- The runtime started at 1.9.0 and moved to 1.11.0 on 2026-10-31, to match the version used in class. It raises `kotlin-stdlib` to 2.3.20 at runtime, while the compiler stays at Kotlin 2.2.10; the build has no compiler warnings, so Kotlin was not changed. Lint flags both as `NewerVersionAvailable`; the warnings are accepted.
+- The runtime is declared explicitly rather than taken transitively from `navigation-compose`, so D-004 builds on its own and the direct use is documented. `navigation-compose` itself is added in D-006, which must check that it does not raise the runtime past 1.11.0 (Gradle picks the highest requested version).
 
 ### Improvement opportunities
 - Deep links to a ticket (for example from an FCM status-change notification) with `TicketDetailRoute`.
