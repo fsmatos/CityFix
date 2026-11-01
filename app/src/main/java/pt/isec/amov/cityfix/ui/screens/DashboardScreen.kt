@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
@@ -39,6 +41,7 @@ private const val DAY_MILLIS = 86_400_000L
 @Composable
 fun DashboardScreen(
     stats: DashboardStats,
+    onSeeTicketsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -123,6 +126,12 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        Button(
+            onClick = onSeeTicketsClick,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text(stringResource(R.string.dashboard_see_tickets))
+        }
     }
 }
 
@@ -197,7 +206,7 @@ private val sampleFigureStats = DashboardStats(
 @Composable
 private fun DashboardScreenPreview() {
     CityFixTheme {
-        DashboardScreen(previewStats)
+        DashboardScreen(previewStats, onSeeTicketsClick = {})
     }
 }
 
@@ -207,7 +216,7 @@ private fun DashboardScreenPreview() {
 @Composable
 private fun DashboardScreenEmptyPreview() {
     CityFixTheme {
-        DashboardScreen(DashboardStats())
+        DashboardScreen(DashboardStats(), onSeeTicketsClick = {})
     }
 }
 
@@ -216,6 +225,6 @@ private fun DashboardScreenEmptyPreview() {
 @Composable
 private fun DashboardScreenSampleFiguresPreview() {
     CityFixTheme {
-        DashboardScreen(sampleFigureStats)
+        DashboardScreen(sampleFigureStats, onSeeTicketsClick = {})
     }
 }

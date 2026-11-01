@@ -40,6 +40,7 @@
     <string name="dashboard_repair_time_none">Ainda sem reparações</string>
     <string name="dashboard_duration_less_than_hour">Menos de 1 hora</string>
     <string name="dashboard_duration_days_hours">%1$s e %2$s</string>
+    <string name="dashboard_see_tickets">Ver ocorrências ativas</string>
     <plurals name="dashboard_days">
         <item quantity="one">%d dia</item>
         <item quantity="many">%d dias</item>
