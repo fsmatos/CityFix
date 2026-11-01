@@ -7,7 +7,7 @@ Remote: not pushed
 | Start | done | 2026-11-01 | |
 | Plan | done | 2026-11-01 | revision 2 (strict brief): audience parameter, PUBLIC = header + media + coarse map; 6 slices; Q1-Q12 with defaults; Q2 header and Q7 map library/key for the person; Gate 1 pending |
 | Gate 1: plan approved | done | 2026-11-01 | approved revision 2: Q7 static placeholder (slice 6 dropped), Q2 category + situation for PUBLIC, DetailAudience in ui/screens |
-| Code | | | |
+| Code | done | 2026-11-01 | slices 1-5 committed (bb3f446..8e1b6f1); slice 6 dropped at Gate 1; build + lint at baseline |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -50,3 +50,33 @@ Append-only.
   - Handovers to Diogo: D-006 call with `audience = DetailAudience.PUBLIC`; projection change; optional sample attachments; manifest `INTERNET` if the manifest is his; Auth task maps the role to `DetailAudience`.
   - Gate 1 pending.
 - 2026-11-01: Gate 1 approved by the person (revision 2) with: Q7 static map placeholder, so no library, key or manifest change; slice 6 dropped. The gap against I.1.C's "mapa com zoom afastado" is accepted knowingly and goes into the docs and report. Q2: the PUBLIC header shows category + situation only (I.1.B fields); the status badge only for REGISTERED/OPERATOR. `DetailAudience` stays in `ui/screens/` (used only by ShowScreen and D-006's call). Other questions at their defaults. Decisions added to the top of 00-plan.
+- 2026-11-01: Code slice 1 `bb3f446` feat(F-005): add ShowScreen with audience, header and not-found state.
+  - Files: `ui/screens/ShowScreen.kt` (new: `DetailAudience`, `ShowScreen`, `TicketHeader`, `DescriptionSection`, `previewTicket`, previews), `utils/DateFormatting.kt` (`formatDateTime`), strings EN + PT (`ticket_not_found`, `ticket_detail_description_title`).
+  - Verify: assembleDebug passes; lint 0 errors, 13 warnings (same IDs as the baseline: 7 UnusedResources on `colors.xml`, 3 NewerVersionAvailable, AndroidGradlePluginVersion, GradleDependency, RedundantLabel).
+  - Greps: privacy pattern empty; `\.description\b` only in `DescriptionSection` (called only from the non-PUBLIC branch); no `import android` in `DateFormatting.kt`.
+  - Deviation (Gate 1 Q2): `TicketHeader(ticket, showStatus, modifier)` gets a `showStatus` flag, set by an exhaustive `when (audience)` (PUBLIC false, REGISTERED/OPERATOR true), so the badge is hidden for PUBLIC. The coding plan's `TicketHeader(ticket, modifier)` always showed the badge.
+  - The whole `previewTicket` (attachments, history, location) is added now so later slices only add sections.
+- 2026-11-01: Code slice 2 `96d4823` feat(F-005): show status history to registered citizens and operators.
+  - Files: `ShowScreen.kt` (`StatusHistorySection`, `HistoryRow`, divider + section in the REGISTERED/OPERATOR branch, `ShowScreenEmptyHistoryPreview` EN/PT, `ShowScreenPrivacyPreview` with raw `SampleTickets.all[1]`), strings EN + PT (`ticket_detail_history_title`, `ticket_detail_history_empty`).
+  - Verify: assembleDebug passes; lint 0 errors, 13 warnings (baseline IDs).
+  - Greps: privacy pattern empty; `\.statusHistory\b` once, in the non-PUBLIC branch; no `sortedBy`, `reversed` or `LazyColumn`.
+  - No deviation.
+- 2026-11-01: Code slice 3 `aa03eda` feat(F-005): show photo and video tiles in ShowScreen.
+  - Files: `ShowScreen.kt` (`MediaSection`, `MediaTile`; called after the header for PUBLIC and after the description for REGISTERED/OPERATOR), strings EN + PT (`ticket_media_title`, `ticket_media_empty`, `ticket_media_photo`, `ticket_media_video`, `ticket_media_unavailable`).
+  - Verify: assembleDebug passes; lint 0 errors, 13 warnings (baseline IDs).
+  - Greps: privacy pattern empty; `\.(file|thumbnail|uploadedById|uploadState)\b` empty.
+  - Small additions, not deviations in behaviour: two exhaustive `when (attachment.type)` (label resource and icon); "Not available yet" is centred under the tile.
+- 2026-11-01: Code slice 4 `45fe6f4` feat(F-005): add approximate-location section to ShowScreen.
+  - Files: `ui/components/CoarseLocationMap.kt` (new: heading, 200dp placeholder box with `LocationOn` and `cd_ticket_map`, caption, "Location not available" for (0, 0), previews EN/PT for both cases), `ShowScreen.kt` (calls it for every audience), strings EN + PT (`ticket_map_title`, `ticket_map_caption`, `ticket_map_unavailable`, `cd_ticket_map`).
+  - Verify: assembleDebug passes; lint 0 errors, 13 warnings (baseline IDs).
+  - Greps: privacy pattern empty; `latitude|longitude` absent from `ShowScreen.kt`, both string files and also `CoarseLocationMap.kt` (the placeholder only compares with `Coordinates()`); `\.location\b` exactly once in `ShowScreen.kt`; `\.description\b` only in `DescriptionSection`, `\.statusHistory\b` only in the non-PUBLIC branch.
+  - Deviations:
+    - Gate 1 Q7: the placeholder is the final map. No `LocalInspectionMode` branch (nothing else to render) and the KDoc says so; slice 6 dropped.
+    - Portrait layout restructured to read `ticket.location` once: `when (audience)` for the description, then `MediaSection` and `CoarseLocationMap` for all audiences, then a second exhaustive `when (audience)` for divider + history. Same order as the plan (non-PUBLIC: header, description, media, map, divider, history); `MediaSection` is now called once instead of in each branch.
+- 2026-11-01: Code slice 5 `8e1b6f1` feat(F-005): split ShowScreen into two panes in landscape.
+  - Files: `ShowScreen.kt` only.
+  - Verify: assembleDebug passes; lint 0 errors, 13 warnings (baseline IDs; no `ModifierParameter`, no `MissingTranslation`).
+  - Greps (final file): privacy pattern and `\.(file|thumbnail|uploadState)\b` empty; no `latitude|longitude`; `\.location\b` once (in `LocationPane`); `\.description\b` only in `DescriptionSection` and `\.statusHistory\b` only in the non-PUBLIC branch of `LocationPane`; `currentStatus` read only in `TicketHeader` under `showStatus`, which is `true` only for REGISTERED/OPERATOR.
+  - Deviation: instead of writing the sections twice (portrait column and landscape panes), two private composables `DetailsPane` and `LocationPane` (each `Column(modifier, spacedBy(16.dp))` with one exhaustive `when (audience)`) are used by both orientations: portrait stacks them in one scrolling column, landscape puts them in a `Row` with `weight(1f).fillMaxHeight().verticalScroll(...)`. Same content and order as the plan, and it keeps `ticket.location` read once. `showStatus` is now set in `DetailsPane`'s `when (audience)` (PUBLIC `false`, others `true`), no longer as a separate value in `ShowScreen`.
+  - Slice 6 (real map) dropped at Gate 1 (Q7: static placeholder). Known gap against brief I.1.C ("mapa com zoom afastado"): no real map; to record in the docs and the report.
+  - Handovers to Diogo (from 00-plan Q10, unchanged): (a) D-006 calls `ShowScreen(ticket = tickets.firstOrNull { it.id == id }, audience = DetailAudience.PUBLIC, modifier = Modifier.padding(innerPadding))`; (b) `toAnonymousView()` should also blank `description` and clear `statusHistory` (amend decision 0006; affects the expanded `TicketCard` and F-003 Q2); (c) optional: IMAGE and VIDEO attachments on a visible sample so the tiles show on a device; (e) the Auth task maps the role to `DetailAudience`. (d) (manifest `INTERNET`) no longer needed: no map library.
