@@ -59,37 +59,38 @@ class ReportViewModel : ViewModel() {
     }
 
     /**
-     * Sets the error of every missing field. Returns the data when valid and not yet submitted
+     * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
+     * so isValid is the one rule that decides. Returns the data when valid and not yet submitted
      * (then locks), else null.
      */
     fun submit(): ReportSubmission? {
         val state = _uiState.value
         if (state.submitted) return null
 
+        // Locals so the null checks below smart-cast (no !!).
         val situation = state.situation
         val scope = state.scope
         val categoryMissing = state.categoryId.isBlank() ||
             state.categories.none { it.id == state.categoryId }
-        val descriptionMissing = state.description.isBlank()
 
-        if (categoryMissing || situation == null || descriptionMissing || scope == null) {
-            _uiState.value = state.copy(
-                categoryError = if (categoryMissing) R.string.report_error_category else null,
-                situationError = if (situation == null) R.string.report_error_situation else null,
-                descriptionError =
-                    if (descriptionMissing) R.string.report_error_description else null,
-                scopeError = if (scope == null) R.string.report_error_scope else null,
-                showErrorSummary = true,
-            )
+        val checked = state.copy(
+            categoryError = if (categoryMissing) R.string.report_error_category else null,
+            situationError = if (situation == null) R.string.report_error_situation else null,
+            descriptionError =
+                if (state.description.isBlank()) R.string.report_error_description else null,
+            scopeError = if (scope == null) R.string.report_error_scope else null,
+        )
+        if (!checked.isValid || situation == null || scope == null) {
+            _uiState.value = checked.copy(showErrorSummary = true)
             return null
         }
 
-        _uiState.value = state.copy(submitted = true, showErrorSummary = false, submitError = null)
+        _uiState.value = checked.copy(submitted = true, showErrorSummary = false, submitError = null)
         return ReportSubmission(
-            categoryId = state.categoryId,
-            categoryName = state.categoryName,
+            categoryId = checked.categoryId,
+            categoryName = checked.categoryName,
             situation = situation,
-            description = state.description.trim(),
+            description = checked.description.trim(),
             scope = scope,
         )
     }

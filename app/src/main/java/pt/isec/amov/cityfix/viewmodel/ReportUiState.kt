@@ -10,7 +10,9 @@ import pt.isec.amov.cityfix.model.Situation
  * Errors are string resource ids, so the ViewModel holds no text and they are localised.
  * Attachments come in F-007 (P09): add `attachments` and `@StringRes attachmentsError` after
  * `scope`, and `attachments.isNotEmpty() && attachmentsError == null` to isValid
- * ("deve ser carregada uma imagem/vídeo"). Until then a report has no image/video (I.2.E gap).
+ * ("deve ser carregada uma imagem/vídeo"); ReportViewModel.submit() must also set
+ * `attachmentsError` when the list is empty. submit() gates on isValid, so that rule is enough
+ * to block the submit. Until then a report has no image/video (I.2.E gap).
  */
 data class ReportUiState(
     /** Active categories only (I.3.E). */

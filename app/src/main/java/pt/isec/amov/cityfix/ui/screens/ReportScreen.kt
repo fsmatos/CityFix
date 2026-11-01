@@ -24,6 +24,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -237,8 +238,9 @@ private fun CategoryDropdown(
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val hasCategories = categories.isNotEmpty()
-    val supportingRes = error ?: if (hasCategories) null else R.string.report_no_categories
-    val errorText = error?.let { stringResource(it) }
+    // With no categories the reason wins over "Choose a category." (I.3.E).
+    val supportingRes = if (hasCategories) error else R.string.report_no_categories
+    val supportingText = supportingRes?.let { stringResource(it) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -253,11 +255,15 @@ private fun CategoryDropdown(
             label = { Text(stringResource(R.string.report_category_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             isError = error != null,
-            supportingText = supportingRes?.let { { Text(stringResource(it)) } },
+            supportingText = supportingText?.let { { Text(it) } },
+            // The disabled default (38% alpha) is too faint for the no-categories message.
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
             modifier = Modifier
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = hasCategories)
                 .fillMaxWidth()
-                .semantics { if (errorText != null) error(errorText) },
+                .semantics { if (error != null && supportingText != null) error(supportingText) },
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -411,6 +417,11 @@ private val errorState = emptyState.copy(
 
 private val noCategoriesState = ReportUiState()
 
+private val noCategoriesSubmittedState = noCategoriesState.copy(
+    categoryError = R.string.report_error_category,
+    showErrorSummary = true,
+)
+
 private val submitFailedState = filledState.copy(submitError = R.string.report_error_not_created)
 
 @Composable
@@ -459,6 +470,13 @@ private fun ReportErrorPreview() {
 @Composable
 private fun ReportNoCategoriesPreview() {
     ReportPreview(noCategoriesState)
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ReportNoCategoriesSubmittedPreview() {
+    ReportPreview(noCategoriesSubmittedState)
 }
 
 @Preview(showBackground = true)
