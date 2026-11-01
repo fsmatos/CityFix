@@ -80,3 +80,8 @@ Append-only.
     - Small addition: a private `ErrorText(@StringRes)` for the summary and the submit error (same style and live region, written once).
   - As planned: the category supporting text is the error when there is one, else "No categories are available." for an empty list.
   - By hand (Android Studio): previews (order, nothing selected, EN/PT errors, disabled dropdown with the message); Layout Inspector / accessibility: `error` semantics, headings, one node per radio row.
+- 2026-11-01: Code slice 3 `1a28697` feat(F-006): note pending photo and video attachments in ReportScreen.
+  - Files: `ReportScreen.kt` (private `MediaPendingSection`: `ticket_media_title` heading + the note in `bodyMedium`/`onSurfaceVariant`, nothing clickable; called between `DescriptionField` and the visibility group), strings EN + PT (`report_media_pending`).
+  - Not part of `isValid` (the `ReportUiState` KDoc says where F-007 adds it). Known gap against I.2.E ("deve ser carregada uma imagem/vídeo"): a report can be submitted without image/video until F-007.
+  - Verify: assembleDebug passes (no Kotlin `w:` lines); lint 0 errors, 13 warnings (baseline IDs).
+  - No deviation. By hand: the note shows in every portrait preview.

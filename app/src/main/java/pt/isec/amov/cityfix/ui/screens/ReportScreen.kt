@@ -1,9 +1,11 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.res.Configuration
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -32,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -93,16 +96,74 @@ fun ReportContent(
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scroll = rememberScrollState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // Hoisted so the scroll position survives rotation; portrait uses leftScroll.
+    val leftScroll = rememberScrollState()
+    val rightScroll = rememberScrollState()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
-            .verticalScroll(scroll)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            ChoicesPane(
+                state = state,
+                onCategorySelected = onCategorySelected,
+                onSituationSelected = onSituationSelected,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .imePadding()
+                    .verticalScroll(leftScroll),
+            )
+            DetailsPane(
+                state = state,
+                onDescriptionChange = onDescriptionChange,
+                onScopeSelected = onScopeSelected,
+                onSubmitClick = onSubmitClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .imePadding()
+                    .verticalScroll(rightScroll),
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(leftScroll)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            ChoicesPane(
+                state = state,
+                onCategorySelected = onCategorySelected,
+                onSituationSelected = onSituationSelected,
+            )
+            DetailsPane(
+                state = state,
+                onDescriptionChange = onDescriptionChange,
+                onScopeSelected = onScopeSelected,
+                onSubmitClick = onSubmitClick,
+            )
+        }
+    }
+}
+
+/** Required note, category and situation: the whole form in portrait, the left pane in landscape. */
+@Composable
+private fun ChoicesPane(
+    state: ReportUiState,
+    onCategorySelected: (Category) -> Unit,
+    onSituationSelected: (Situation) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = stringResource(R.string.report_required_note),
             style = MaterialTheme.typography.bodyMedium,
@@ -121,6 +182,19 @@ fun ReportContent(
             error = state.situationError,
             onSelect = onSituationSelected,
         )
+    }
+}
+
+/** Description, media note, visibility, errors and Submit: the right pane in landscape. */
+@Composable
+private fun DetailsPane(
+    state: ReportUiState,
+    onDescriptionChange: (String) -> Unit,
+    onScopeSelected: (Scope) -> Unit,
+    onSubmitClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         DescriptionField(
             value = state.description,
             error = state.descriptionError,
@@ -354,21 +428,27 @@ private fun ReportPreview(state: ReportUiState) {
 }
 
 @Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, locale = "pt", device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 private fun ReportEmptyPreview() {
     ReportPreview(emptyState)
 }
 
 @Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, locale = "pt", device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 private fun ReportFilledPreview() {
     ReportPreview(filledState)
 }
 
 @Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, locale = "pt", device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 private fun ReportErrorPreview() {
     ReportPreview(errorState)
