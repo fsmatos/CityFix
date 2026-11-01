@@ -52,14 +52,22 @@ import java.util.Locale
 
 private const val DAY_MILLIS = 86_400_000L
 
-/** Who is looking at the detail; each value is a different view in the brief (I.1.C, I.2.E, I.3.E). */
+/**
+ * Who is looking at the detail; each value is a different view in the brief.
+ * PUBLIC: anonymous users (I.1.C), and any registered citizen viewing a public ticket they did not
+ * create or follow (I.2.D, "acesso às funcionalidades do utilizador anónimo").
+ * REGISTERED: the registered citizen who created or follows this ticket (I.2.E, "ocorrências (do
+ * utilizador)").
+ * OPERATOR: any municipal operator (I.3.E).
+ */
 enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 
 /**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
- * PUBLIC (brief I.1.C): category, situation, photo/video tiles and the approximate location only.
- * REGISTERED and OPERATOR also get the status badge, "Reported on", the description and the status
- * history. Never reads author ids, follower ids, messages, responsible ids, justifications or
+ * Every audience gets the header (category, situation, status badge), the photo/video tiles and the
+ * approximate location. The header follows the Gate 1 Q2 decision as revised at review: brief I.1.B's
+ * list fields plus the status badge already shown on the public list card.
+ * REGISTERED and OPERATOR also get "Reported on", the description and the status history. Never reads author ids, follower ids, messages, responsible ids, justifications or
  * uploader ids; the anonymous projection happens upstream (decision 0006).
  * Portrait: one scrolling column. Landscape: two panes side by side, each scrolling on its own.
  */
@@ -90,6 +98,10 @@ fun ShowScreen(
         return
     }
 
+    // Hoisted so both orientations share the same call sites and the position survives rotation
+    val detailsScroll = rememberScrollState()
+    val locationScroll = rememberScrollState()
+
     if (isLandscape) {
         Row(
             modifier = modifier
@@ -104,7 +116,7 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(detailsScroll),
             )
             LocationPane(
                 ticket = ticket,
@@ -113,14 +125,14 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(locationScroll),
             )
         }
     } else {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(detailsScroll)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -142,13 +154,11 @@ private fun DetailsPane(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Gate 1 Q2 (revised at review): I.1.B's list fields plus the status badge, for every audience
+        TicketHeader(ticket)
         when (audience) {
-            // Brief I.1.C: anonymous users see category and situation only, no status
-            DetailAudience.PUBLIC -> TicketHeader(ticket, showStatus = false)
-            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
-                TicketHeader(ticket, showStatus = true)
-                DescriptionSection(ticket, locale)
-            }
+            DetailAudience.PUBLIC -> Unit
+            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
         }
         MediaSection(ticket.attachments)
     }
@@ -178,11 +188,10 @@ private fun LocationPane(
     }
 }
 
-/** Category and situation; the status badge only when [showStatus] is true. */
+/** Category (the page heading), situation and status badge. */
 @Composable
 private fun TicketHeader(
     ticket: Ticket,
-    showStatus: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -192,14 +201,13 @@ private fun TicketHeader(
         Text(
             text = ticket.categoryName.ifBlank { stringResource(R.string.ticket_no_category) },
             style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
         )
         Text(
             text = stringResource(situationLabelRes(ticket.situation)),
             style = MaterialTheme.typography.bodyMedium,
         )
-        if (showStatus) {
-            StatusBadge(ticket.currentStatus)
-        }
+        StatusBadge(ticket.currentStatus)
     }
 }
 
@@ -345,7 +353,7 @@ private fun MediaTile(
             modifier = Modifier
                 .size(96.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             // Decorative: the label below says what it is
@@ -425,6 +433,7 @@ private fun ShowScreenFullPreview() {
 @Preview(showBackground = true)
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, locale = "pt", device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 private fun ShowScreenNotFoundPreview() {
     CityFixTheme {
@@ -449,6 +458,6 @@ private fun ShowScreenEmptyHistoryPreview() {
 @Composable
 private fun ShowScreenPrivacyPreview() {
     CityFixTheme {
-        ShowScreen(SampleTickets.all[1], audience = DetailAudience.PUBLIC)
+        ShowScreen(SampleTickets.all.first { it.id == "sample-2" }, audience = DetailAudience.PUBLIC)
     }
 }
