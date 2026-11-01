@@ -8,7 +8,7 @@ Remote: not pushed
 | Plan | done | 2026-10-30 | 00-plan, 01-coding-plan, 03-docs-plan; 3 slices; Q1-Q7 decided (revised 2026-10-30) |
 | Gate 1: plan approved | done | 2026-11-01 | approved as revised (Q4 "N of M issues", Q5 button, no guards) |
 | Code | done | 2026-11-01 | 3 slices: b52af64, 47a915a, b4e6a81; verify green (lint baseline 0 errors, 13 warnings) |
-| Review | | | |
+| Review | done | 2026-11-01 | approve with 1 should-fix (S1 PT landscape preview), 5 nits; 0 blocking; build pass, lint 0 errors, 13 warnings (baseline) |
 | Docs | | | |
 | Pushed | | | |
 | Merged | | | |
@@ -51,3 +51,14 @@ Append-only.
 - 2026-11-01: Slice 2 done (47a915a): landscape `Row(fillMaxWidth().height(IntrinsicSize.Min))` with each card `weight(1f).fillMaxHeight()`, portrait unchanged, orientation from `LocalConfiguration`. Verify: assembleDebug pass; lint 0 errors, 13 warnings (baseline). Plan greps still empty. Choice (allowed by the plan): first tried a private `StatCards(..., cardModifier)` helper, but lint added a `ModifierParameter` warning (14 warnings) and renaming it to `modifier` would apply one modifier to three children; switched to the plan's other option, three `StatCard` calls in each branch, which brought lint back to the baseline.
 - 2026-11-01: Slice 3 done (b4e6a81): `onSeeTicketsClick: () -> Unit` before `modifier`, a centred M3 `Button` "See active issues" / "Ver ocorrências ativas" below the stats, `dashboard_see_tickets` in both string files (placed with the Dashboard `<string>`s, before the plurals), previews pass `onSeeTicketsClick = {}`. Verify: assembleDebug pass; lint 0 errors, 13 warnings (baseline). Plan greps empty; key present in both string files.
 - 2026-11-01: Code phase done: 3 slices, 3 commits (b52af64, 47a915a, b4e6a81). Not pushed. Manual checks left for the person in Android Studio: preview texts against the 01-coding-plan table (EN and PT), landscape row with equal-height cards and no clipping, TalkBack reading each card as one item, interactive preview tap and 48dp button. Handover to D-006 (Diogo): wire `onSeeTicketsClick` to `navigate(TicketListRoute)` and pass `innerPadding`.
+- 2026-11-01: Review done (review.md), range 03f9615..b4e6a81. Verdict: approve with one should-fix.
+  - Reviewer ran assembleDebug (pass) and lint: 0 errors, 13 warnings, the same baseline IDs, none from the dashboard keys.
+  - Plan greps (recompute and guard patterns) are empty. No Diogo files changed (`model/`, `viewmodel/`, `data/`, `ui/navigation/` untouched).
+  - Both deviations accepted: the `Int` conversion before the `when`, and three `StatCard` calls per branch instead of a helper.
+  - S1: no PT landscape preview, so slice 2's PT wrap check cannot be done. Fix: add the PT landscape `@Preview` to `DashboardScreenPreview`.
+  - Nits:
+    - N1: the stats count private tickets but the button leads to the public list. Rename the button or document the difference (person's call, Q5 wording).
+    - N2: `remember(locale)` the `NumberFormat`s.
+    - N3: optional edge-case preview (less than 1 hour, 1 of 1 issue).
+    - N4: the 48dp is the touch target, the button is 40dp visually; fix the wording in the docs.
+    - N5: percent HALF_EVEN rounding at the extremes; document it.
