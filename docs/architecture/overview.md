@@ -155,7 +155,7 @@ Code: `ui/navigation/MainTopAppBar.kt`. No decision record (D-005 docs plan): th
 - Theme: the course template trio in `ui/theme/` (`Color.kt`, `Theme.kt`, `Type.kt`). Light only (dark mode is not required by the brief): `CityFixTheme` has one `lightColorScheme` with primary `CityFixBlue`, secondary `CityFixTeal`, tertiary `CityFixOrange`. `Type.kt` stays the template. Screens read `MaterialTheme.colorScheme` and `MaterialTheme.typography`, never raw colours.
 - `dynamicColor` defaults to `false`, the one change to the template: on Android 12+ dynamic colour would replace the CityFix colours with the wallpaper palette.
 - `MainActivity` calls `enableEdgeToEdge` with `SystemBarStyle.light(TRANSPARENT, TRANSPARENT)` for status and navigation bars. The default style follows the device, so in device dark mode it would draw light icons over the light-only UI; the light style keeps them dark and readable.
-- Strings: English default in `values/strings.xml`, Portuguese in `values-pt/strings.xml`, same snake_case keys; the device language picks the file, falling back to English. Composables use `stringResource(R.string.x)`, no literals. `app_name` is `translatable="false"`. Each task adds its strings with the screen that uses them, EN and PT in the same commit (lint `MissingTranslation` catches gaps).
+- Strings: English default in `values/strings.xml`, Portuguese in `values-pt/strings.xml`, same snake_case keys; the device language picks the file, falling back to English. Composables use `stringResource(R.string.x)`, no literals. `app_name` is `translatable="false"`. Each task adds its strings with the screen that uses them, EN and PT in the same commit (lint `MissingTranslation` catches gaps). Plurals use `<plurals>` with `pluralStringResource(R.plurals.x, count, args...)` (first added by F-004): EN needs `one`/`other`, PT needs `one`/`many`/`other` (`many` equal to `other`; lint accepts it, with no `MissingQuantity`/`UnusedQuantity`). PT `one` also covers 0 (CLDR `i = 0..1`), so a plural that could show 0 would read "0 reparação"; no current call site passes 0. A plural whose numbers are pre-formatted (`dashboard_active_of_total`) uses `%1$s`/`%2$s`, while the quantity argument stays an `Int`.
 - Sizes: `dp` for layout, `sp` for text (so text follows the font scale).
 - Touch targets: 48dp through Material 3 components (`Button`, `IconButton`, ...), which enforce the minimum size; no custom size constants.
 - `contentDescription`: meaningful icons use `stringResource(...)`; `null` only for decorative icons next to text that already says the same.
@@ -190,6 +190,29 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
     )
     ```
     In landscape on a device with a camera cutout, check that no card sits under the notch; add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if needed (F-003 review N3).
+- `DashboardScreen(stats, onSeeTicketsClick: () -> Unit, modifier)` (`ui/screens/DashboardScreen.kt`, F-004): the anonymous dashboard behind `DashboardRoute`, the start destination (brief I.1.A). No decision record (Gate 1 kept the defaults except Q4).
+  - Formats `DashboardStats` and recomputes nothing: it never reads a `Ticket`. It trusts the D-002 contract (`activeRatio` in 0.0..1.0 and never NaN, 0.0 with no tickets; `averageRepairTimeMillis` `null` when nothing is resolved and never negative) and adds no guard of its own (Gate 1: one owner per rule). Any change to `DashboardStats` must keep that contract, or the fault shows directly in the UI (for example "NaN" in the zero-ticket preview).
+  - Three `Card`s in the brief's order:
+    - average repair time: whole days and hours, both truncated, with plurals ("3 days", "1 day and 4 hours", "5 hours", "Less than 1 hour"), or "No repairs yet" when `null`. Supporting line "Based on N repairs" (`resolvedTickets`) only when the average is not `null`;
+    - total issues: locale-aware integer `NumberFormat`;
+    - % active (label "Active issues (not yet repaired)", because RESOLVED is not active): locale-aware percent `NumberFormat` on `stats.activeRatio` (EN "67%", PT "67 %"). Supporting line "N of M issues" (`activeTickets` of `totalTickets`, numbers in the same integer format as the total card, pluralised on `totalTickets`), omitted when `totalTickets == 0`. With zero tickets the card shows "0%" (Q3).
+  - The percent rounds to whole numbers (HALF_EVEN), so 1 of 300 shows "0%" and 299 of 300 shows "100%"; the "N of M issues" line underneath gives the exact figure (review N5). Use `maximumFractionDigits = 1` if a finer value is ever wanted.
+  - Locale from `LocalConfiguration.current.locales[0]` (API 24), not `Locale.getDefault()`, so the `locale = "pt"` preview and the device agree.
+  - Layout: a scrolling `Column` (16dp padding, 12dp spacing). Portrait stacks the cards full width; landscape puts them in one `Row(height(IntrinsicSize.Min))` with `weight(1f).fillMaxHeight()` cards, so they have equal widths and heights (Q6). Orientation from `LocalConfiguration`. `verticalScroll` keeps everything reachable at large font scales, and `rememberScrollState` (UI element state, the only `remember` in the screen) keeps the position across rotation.
+  - Each card has `semantics(mergeDescendants = true)`, so TalkBack reads "label, value, supporting line" as one item.
+  - A centred M3 `Button` "See active issues" / "Ver ocorrências ativas" below the cards calls `onSeeTicketsClick` (Q5). It is 40dp tall visually, with a 48dp minimum touch target (M3 `minimumInteractiveComponentSize`) (review N4).
+  - **Known difference (review N1, wording kept by the person):** the figures count every ticket, private ones included (decision 0005), while the button opens the list of PUBLIC active tickets (`publicActive()`). Today they match because all samples are PUBLIC; once private tickets exist, "12 of 30 issues" can lead to a list of 9. At the defence: the brief's "nº total de ocorrências" is not limited to public ones, while the anonymous list is. If this confuses users, rename the button "See public issues" / "Ver ocorrências públicas" (`dashboard_see_tickets`).
+  - Previews (private data, `CityFixTheme`): `previewStats` (30 / 12 / 8, 3 days 4 hours) in portrait, landscape and PT landscape; `DashboardStats()` in portrait, landscape and PT; the sample figures (3 / 2 / 1, exactly 3 days) in EN and PT; a single-ticket preview `DashboardStats(1, 0, 1, 30 min)` in EN and PT for "Less than 1 hour", "Based on 1 repair" and "0 of 1 issue". It uses 0 active of 1, not 1 of 1, because a resolved ticket is never active (D-002 contract). The "hours only" branch ("5 hours") has no preview and is checked by reading the code.
+  - No stateful wrapper (Q1, as in F-003): D-006 collects `vm.stats`.
+  - **Contract for D-006 (Q5 handover to Diogo):** D-005's top bar has no list action, so dashboard -> list goes through this button.
+    ```kotlin
+    DashboardScreen(
+        stats = vm.stats.collectAsStateWithLifecycle().value,
+        onSeeTicketsClick = { navController.navigate(TicketListRoute) },
+        modifier = Modifier.padding(innerPadding),
+    )
+    ```
+    As for `ListScreen`, check landscape on a device with a camera cutout and add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if a card sits under the notch (F-003 review N3).
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.

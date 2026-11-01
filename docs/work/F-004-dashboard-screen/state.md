@@ -9,7 +9,7 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-11-01 | approved as revised (Q4 "N of M issues", Q5 button, no guards) |
 | Code | done | 2026-11-01 | 3 slices: b52af64, 47a915a, b4e6a81; verify green (lint baseline 0 errors, 13 warnings) |
 | Review | done | 2026-11-01 | approve with 1 should-fix (S1 PT landscape preview), 5 nits; 0 blocking; build pass, lint 0 errors, 13 warnings (baseline) |
-| Docs | | | |
+| Docs | done | 2026-11-01 | overview "Screens" + Strings/plurals note; report notes F-004; no ADR; acceptance checks left unticked (manual checks pending) |
 | Pushed | | | |
 | Merged | | | |
 
@@ -63,3 +63,9 @@ Append-only.
     - N4: the 48dp is the touch target, the button is 40dp visually; fix the wording in the docs.
     - N5: percent HALF_EVEN rounding at the extremes; document it.
 - 2026-11-01: review fixes (0338f1e): S1 PT landscape preview added to `DashboardScreenPreview`; N3 `DashboardScreenSingleTicketPreview` (EN + PT) with `DashboardStats(1, 0, 1, 30 min)` for "Less than 1 hour", "Based on 1 repair", "0 of 1 issue". Deviation from the review suggestion `(1, 1, 1, ...)`: 1 active and 1 resolved out of 1 ticket breaks the D-002 contract (resolved tickets are not active). "N hours" alone still has no preview. N2 (`remember` the formatters) skipped by the person: little gain, and keeps the screen free of `remember` apart from the scroll state. N1 (button counts public tickets, figures include private ones): wording kept, to be explained in the docs; N4, N5 go to the docs phase. Verify: assembleDebug pass, lint 0 errors, 13-warning baseline.
+- 2026-11-01: Docs phase done (03-docs-plan).
+  - `docs/architecture/overview.md`, "UI foundation" Strings bullet: plurals note (`pluralStringResource`, EN `one`/`other`, PT `one`/`many`/`other` accepted by lint, PT `one` covers 0, `%1$s`/`%2$s` for pre-formatted numbers with an `Int` quantity).
+  - `docs/architecture/overview.md`, "Screens": `DashboardScreen` entry after `ListScreen` (signature, trusted D-002 contract and no guards, cards and supporting lines, percent rounding N5, locale, layout, semantics, button 40dp visual / 48dp touch target N4, previews incl. the 0-of-1 single-ticket preview, known figures-vs-public-list difference N1, D-006 contract with `onSeeTicketsClick -> navigate(TicketListRoute)` and the cutout inset note). "Top bar (D-005)" left intact.
+  - `docs/report/notes.md`: new "F-004: DashboardScreen" section (technical solutions, options chosen incl. N2 skipped with reason, rejected, known difference N1, verification, improvement opportunities).
+  - No ADR (Gate 1 picked no non-default with lasting impact). Task file acceptance checks left unticked: manual Android Studio checks are pending.
+  - Q5 handover to Diogo (D-006): wire `onSeeTicketsClick` to `navigate(TicketListRoute)` and pass `innerPadding`; recorded in the overview contract.

@@ -273,3 +273,56 @@ No decision record (docs plan). Code: `ui/navigation/MainTopAppBar.kt`, `res/val
 
 ### Improvement opportunities
 - Move to Material Symbols vectors, as the icons library is no longer updated.
+
+## F-004: DashboardScreen
+No decision record (Gate 1 kept the defaults except Q4). Code: `ui/screens/DashboardScreen.kt`, the `dashboard_*` strings and plurals in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens". Relies on decision [0005](../decisions/0005-tickets-list-rules.md) for what the figures count.
+
+### Technical solutions
+- Stateless screen `DashboardScreen(stats, onSeeTicketsClick, modifier)` that only formats `DashboardStats`; the figures are computed once, upstream, by `TicketsList.stats()` and exposed by `TicketsViewModel.stats`.
+- Locale-aware `NumberFormat` (integer for the total, percent for % active), with the locale taken from `LocalConfiguration`, so the `locale = "pt"` preview and the device agree ("67%" in EN, "67 %" in PT). `Locale.getDefault()` would ignore the preview locale (F-002 review S3).
+- Average repair time split into whole days and hours (both truncated) and shown with Android plurals ("3 days", "1 day and 4 hours", "5 hours", "Less than 1 hour"); `null` shows "No repairs yet" instead of "0 days". These are the first `<plurals>` in the project. PT needs `one`/`many`/`other`, and the PT `one` category also covers 0, which no call site passes.
+- No defensive guards in the UI: the screen relies on the model's documented contract (`activeRatio` never NaN and 0.0 with no tickets, a `null` average when nothing is resolved). Each rule has one owner, and a model regression shows up in the zero-ticket preview instead of being hidden.
+- Supporting lines: "Based on N repairs" under the average, and "N of M issues" under % active. The second is pluralised on `totalTickets`, but its numbers are pre-formatted strings (`%1$s`/`%2$s`) from the same integer format as the total card, so "M" always looks like the total above it.
+- The percent rounds to whole numbers, so 1 of 300 shows "0%" and 299 of 300 shows "100%"; the "N of M issues" line gives the exact figure, which is a reason it exists (review N5).
+- Landscape: one `Row` with `height(IntrinsicSize.Min)` and `weight(1f).fillMaxHeight()` cards, so the three cards have equal widths and heights even when a PT label wraps or only some cards have a supporting line.
+- `semantics(mergeDescendants = true)` on each card, so TalkBack reads label, value and supporting line as one item.
+- `verticalScroll` on the root, so nothing is clipped at large font scales or in landscape.
+- The M3 `Button` is 40dp tall visually and gets a 48dp minimum touch target from `minimumInteractiveComponentSize` (review N4).
+
+### Options chosen
+- Q1: no stateful wrapper, as in F-003; D-006 collects `vm.stats`.
+- Q2: whole days and hours, truncated, with plurals.
+- Q3: "0%" with zero tickets, because the model defines `activeRatio = 0.0`; the "0" total next to it makes the meaning clear.
+- Q4 (changed from the default): both supporting lines; "N of M issues" omitted with zero tickets. The % label says "not yet repaired", because RESOLVED is not active.
+- Q5: a "See active issues" button calling `onSeeTicketsClick`, because D-005's top bar has no list action. D-006 wires it to `navigate(TicketListRoute)`.
+- Q6: a row of three cards in landscape, orientation from `LocalConfiguration` (as in P07).
+- Q7: private preview data: `previewStats` (30 / 12 / 8), the zero state, the sample figures (3 / 2 / 1) and a single-ticket state (1 / 0 / 1, 30 min) for the singular plurals and "Less than 1 hour". The single-ticket preview has 0 active of 1, not 1 of 1, because a resolved ticket is never active (D-002 contract); a review suggestion of 1 of 1 was adjusted for that reason.
+- Formatting stays in the screen, not in `utils/`: it needs string resources, and `utils/` must stay pure Kotlin because `model/` imports it (decision 0005).
+- `NumberFormat`s are created on each composition, without `remember(locale)` (review N2, skipped by the person): the formatters are cheap, the screen recomposes only when `stats` or the configuration changes, and the screen stays free of `remember` apart from the scroll state, which is easier to explain.
+- Three explicit `StatCard` calls per orientation instead of a helper taking a `cardModifier`: the helper added a `ModifierParameter` lint warning, and one shared `modifier` would have been applied to three children.
+
+### Rejected
+- Decimal days ("3.2 days"): awkward plural rules and less clear than days and hours.
+- `FlowRow` for the cards: less predictable and harder to explain than choosing Column or Row.
+- Window size classes / `BoxWithConstraints` in phase 1: orientation is enough for a phone.
+- Recomputing stats in the screen from tickets: duplicates decision 0005 and the screen would need every ticket, private ones included.
+- A duplicate NaN/clamp guard in the UI: hides model bugs, two owners for one rule.
+- "0 of 0 issues" with zero tickets: repeats the total and the percent.
+- "—" for % active with zero tickets: the model documents 0.0.
+
+### Known difference: figures vs list (review N1)
+- The figures count every ticket, private ones included (decision 0005: the brief says "nº total de ocorrências"), while "See active issues" opens the public active list (`publicActive()`). With the PUBLIC-only samples they match; once private tickets exist, "12 of 30 issues" can lead to a list of 9.
+- The person kept the button wording (Gate 1, Q5). It is recorded in the overview as a handover and an answer for the defence.
+
+### Verification
+- F-004 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no `MissingTranslation`/`MissingQuantity`), by the plan's greps (no recomputing, no guards) and by code review, which traced the duration maths. The manual Android Studio checks (previews in EN/PT and landscape, TalkBack, the interactive tap) are still pending, so the task's acceptance checks are not ticked yet.
+
+### Improvement opportunities
+- Align the figures and the button: rename it "See public issues", or show public-only figures next to the totals, or explain the difference in the UI.
+- A median repair time, or excluding outliers.
+- Small charts (active vs resolved).
+- Per-category figures.
+- Window-size-based layouts for tablets (`WindowSizeClass`).
+- One decimal in the percent (`maximumFractionDigits = 1`) if whole-number rounding hides small values.
+- An aggregate Firestore stats document (or `count()` aggregation allowed by the rules) for anonymous users in the Firebase phase, since they cannot read private tickets (decision 0005).
+- Display-cutout insets in landscape, as for the list.
