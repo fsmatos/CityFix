@@ -377,3 +377,57 @@ Decision: [0007](../decisions/0007-ticket-detail-by-audience.md) (amends [0006](
 - Clustering coarse markers on a future overview map (projected tickets collapse onto one grid point).
 - `formatDate` should take a locale, like `formatDateTime`, with `TicketCard` passing the `LocalConfiguration` locale; today a PT preview of the card and of the detail can format dates in different languages (review N7).
 - Merge the map description and caption into one TalkBack item, and make the description honest while there is no map (review N6, skipped).
+
+## F-006: ReportScreen
+Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `ui/screens/ReportScreen.kt`, `viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, the `report_*` and `scope_*` strings in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Report form (F-006)", "Screens" and "Shared components".
+
+### Technical solutions
+- **The P08 pattern.** One immutable `ReportUiState` with a computed `isValid`, exposed by a `ReportViewModel` as a `StateFlow`; events in as plain functions; the ViewModel created per route with `viewModel()`, so the draft survives rotation and is discarded when the user leaves. Plan revision 1 used `rememberSaveable` in the screen; Gate 1 moved to the class pattern (Diogo's doc "Dicas da aula P08 para o CityFix").
+- **Errors as `@StringRes` ids in the state.** The ViewModel never holds text, the messages are localised by the screen, and the ViewModel has no Compose or Context import (checked by grep).
+- **Live per-field validation.** The description error follows every keystroke; choosing a category, situation or visibility clears its error; Submit sets the error of every field still missing and shows a summary. An untouched form shows no red until the user tries to submit.
+- **One gate.** `submit()` builds the state with every field's error and then checks `isValid` (P08 slide 15). The first version repeated the rules in `submit()`; the review (S2) noticed that F-007 would then add the attachment rule to `isValid` only and a report without media would still pass. A good example for the defence of "one owner per rule".
+- **Double-submit lock and the `onSubmitResult` round trip.** `submit()` returns the `ReportSubmission` and sets `submitted`; the caller creates the ticket with `TicketsViewModel.reportTicket` and returns whether it worked; `onSubmitResult(false)` unlocks and shows "could not be submitted", `true` keeps the lock. The ViewModel never references the other ViewModel, and no factory is needed.
+- **Nothing preselected.** `Situation?` and `Scope?` start `null`, so the user must choose (I.2.E "preenchimento obrigatório") and a default never lands in the 10 m grouping key or publishes a report by accident.
+- **Active categories only (I.3.E).** `data/SampleCategories` has three active categories and an inactive "Graffiti"; the ViewModel keeps the active ones, and `submit()` rejects an id not in the list. With no categories the field is disabled and says so, and that message wins over "Choose a category." (review S1).
+- **`ExposedDropdownMenuBox`** (P08 slide 32) with a read-only text field, opted in with `@OptIn(ExperimentalMaterial3Api::class)` on the private composable. The material3 1.4.0 sources were checked in the Gradle cache: the non-deprecated anchor is `menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)`, and `enabled = false` hides the expand action from TalkBack when the list is empty.
+- **Accessible radio groups.** `selectableGroup()` plus one `selectable(role = RadioButton)` row of at least 48dp per option, with `RadioButton(onClick = null)`, so the whole row is one TalkBack item with its state; section titles are headings; text fields carry `error` semantics with the real message; form-level messages are polite live regions.
+- **Keyboard with edge-to-edge.** `adjustResize` was already in the manifest, but with `enableEdgeToEdge` the window does not shrink, so Compose applies `imePadding()`. Lesson learned: it must go **before** `verticalScroll`. Outside the scroll container it shrinks the viewport, so the focused field is scrolled above the keyboard; inside it (the plan's order) it only adds blank space after the content. The caller must also `consumeWindowInsets(innerPadding)` so the navigation-bar inset is not added twice.
+- **Landscape in two panes** (left: category, situation; right: description, media note, visibility, Submit), each scrolling on its own, written once as private composables and used by both orientations; the two scroll states are hoisted (F-005 review S2).
+
+### Options chosen and rejected
+- As in decision 0008: route-scoped `ReportViewModel` over `rememberSaveable` in the screen, form state in `TicketsViewModel`, a ViewModel holding another, or a constructor-injected reporter (needs a factory); nothing preselected over the doc's `DAMAGE`/`PRIVATE`; Submit always enabled over `enabled = isValid`.
+- Radio groups for situation and visibility over a dropdown (hides options, extra tap) and `SingleChoiceSegmentedButtonRow` (four PT labels such as "Destruição" do not fit a portrait row, and a segmented row with nothing selected looks odd). Dropdown only for the category, whose list is municipality data of any length.
+- `collectAsState()` until D-006 adds `lifecycle-runtime-compose`, so the two branches do not both edit the version catalog.
+- No `SavedStateHandle`: the draft is lost on process death, as `TicketsViewModel`'s reports are.
+
+### Submit control (Gate 1 Q6 and Q8)
+- **Full-width "Submit report" button at the end of the form, not the P08 slide-20 FAB.** The FAB is the class pattern and matches brief V's "botões flutuantes ... dinâmicos", but on this form it floats over the content (the slide needs a bottom spacer), is icon-only (needs a `contentDescription`, no visible label), needs a `Scaffold` nested in D-006's, and in landscape covers the right pane with the description, near the keyboard. The button is in reading and TalkBack order with a visible label. A top-bar check action was also rejected (Diogo's `MainTopAppBar`, and the validation result would have to be hoisted to D-006). The "dynamic" part of brief V is still met by the top bar hiding the add button on this route.
+- **Always clickable, P08-style.** Slide 20 keeps the Save FAB clickable and only changes its colour with `isValid`; slide 15 returns early when invalid. F-006 goes one step further: instead of a silent return, Submit shows every missing field's error and an announced summary. The optional `isValid` colour cue was left off at Gate 1; it would be a hint only, never the only signal.
+
+### Known gaps
+- **No image or video (brief I.2.E "deve ser carregada uma imagem/vídeo"), open until F-007.** The form shows a note that attachments come later and will then be required. F-007 (report attachments, following P09; the person writes the task file) adds the system photo picker (`PickVisualMedia.ImageAndVideo`, no permission), the camera (`TakePicture` + `FileProvider`), local copies in `filesDir`, Coil previews, and the "at least one" rule in `isValid`. It needs an attachments parameter on `TicketsViewModel.reportTicket` (Diogo's file). Thumbnails, compression, EXIF stripping and the upload stay in the upload phase.
+- No location, so no 10 m grouping (decision 0006); the location task adds it with the runtime permission.
+- Anonymous users can open the form until the Auth task hides the add button by role.
+- Category names are shown as stored, not translated.
+- Process death loses the draft.
+- Nothing has run on a device yet: D-006 wires the route.
+
+### Verification
+- F-006 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no deprecation warning from the dropdown API), by greps (no Compose or Context in the ViewModel files, no ViewModel in `ReportContent`, no `data`/navigation import in the screen, `TicketsViewModel.kt` unchanged) and by code review, which traced `submit()` on an empty form. The Android Studio previews, the accessibility inspector, TalkBack and the emulator checks (rotation, keyboard, insets) are still pending.
+
+### Improvement opportunities
+- `SavedStateHandle` in `ReportViewModel` so a draft survives process death.
+- In the Firebase phase, a categories repository (active categories of the municipality) and ticket creation through a repository, injected with a `ViewModelProvider.Factory` (the doc's "later" list); then a `suspend` submit with a progress state ("Sending...") instead of the synchronous `Boolean`.
+- Impact-detection prefill (brief I.2.F): a `prefill(situation, categoryId)` event that opens the form for a pavement anomaly.
+- A description length limit with a character counter, if the data layer needs one.
+- Defence checks from the doc: rotate a half-filled form (values and errors stay), force-close the app (the draft is gone, by design), leave and reopen (empty).
+- Nits left open by the person's choice (review), with their fixes:
+  - N1: the `error` semantics on the radio-group column are never read (not focusable); remove them or comment that the visible error text is what TalkBack reads;
+  - N2: a second failed Submit may not be re-announced by the live region; if so, move focus to the first field with an error (a `FocusRequester` per field), which also helps keyboard users; check that the description error is not read twice;
+  - N3: the dropdown closes on rotation (its `rememberSaveable` is keyed under a different parent per orientation); acceptable, or use `remember` and drop the claim;
+  - N4: only the left scroll position carries over a rotation from portrait;
+  - N5: write the submit wiring (`submit()?.let { onSubmitResult(onSubmit(it)) }`) as three explained statements;
+  - N6: PT summary "Faltam preencher campos obrigatórios." could read "Há campos obrigatórios por preencher.";
+  - N7: a PT preview for the submit-failed state;
+  - N8: `@StringRes` on `scopeLabelRes`, and move it to `ui/components/` if another screen uses it.
+- Optional `isValid` colour cue on Submit (P08 slide 20), as a hint next to the errors.
