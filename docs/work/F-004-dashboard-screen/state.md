@@ -1,6 +1,6 @@
 # F-004: DashboardScreen
 Branch: dev/Francisco · Base: 693b05d
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-01 | 3 slices: b52af64, 47a915a, b4e6a81; verify green (lint baseline 0 errors, 13 warnings) |
 | Review | done | 2026-11-01 | approve with 1 should-fix (S1 PT landscape preview), 5 nits; 0 blocking; build pass, lint 0 errors, 13 warnings (baseline) |
 | Docs | done | 2026-11-01 | overview "Screens" + Strings/plurals note; report notes F-004; no ADR; acceptance checks left unticked (manual checks pending) |
-| Pushed | | | |
+| Pushed | done | 2026-11-01 | 72a43a9 to origin/dev/Francisco |
 | Merged | | | |
 
 ## Log
@@ -69,3 +69,4 @@ Append-only.
   - `docs/report/notes.md`: new "F-004: DashboardScreen" section (technical solutions, options chosen incl. N2 skipped with reason, rejected, known difference N1, verification, improvement opportunities).
   - No ADR (Gate 1 picked no non-default with lasting impact). Task file acceptance checks left unticked: manual Android Studio checks are pending.
   - Q5 handover to Diogo (D-006): wire `onSeeTicketsClick` to `navigate(TicketListRoute)` and pass `innerPadding`; recorded in the overview contract.
+- 2026-11-01: pushed dev/Francisco to origin (693b05d..72a43a9) after verify (assembleDebug + lint) passed; includes the origin/main merge (D-005). Manual Android Studio checks (previews, PT landscape, TalkBack) still not run.
