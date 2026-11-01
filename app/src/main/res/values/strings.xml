@@ -44,6 +44,7 @@
     <string name="report_no_categories">No categories are available.</string>
     <string name="report_situation_title">Situation</string>
     <string name="report_description_label">Description</string>
+    <string name="report_media_pending">Adding a photo or video comes in a later version; it will then be required.</string>
     <string name="report_scope_title">Visibility</string>
     <string name="scope_public">Public</string>
     <string name="scope_private">Private</string>

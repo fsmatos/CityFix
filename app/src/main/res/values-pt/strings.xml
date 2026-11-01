@@ -43,6 +43,7 @@
     <string name="report_no_categories">Não há categorias disponíveis.</string>
     <string name="report_situation_title">Situação</string>
     <string name="report_description_label">Descrição</string>
+    <string name="report_media_pending">A adição de fotografias ou vídeos chega numa versão posterior; nessa altura será obrigatória.</string>
     <string name="report_scope_title">Alcance</string>
     <string name="scope_public">Público</string>
     <string name="scope_private">Privado</string>

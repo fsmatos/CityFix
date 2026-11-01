@@ -126,6 +126,7 @@ fun ReportContent(
             error = state.descriptionError,
             onValueChange = onDescriptionChange,
         )
+        MediaPendingSection()
         RadioGroupSection(
             title = stringResource(R.string.report_scope_title),
             options = Scope.entries,
@@ -277,6 +278,26 @@ private fun DescriptionField(
             .fillMaxWidth()
             .semantics { if (errorText != null) error(errorText) },
     )
+}
+
+/**
+ * Photos and videos (brief I.2.E): a note only, nothing to tap. F-007 replaces it with the
+ * picker/camera row and previews, in the same place, and adds the "at least one" rule.
+ */
+@Composable
+private fun MediaPendingSection(modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(R.string.ticket_media_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = stringResource(R.string.report_media_pending),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 /** Form-level error, announced by TalkBack when it appears. */
