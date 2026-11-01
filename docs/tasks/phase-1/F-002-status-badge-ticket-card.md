@@ -13,9 +13,9 @@ Reusable stateless components for the list and detail screens.
 `StatusBadge.kt`, `TicketCard.kt`
 
 ## Acceptance checks
-- [ ] Stateless: no ViewModel inside.
-- [ ] One badge colour/label per `TicketStatus`, with text (not colour only).
-- [ ] `@Preview` for each status, collapsed and expanded, portrait and landscape.
+- [x] Stateless: no ViewModel inside.
+- [x] One badge colour/label per `TicketStatus`, with text (not colour only).
+- [x] `@Preview` for each status, collapsed and expanded, portrait and landscape.
 
 ## References
 - Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`; domain model: `docs/architecture/overview.md` (Option A, decision 0002).

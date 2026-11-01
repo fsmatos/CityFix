@@ -14,7 +14,7 @@ Ticket detail with state history.
 
 ## Acceptance checks
 - [ ] Null ticket shows "Ticket not found".
-- [ ] Status history shown in order with timestamps.
+- [ ] Status history shown in order with timestamps for REGISTERED/OPERATOR (previews in phase 1); the PUBLIC view follows brief I.1.C (no description, no history; see ADR 0007).
 - [ ] Public view never shows author data or exact coordinates (anonymous rule from the brief).
 - [ ] `@Preview` in portrait and landscape.
 

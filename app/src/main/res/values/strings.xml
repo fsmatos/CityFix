@@ -1,5 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">CityFix</string>
+    <string name="app_name" translatable="false">CityFix</string>
+    <string name="welcome_message">Welcome to CityFix</string>
+
+    <!-- Ticket status labels -->
+    <string name="status_open">Open</string>
+    <string name="status_info_requested">Info requested</string>
+    <string name="status_in_progress">In progress</string>
+    <string name="status_resolved">Resolved</string>
+    <string name="status_closed">Closed</string>
+
+    <!-- Ticket card -->
+    <string name="ticket_thumbnail_description">Ticket photo</string>
+    <string name="ticket_no_category">No category</string>
+    <string name="ticket_reported_on">Reported on %1$s</string>
+
+    <!-- Ticket list -->
+    <string name="ticket_list_empty">No active issues to show.</string>
+
+    <!-- Ticket detail -->
+    <string name="ticket_not_found">Ticket not found</string>
+    <string name="ticket_detail_description_title">Description</string>
+    <string name="ticket_detail_history_title">Status history</string>
+    <string name="ticket_detail_history_empty">No status changes recorded.</string>
+    <string name="ticket_media_title">Photos and videos</string>
+    <string name="ticket_media_empty">No photos or videos.</string>
+    <string name="ticket_media_photo">Photo</string>
+    <string name="ticket_media_video">Video</string>
+    <string name="ticket_media_unavailable">Not available yet</string>
+    <string name="ticket_map_title">Approximate location</string>
+    <string name="ticket_map_caption">Approximate area (about 1 km)</string>
+    <string name="ticket_map_unavailable">Location not available</string>
+    <string name="cd_ticket_map">Map of the approximate area of the issue</string>
+
+    <!-- Report form -->
+    <string name="report_error_category">Choose a category.</string>
+    <string name="report_error_situation">Choose a situation.</string>
+    <string name="report_error_description">Describe the issue.</string>
+    <string name="report_error_scope">Choose public or private.</string>
+    <string name="report_error_not_created">The report could not be submitted. Try again.</string>
+    <string name="report_required_note">All fields are required.</string>
+    <string name="report_category_label">Category</string>
+    <string name="report_no_categories">No categories are available.</string>
+    <string name="report_situation_title">Situation</string>
+    <string name="report_description_label">Description</string>
+    <string name="report_media_pending">Adding a photo or video comes in a later version; it will then be required.</string>
+    <string name="report_scope_title">Visibility</string>
+    <string name="scope_public">Public</string>
+    <string name="scope_private">Private</string>
+    <string name="report_error_summary">Some required fields are missing.</string>
+    <string name="report_submit">Submit report</string>
+
+    <!-- Situation labels -->
+    <string name="situation_damage">Damage</string>
+    <string name="situation_breakdown">Breakdown</string>
+    <string name="situation_destruction">Destruction</string>
+    <string name="situation_theft">Theft</string>
+
+    <!-- Top bar -->
     <string name="top_bar_title_dashboard">Dashboard</string>
     <string name="top_bar_title_list">Tickets</string>
     <string name="top_bar_title_detail">Ticket details</string>
@@ -8,4 +66,29 @@
     <string name="cd_expand_tickets">Expand tickets</string>
     <string name="cd_collapse_tickets">Collapse tickets</string>
     <string name="cd_report_ticket">Report an issue</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_repair_time_label">Average repair time</string>
+    <string name="dashboard_total_label">Total issues</string>
+    <string name="dashboard_active_label">Active issues (not yet repaired)</string>
+    <string name="dashboard_repair_time_none">No repairs yet</string>
+    <string name="dashboard_duration_less_than_hour">Less than 1 hour</string>
+    <string name="dashboard_duration_days_hours">%1$s and %2$s</string>
+    <string name="dashboard_see_tickets">See active issues</string>
+    <plurals name="dashboard_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="dashboard_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="dashboard_based_on_repairs">
+        <item quantity="one">Based on %d repair</item>
+        <item quantity="other">Based on %d repairs</item>
+    </plurals>
+    <plurals name="dashboard_active_of_total">
+        <item quantity="one">%1$s of %2$s issue</item>
+        <item quantity="other">%1$s of %2$s issues</item>
+    </plurals>
 </resources>
