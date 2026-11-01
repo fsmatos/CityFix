@@ -1,5 +1,7 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,15 +9,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -45,7 +54,7 @@ enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 
 /**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
- * PUBLIC (brief I.1.C): category and situation only. REGISTERED and OPERATOR also get the status
+ * PUBLIC (brief I.1.C): category, situation and photo/video tiles only. REGISTERED and OPERATOR also get the status
  * badge, "Reported on", the description and the status history. Never reads author ids, follower ids, messages,
  * responsible ids, justifications or uploader ids; the anonymous projection happens upstream
  * (decision 0006).
@@ -90,9 +99,10 @@ fun ShowScreen(
     ) {
         TicketHeader(ticket, showStatus)
         when (audience) {
-            DetailAudience.PUBLIC -> Unit
+            DetailAudience.PUBLIC -> MediaSection(ticket.attachments)
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
                 DescriptionSection(ticket, locale)
+                MediaSection(ticket.attachments)
                 HorizontalDivider()
                 StatusHistorySection(ticket.statusHistory, locale)
             }
@@ -208,6 +218,92 @@ private fun HistoryRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
+    }
+}
+
+/** Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". */
+@Composable
+private fun MediaSection(
+    attachments: List<Attachment>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.ticket_media_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (attachments.isEmpty()) {
+            Text(
+                text = stringResource(R.string.ticket_media_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                attachments.forEach { attachment -> MediaTile(attachment) }
+            }
+        }
+    }
+}
+
+/**
+ * Type icon and label for one attachment. Phase 1 has no real files, so it says "Not available yet"
+ * instead of drawing a fake photo; the media task replaces the icon with the thumbnail.
+ */
+@Composable
+private fun MediaTile(
+    attachment: Attachment,
+    modifier: Modifier = Modifier,
+) {
+    val labelRes = when (attachment.type) {
+        AttachmentType.IMAGE -> R.string.ticket_media_photo
+        AttachmentType.VIDEO -> R.string.ticket_media_video
+    }
+
+    Column(
+        modifier = modifier
+            .width(120.dp)
+            .semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            // Decorative: the label below says what it is
+            when (attachment.type) {
+                AttachmentType.IMAGE -> Icon(
+                    painter = painterResource(R.drawable.ic_image_placeholder),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                AttachmentType.VIDEO -> Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = stringResource(R.string.ticket_media_unavailable),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
