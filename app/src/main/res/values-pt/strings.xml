@@ -20,6 +20,8 @@
     <!-- Ticket detail -->
     <string name="ticket_not_found">Ocorrência não encontrada</string>
     <string name="ticket_detail_description_title">Descrição</string>
+    <string name="ticket_detail_history_title">Histórico de estados</string>
+    <string name="ticket_detail_history_empty">Sem alterações de estado registadas.</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

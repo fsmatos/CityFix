@@ -3,10 +3,13 @@ package pt.isec.amov.cityfix.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.SampleTickets
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Coordinates
@@ -42,7 +46,7 @@ enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 /**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
  * PUBLIC (brief I.1.C): category and situation only. REGISTERED and OPERATOR also get the status
- * badge, "Reported on" and the description. Never reads author ids, follower ids, messages,
+ * badge, "Reported on", the description and the status history. Never reads author ids, follower ids, messages,
  * responsible ids, justifications or uploader ids; the anonymous projection happens upstream
  * (decision 0006).
  */
@@ -87,7 +91,11 @@ fun ShowScreen(
         TicketHeader(ticket, showStatus)
         when (audience) {
             DetailAudience.PUBLIC -> Unit
-            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
+            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
+                DescriptionSection(ticket, locale)
+                HorizontalDivider()
+                StatusHistorySection(ticket.statusHistory, locale)
+            }
         }
     }
 }
@@ -150,6 +158,59 @@ private fun DescriptionSection(
     }
 }
 
+/** Status changes in stored order, oldest first; not for anonymous users (brief I.1.C). */
+@Composable
+private fun StatusHistorySection(
+    history: List<StatusHistory>,
+    locale: Locale,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.ticket_detail_history_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (history.isEmpty()) {
+            Text(
+                text = stringResource(R.string.ticket_detail_history_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            // No sort: currentStatus copies the last entry (decision 0004), so the stored order is shown
+            history.forEach { entry -> HistoryRow(entry, locale) }
+        }
+    }
+}
+
+/** One status change: badge and date/time, read by TalkBack as one item. */
+@Composable
+private fun HistoryRow(
+    entry: StatusHistory,
+    locale: Locale,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        StatusBadge(entry.status)
+        if (entry.dateTime > 0L) {
+            Text(
+                text = formatDateTime(entry.dateTime, locale),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
 /** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_CREATED = 1_792_089_000_000L
 
@@ -204,5 +265,26 @@ private fun ShowScreenFullPreview() {
 private fun ShowScreenNotFoundPreview() {
     CityFixTheme {
         ShowScreen(ticket = null, audience = DetailAudience.PUBLIC)
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ShowScreenEmptyHistoryPreview() {
+    CityFixTheme {
+        ShowScreen(Ticket(id = "empty", categoryName = "Pavement"), audience = DetailAudience.REGISTERED)
+    }
+}
+
+/**
+ * Privacy check: the raw, unprojected sample-2 (author id, a follower, an operator id in the history,
+ * exact location and a description) in PUBLIC must show none of them.
+ */
+@Preview(showBackground = true)
+@Composable
+private fun ShowScreenPrivacyPreview() {
+    CityFixTheme {
+        ShowScreen(SampleTickets.all[1], audience = DetailAudience.PUBLIC)
     }
 }
