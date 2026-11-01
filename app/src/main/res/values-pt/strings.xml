@@ -32,4 +32,32 @@
     <string name="cd_expand_tickets">Expandir ocorrências</string>
     <string name="cd_collapse_tickets">Recolher ocorrências</string>
     <string name="cd_report_ticket">Reportar ocorrência</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_repair_time_label">Tempo médio de reparação</string>
+    <string name="dashboard_total_label">Total de ocorrências</string>
+    <string name="dashboard_active_label">Ocorrências ativas (por reparar)</string>
+    <string name="dashboard_repair_time_none">Ainda sem reparações</string>
+    <string name="dashboard_duration_less_than_hour">Menos de 1 hora</string>
+    <string name="dashboard_duration_days_hours">%1$s e %2$s</string>
+    <plurals name="dashboard_days">
+        <item quantity="one">%d dia</item>
+        <item quantity="many">%d dias</item>
+        <item quantity="other">%d dias</item>
+    </plurals>
+    <plurals name="dashboard_hours">
+        <item quantity="one">%d hora</item>
+        <item quantity="many">%d horas</item>
+        <item quantity="other">%d horas</item>
+    </plurals>
+    <plurals name="dashboard_based_on_repairs">
+        <item quantity="one">Com base em %d reparação</item>
+        <item quantity="many">Com base em %d reparações</item>
+        <item quantity="other">Com base em %d reparações</item>
+    </plurals>
+    <plurals name="dashboard_active_of_total">
+        <item quantity="one">%1$s de %2$s ocorrência</item>
+        <item quantity="many">%1$s de %2$s ocorrências</item>
+        <item quantity="other">%1$s de %2$s ocorrências</item>
+    </plurals>
 </resources>

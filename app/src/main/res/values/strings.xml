@@ -33,4 +33,28 @@
     <string name="cd_expand_tickets">Expand tickets</string>
     <string name="cd_collapse_tickets">Collapse tickets</string>
     <string name="cd_report_ticket">Report an issue</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_repair_time_label">Average repair time</string>
+    <string name="dashboard_total_label">Total issues</string>
+    <string name="dashboard_active_label">Active issues (not yet repaired)</string>
+    <string name="dashboard_repair_time_none">No repairs yet</string>
+    <string name="dashboard_duration_less_than_hour">Less than 1 hour</string>
+    <string name="dashboard_duration_days_hours">%1$s and %2$s</string>
+    <plurals name="dashboard_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="dashboard_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="dashboard_based_on_repairs">
+        <item quantity="one">Based on %d repair</item>
+        <item quantity="other">Based on %d repairs</item>
+    </plurals>
+    <plurals name="dashboard_active_of_total">
+        <item quantity="one">%1$s of %2$s issue</item>
+        <item quantity="other">%1$s of %2$s issues</item>
+    </plurals>
 </resources>
