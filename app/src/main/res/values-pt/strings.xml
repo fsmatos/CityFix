@@ -17,6 +17,10 @@
     <!-- Ticket list -->
     <string name="ticket_list_empty">Não há ocorrências ativas para mostrar.</string>
 
+    <!-- Ticket detail -->
+    <string name="ticket_not_found">Ocorrência não encontrada</string>
+    <string name="ticket_detail_description_title">Descrição</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>
     <string name="situation_breakdown">Avaria</string>

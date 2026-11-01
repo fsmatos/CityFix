@@ -18,6 +18,10 @@
     <!-- Ticket list -->
     <string name="ticket_list_empty">No active issues to show.</string>
 
+    <!-- Ticket detail -->
+    <string name="ticket_not_found">Ticket not found</string>
+    <string name="ticket_detail_description_title">Description</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
     <string name="situation_breakdown">Breakdown</string>
