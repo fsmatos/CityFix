@@ -201,8 +201,16 @@ private val sampleFigureStats = DashboardStats(
     averageRepairTimeMillis = 3 * DAY_MILLIS,
 )
 
+private val singleTicketStats = DashboardStats(
+    totalTickets = 1,
+    activeTickets = 0,
+    resolvedTickets = 1,
+    averageRepairTimeMillis = HOUR_MILLIS / 2,
+)
+
 @Preview(showBackground = true)
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Preview(showBackground = true, locale = "pt", device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 private fun DashboardScreenPreview() {
     CityFixTheme {
@@ -226,5 +234,15 @@ private fun DashboardScreenEmptyPreview() {
 private fun DashboardScreenSampleFiguresPreview() {
     CityFixTheme {
         DashboardScreen(sampleFigureStats, onSeeTicketsClick = {})
+    }
+}
+
+/** Singular plurals and the shortest duration: "Less than 1 hour", "Based on 1 repair", "0 of 1 issue". */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun DashboardScreenSingleTicketPreview() {
+    CityFixTheme {
+        DashboardScreen(singleTicketStats, onSeeTicketsClick = {})
     }
 }
