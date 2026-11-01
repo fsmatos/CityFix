@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-10-28 | approve with should-fix: 0 blocking, 3 should-fix (S1-S3), 5 nits; see review.md |
 | Docs | done | 2026-10-28 | overview "Shared components" + CityFixGreen exception; report notes section; no ADR |
 | Pushed | done | 2026-10-28 | c0c8957 to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -30,3 +30,4 @@ Append-only.
 - 2026-10-28: merged origin/main into dev/Francisco (e352e04, brings D-002 tickets list, dashboard stats and `utils/Distance.kt`). Two docs-only conflicts, both sides kept: `docs/architecture/overview.md` `utils/` line combined (date formatting + distance maths and the `model -> utils` pure-Kotlin rule); `docs/report/notes.md` F-002 section then D-002 section. assembleDebug + lint pass. Not pushed.
 - 2026-10-29: merged origin/main into dev/Francisco again (e98c55d, brings D-003 TicketsViewModel and D-004 navigation routes). One conflict in `docs/architecture/overview.md`, resolved with main's side. This also repairs the 2026-10-28 merge (e352e04): its resolution had dropped the D-002 "Rules" section and this task's "UI foundation"/"Shared components" sections and duplicated the `utils/` line; the sections are restored from 6480b9d. assembleDebug + lint pass.
 - 2026-11-01: manual Android Studio checks done by the person (previews portrait/landscape/PT, placeholder icon); all acceptance checks in `docs/tasks/phase-1/F-002-status-badge-ticket-card.md` ticked.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.

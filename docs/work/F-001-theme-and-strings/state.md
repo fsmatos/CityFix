@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-10-27 | approve; 0 blocking, 2 should-fix, 5 nits (review.md) |
 | Docs | done | 2026-10-27 | overview "UI foundation" section; no ADR |
 | Pushed | done | 2026-10-27 | 8961726 to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -27,3 +27,4 @@ Append-only.
 - 2026-10-27: Docs: added a "UI foundation" section to `docs/architecture/overview.md` (light-only template theme trio, `dynamicColor` default false and why, `SystemBarStyle.light` in `MainActivity` and why, strings rule EN/PT with same keys, `stringResource`, `app_name` non-translatable, strings added with their screen in EN and PT together, dp/sp, 48dp via M3 components, contentDescription rule, improvement items for the report). The system bar point is a deviation from 03-docs-plan, added because of the review fix. No ADR, as the docs plan says. Task file acceptance checks left unticked: manual device checks are still pending. Report notes stay in 03-docs-plan.md. Not committed (the person commits).
 - 2026-10-27: pushed dev/Francisco to origin (eff85d0..8961726) after verify (assembleDebug + lint) passed. Manual device checks still not run (review Should-fix 2).
 - 2026-11-01: manual checks done by the person (device language PT, touch targets, previews); all acceptance checks in `docs/tasks/phase-1/F-001-theme-and-strings.md` ticked.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.

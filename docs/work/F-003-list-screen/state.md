@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-10-29 | approve with should-fix: 0 blocking, 2 should-fix, 4 nits; review.md |
 | Docs | done | 2026-10-29 | overview "Screens" + TicketCard caveat (S1), report notes; no ADR; task checks left unticked (manual checks pending) |
 | Pushed | done | 2026-10-29 | 487cac7 to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -26,3 +26,4 @@ Append-only.
 - 2026-10-29: Handover to Diogo (D-005/D-006), review S1: the overview is the handover. The `ListScreen` entry ("Screens", "Handover to D-005/D-006") and the `TicketCard` bullet ("Anonymous caveat") state that `isExpanded = true` shows the free-text description and that D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (brief I.1.B). The same entry carries the review N3 display-cutout check for D-006. Diogo reads it after the next merge of dev/Francisco into main.
 - 2026-10-29: pushed dev/Francisco to origin (ca22f44..487cac7) after verify (assembleDebug + lint) passed. Manual Android Studio checks (S2) still not run.
 - 2026-11-01: manual Android Studio checks (review S2) done by the person (previews with data and empty, portrait/landscape/PT); all acceptance checks in `docs/tasks/phase-1/F-003-list-screen.md` ticked.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.
