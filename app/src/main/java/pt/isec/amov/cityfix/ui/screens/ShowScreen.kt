@@ -1,11 +1,13 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -55,10 +57,11 @@ enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 
 /**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
- * PUBLIC (brief I.1.C): category, situation, photo/video tiles and the approximate location only. REGISTERED and OPERATOR also get the status
- * badge, "Reported on", the description and the status history. Never reads author ids, follower ids, messages,
- * responsible ids, justifications or uploader ids; the anonymous projection happens upstream
- * (decision 0006).
+ * PUBLIC (brief I.1.C): category, situation, photo/video tiles and the approximate location only.
+ * REGISTERED and OPERATOR also get the status badge, "Reported on", the description and the status
+ * history. Never reads author ids, follower ids, messages, responsible ids, justifications or
+ * uploader ids; the anonymous projection happens upstream (decision 0006).
+ * Portrait: one scrolling column. Landscape: two panes side by side, each scrolling on its own.
  */
 @Composable
 fun ShowScreen(
@@ -66,7 +69,9 @@ fun ShowScreen(
     audience: DetailAudience,
     modifier: Modifier = Modifier,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
+    val configuration = LocalConfiguration.current
+    val locale = configuration.locales[0]
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     if (ticket == null) {
         Box(
@@ -85,25 +90,82 @@ fun ShowScreen(
         return
     }
 
-    // Brief I.1.C: anonymous users see category and situation only, no status
-    val showStatus = when (audience) {
-        DetailAudience.PUBLIC -> false
-        DetailAudience.REGISTERED, DetailAudience.OPERATOR -> true
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            DetailsPane(
+                ticket = ticket,
+                audience = audience,
+                locale = locale,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState()),
+            )
+            LocationPane(
+                ticket = ticket,
+                audience = audience,
+                locale = locale,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState()),
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            DetailsPane(ticket, audience, locale)
+            LocationPane(ticket, audience, locale)
+        }
     }
+}
 
+/** Header, then "Reported on" and description (not for PUBLIC), then the photo/video tiles. */
+@Composable
+private fun DetailsPane(
+    ticket: Ticket,
+    audience: DetailAudience,
+    locale: Locale,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TicketHeader(ticket, showStatus)
         when (audience) {
-            DetailAudience.PUBLIC -> Unit
-            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
+            // Brief I.1.C: anonymous users see category and situation only, no status
+            DetailAudience.PUBLIC -> TicketHeader(ticket, showStatus = false)
+            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
+                TicketHeader(ticket, showStatus = true)
+                DescriptionSection(ticket, locale)
+            }
         }
         MediaSection(ticket.attachments)
+    }
+}
+
+/** The approximate location, then the status history (not for PUBLIC). */
+@Composable
+private fun LocationPane(
+    ticket: Ticket,
+    audience: DetailAudience,
+    locale: Locale,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         // The only location read: the map shows the approximate area, never coordinates
         CoarseLocationMap(ticket.location)
         when (audience) {
