@@ -38,6 +38,16 @@
     <string name="report_error_description">Descreva a ocorrência.</string>
     <string name="report_error_scope">Escolha público ou privado.</string>
     <string name="report_error_not_created">Não foi possível enviar a ocorrência. Tente novamente.</string>
+    <string name="report_required_note">Todos os campos são obrigatórios.</string>
+    <string name="report_category_label">Categoria</string>
+    <string name="report_no_categories">Não há categorias disponíveis.</string>
+    <string name="report_situation_title">Situação</string>
+    <string name="report_description_label">Descrição</string>
+    <string name="report_scope_title">Alcance</string>
+    <string name="scope_public">Público</string>
+    <string name="scope_private">Privado</string>
+    <string name="report_error_summary">Faltam preencher campos obrigatórios.</string>
+    <string name="report_submit">Enviar ocorrência</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

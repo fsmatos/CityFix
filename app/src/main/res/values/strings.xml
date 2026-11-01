@@ -39,6 +39,16 @@
     <string name="report_error_description">Describe the issue.</string>
     <string name="report_error_scope">Choose public or private.</string>
     <string name="report_error_not_created">The report could not be submitted. Try again.</string>
+    <string name="report_required_note">All fields are required.</string>
+    <string name="report_category_label">Category</string>
+    <string name="report_no_categories">No categories are available.</string>
+    <string name="report_situation_title">Situation</string>
+    <string name="report_description_label">Description</string>
+    <string name="report_scope_title">Visibility</string>
+    <string name="scope_public">Public</string>
+    <string name="scope_private">Private</string>
+    <string name="report_error_summary">Some required fields are missing.</string>
+    <string name="report_submit">Submit report</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
