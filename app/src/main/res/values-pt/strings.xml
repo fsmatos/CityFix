@@ -22,4 +22,14 @@
     <string name="situation_breakdown">Avaria</string>
     <string name="situation_destruction">Destruição</string>
     <string name="situation_theft">Roubo</string>
+
+    <!-- Top bar -->
+    <string name="top_bar_title_dashboard">Painel</string>
+    <string name="top_bar_title_list">Ocorrências</string>
+    <string name="top_bar_title_detail">Detalhes da ocorrência</string>
+    <string name="top_bar_title_report">Reportar ocorrência</string>
+    <string name="cd_navigate_back">Voltar</string>
+    <string name="cd_expand_tickets">Expandir ocorrências</string>
+    <string name="cd_collapse_tickets">Recolher ocorrências</string>
+    <string name="cd_report_ticket">Reportar ocorrência</string>
 </resources>
