@@ -1,9 +1,14 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +43,7 @@ fun DashboardScreen(
 ) {
     val configuration = LocalConfiguration.current
     val locale = configuration.locales[0]
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val integerFormat = NumberFormat.getIntegerInstance(locale)
 
     val total = integerFormat.format(stats.totalTickets)
@@ -70,24 +76,53 @@ fun DashboardScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        StatCard(
-            label = stringResource(R.string.dashboard_repair_time_label),
-            value = average,
-            supporting = basedOn,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        StatCard(
-            label = stringResource(R.string.dashboard_total_label),
-            value = total,
-            supporting = null,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        StatCard(
-            label = stringResource(R.string.dashboard_active_label),
-            value = percent,
-            supporting = activeOfTotal,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (isLandscape) {
+            // One row of equal-width cards; IntrinsicSize.Min + fillMaxHeight gives them equal heights.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                StatCard(
+                    label = stringResource(R.string.dashboard_repair_time_label),
+                    value = average,
+                    supporting = basedOn,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                StatCard(
+                    label = stringResource(R.string.dashboard_total_label),
+                    value = total,
+                    supporting = null,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                StatCard(
+                    label = stringResource(R.string.dashboard_active_label),
+                    value = percent,
+                    supporting = activeOfTotal,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
+        } else {
+            StatCard(
+                label = stringResource(R.string.dashboard_repair_time_label),
+                value = average,
+                supporting = basedOn,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            StatCard(
+                label = stringResource(R.string.dashboard_total_label),
+                value = total,
+                supporting = null,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            StatCard(
+                label = stringResource(R.string.dashboard_active_label),
+                value = percent,
+                supporting = activeOfTotal,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
