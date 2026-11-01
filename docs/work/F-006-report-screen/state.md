@@ -7,7 +7,7 @@ Remote: not pushed
 | Start | done | 2026-11-01 | |
 | Plan | done | 2026-11-01 | revision 3 (P08 doc + P09 review; attachments to F-007): ReportUiState + route-scoped ReportViewModel in viewmodel/, SampleCategories in data/, ExposedDropdownMenuBox + radio groups, live @StringRes errors, submit returns ReportSubmission (D-006 calls reportTicket, stays on null); media note (I.2.E gap); landscape two panes; 4 slices; Q1-Q13 |
 | Gate 1: plan approved | done | 2026-11-01 | approved revision 3 with all defaults (full-width Submit, nothing preselected, media note, F-007 for attachments) |
-| Code | pending | 2026-11-01 | |
+| Code | done | 2026-11-01 | slices 1-4 committed (a04e88c..d76eec5); Gate 1 defaults; build + lint at baseline; deviations: imePadding before verticalScroll, menuAnchor `enabled`, error semantics on the category field |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -85,3 +85,11 @@ Append-only.
   - Not part of `isValid` (the `ReportUiState` KDoc says where F-007 adds it). Known gap against I.2.E ("deve ser carregada uma imagem/vídeo"): a report can be submitted without image/video until F-007.
   - Verify: assembleDebug passes (no Kotlin `w:` lines); lint 0 errors, 13 warnings (baseline IDs).
   - No deviation. By hand: the note shows in every portrait preview.
+- 2026-11-01: Code slice 4 `d76eec5` feat(F-006): split ReportScreen into two panes in landscape.
+  - Files: `ReportScreen.kt` only (`isLandscape` from `LocalConfiguration`; hoisted `leftScroll`/`rightScroll`; private `ChoicesPane` (required note, category, situation) and `DetailsPane` (description, media note, visibility, summary, submit error, Submit), used by both orientations; landscape EN + PT previews for empty, filled and error).
+  - Landscape: `Row(fillMaxSize().padding(16.dp), spacedBy(24.dp))` with each pane `weight(1f).fillMaxHeight().imePadding().verticalScroll(...)`; portrait: one `Column(fillMaxSize().imePadding().verticalScroll(leftScroll).padding(16.dp), spacedBy(16.dp))` with both panes.
+  - Verify: assembleDebug passes (no Kotlin `w:` lines); lint 0 errors, 13 warnings (baseline IDs).
+  - Greps (final files): no `import androidx.compose` and no `Context` in `ReportUiState.kt`/`ReportViewModel.kt`; no `data` or `androidx.navigation` import in `ReportScreen.kt`; `git diff --stat f2714b5` empty for `TicketsViewModel.kt`, `SampleTickets.kt`, `model/`, `ui/navigation/`, `ui/components/`, `ui/theme/`, `MainActivity.kt`, the manifest, Gradle files and `docs/tasks/`. Untracked `.idea/` files left alone.
+  - Deviation: `imePadding()` before `verticalScroll` in each pane (see slice 2).
+  - Pending, by hand: Android Studio previews (portrait/landscape, EN/PT, nothing clipped, Submit reachable in the right pane); accessibility inspector/TalkBack (error semantics with the real message on the dropdown, radio groups and description; headings; one node per radio row; live-region summary). On an emulator after D-006 wires the route: rotation keeps values, errors and scroll; leaving and reopening starts empty; the keyboard does not cover the description in landscape; no double inset with `consumeWindowInsets(innerPadding)`.
+  - Handover for D-006 (unchanged from the plan): the "Caller" block in 01-coding-plan (`viewModel()` inside `composable<ReportTicketRoute>`, `onSubmit` calls `reportTicket` and returns `id != null`, snackbar + `navigateUp()` on success, never navigate to the id, `Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)`); switch `collectAsState()` to `collectAsStateWithLifecycle()` once `lifecycle-runtime-compose` is in the catalog.
