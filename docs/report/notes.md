@@ -326,3 +326,54 @@ No decision record (Gate 1 kept the defaults except Q4). Code: `ui/screens/Dashb
 - One decimal in the percent (`maximumFractionDigits = 1`) if whole-number rounding hides small values.
 - An aggregate Firestore stats document (or `count()` aggregation allowed by the rules) for anonymous users in the Firebase phase, since they cannot read private tickets (decision 0005).
 - Display-cutout insets in landscape, as for the list.
+
+## F-005: ShowScreen
+Decision: [0007](../decisions/0007-ticket-detail-by-audience.md) (amends [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `ui/screens/ShowScreen.kt`, `ui/components/CoarseLocationMap.kt`, `formatDateTime` in `utils/DateFormatting.kt`, the `ticket_detail_*`, `ticket_media_*`, `ticket_map_*` and `cd_ticket_map` strings in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens" and "Shared components".
+
+### Technical solutions
+- One stateless screen `ShowScreen(ticket, audience, modifier)` with `enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }`. The brief defines three detail views (I.1.C anonymous, I.2.E registered on their own tickets, I.3.E operator), and the enum maps them one to one. An exhaustive `when (audience)` means a later task adding messages or coordinates cannot compile until it decides for every audience.
+- The caller decides the audience, never the screen: anonymous or a registered citizen on someone else's ticket -> PUBLIC (I.1.C, I.2.D); the citizen who created or follows the ticket -> REGISTERED (I.2.E); any operator -> OPERATOR (I.3.E). The relation to the ticket matters, not only the role (review S3).
+- Privacy in layers: the projection upstream (`toAnonymousView()`, decision 0006) blanks author fields and rounds the location; the screen reads `description` and `statusHistory` only in the non-PUBLIC branches; the location is read once and goes only into the map component, which never prints coordinates. The review checked this with greps on property access and a privacy preview fed with the raw, unprojected `sample-2`.
+- The map behind one component, `CoarseLocationMap(location, modifier)`, so a library swap touches one file. In phase 1 it is a static placeholder (see "Known gaps").
+- Honest media placeholders: a tile per attachment with a type icon, "Photo"/"Video" and "Not available yet", reading only `attachment.type`. Phase 1 has no real files, so no image loader and no fake photo.
+- Locale-aware date and time with `java.text.DateFormat.getDateTimeInstance(MEDIUM, SHORT, locale)` (minSdk 24, no desugaring), the locale from `LocalConfiguration` so the PT previews show PT dates; device time zone; `0L` (unset) is skipped.
+- History in stored order with no sort: `currentStatus` duplicates the last entry (decision 0004), so a sort in the UI could hide a data bug instead of showing it.
+- Two-pane landscape: the same two private composables (`DetailsPane`, `LocationPane`) are stacked in one scrolling column in portrait and placed side by side, each scrolling on its own, in landscape. No section is written twice.
+- Scroll kept across rotation: the two `rememberScrollState()` calls are hoisted to the top of the screen, after the `null` check, so both orientations use the same call sites. When they sat inside each branch, `rememberSaveable` found no saved value after rotation and the page jumped to the top (review S2). A good example for the defence of how saveable state is keyed by call site.
+- Accessibility: the category and section titles are headings; each history row and media tile is one TalkBack item; decorative icons have no description next to a text label.
+
+### Options chosen
+- Q1: a required three-value enum, no default; in `ui/screens/` (Gate 1), not `model/`.
+- Q2 (interpretation of "apenas com imagem(ns) e/ou vídeo(s) e mapa"): for the defence, the literal reading leaves an unlabelled map and photos. Gate 1 chose I.1.B's list fields (category, situation); at review (N2) the person added the status badge so the detail matches the public list card. The anonymous detail shows nothing the list does not already show for that ticket.
+- Q3: history as stored, oldest first.
+- Q4: medium date + short time, `LocalConfiguration` locale, device time zone; non-PUBLIC only.
+- Q5: two panes in landscape (left: header, description, media; right: map, history).
+- Q6: type-icon tiles, no Coil yet.
+- Q7: a static map placeholder; no library, key or manifest change (the person's choice at Gate 1).
+- Q12: "Reported on" only for REGISTERED/OPERATOR (not in I.1.B or I.1.C).
+- Media tile box in `surfaceVariant`: `surface` equals the screen background, so the tile was invisible (review S1). The same colour was rejected in F-002 for the opposite reason (it matched the card container).
+
+### Rejected
+- Revision 1 of the plan: description and history for anonymous users. Rejected at Gate 1, because the brief is followed strictly (I.1.C "apenas").
+- `isPublicView: Boolean` (cannot express three views); reading the role inside the screen (not stateless, not previewable, and it needs the creator/follower relation); `DetailAudience` in `model/`; a default `audience = PUBLIC`.
+- Coordinate text, a pin on the rounded point, an interactive map; a sample photo shown as the ticket's photo; projecting in the screen; `LazyColumn` for a handful of history rows inside a scrolling page.
+- osmdroid and Google Maps Compose for now (see "Known gaps").
+
+### Known gaps
+- **No real map (brief I.1.C "mapa com zoom afastado").** Accepted knowingly at Gate 1: no dependency, permission or key in this task, and the no-key option (osmdroid) is archived. To close it, replace the body of `CoarseLocationMap` with osmdroid (no key; `INTERNET` + `ACCESS_NETWORK_STATE`; `AndroidView` + `onRelease { onDetach() }`; User-Agent and OSM attribution) or Google Maps Compose (needs a Maps API key kept out of git). Either way: fixed zoom about 14, gestures off, a ~600 m circle instead of a pin, a placeholder in previews through `LocalInspectionMode`.
+- **Description and history hidden only in the UI (review S4).** `toAnonymousView()` still passes them through; Diogo's projection change should drop them (decision 0007 amends 0006).
+- **List/detail inconsistency.** The expanded anonymous list card shows the description that the detail hides (F-003 Gate 1 Q2). To be decided together with the projection change.
+- Media tiles never show real images on a device in phase 1: the visible samples have no attachments.
+- The non-anonymous view is preview-only until the Auth task.
+
+### Verification
+- F-005 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no `ModifierParameter` or `MissingTranslation`), by the plan's privacy greps (no author fields, `description`/`statusHistory` only in non-PUBLIC branches, `location` read once, no `latitude|longitude`), and by code review. The manual Android Studio checks (previews in EN/PT and landscape, TalkBack) are still pending, so the task's acceptance checks are not ticked yet.
+
+### Improvement opportunities
+- A real coarse map (osmdroid or Google Maps Compose) in `CoarseLocationMap`; a maintained library if osmdroid is chosen; offline tiles.
+- Real media with Coil and thumbnails once uploaded.
+- Exact map, coordinates and author contacts for operators (I.3.E); messages for registered citizens (I.2.E).
+- A "no longer public" message when a watched ticket gets RESOLVED, instead of "Ticket not found".
+- Clustering coarse markers on a future overview map (projected tickets collapse onto one grid point).
+- `formatDate` should take a locale, like `formatDateTime`, with `TicketCard` passing the `LocalConfiguration` locale; today a PT preview of the card and of the detail can format dates in different languages (review N7).
+- Merge the map description and caption into one TalkBack item, and make the description honest while there is no map (review N6, skipped).

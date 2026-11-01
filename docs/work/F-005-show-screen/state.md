@@ -9,7 +9,7 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-11-01 | approved revision 2: Q7 static placeholder (slice 6 dropped), Q2 category + situation for PUBLIC, DetailAudience in ui/screens |
 | Code | done | 2026-11-01 | slices 1-5 committed (bb3f446..8e1b6f1); slice 6 dropped at Gate 1; build + lint at baseline |
 | Review | done | 2026-11-01 | approve with should-fixes: 0 blocking, 4 should-fix (S1 tile background, S2 scroll lost on rotation, S3 REGISTERED meaning, S4 UI-only privacy for description/history), 8 nits; build + lint at baseline |
-| Docs | | | |
+| Docs | done | 2026-11-01 | overview (Screens ShowScreen, Shared components, ViewModel S4), ADR 0007, report notes; 0006 and the task file not edited; not committed |
 | Pushed | | | |
 | Merged | | | |
 
@@ -90,3 +90,13 @@ Append-only.
   - Left: N6 skipped by the person; N7, S4 and N8 go to the docs phase. `formatDate`, Diogo's folders, the manifest and Gradle untouched.
   - Verify: assembleDebug passes; lint 0 errors, 13 warnings (baseline IDs, no new warnings).
   - Greps: privacy pattern and `\.(file|thumbnail|uploadState)\b` empty; no `latitude|longitude`; `\.location\b` once; `\.description\b` only in `DescriptionSection`; `\.statusHistory\b` only in the non-PUBLIC branch. Changed: `currentStatus` is now read in `TicketHeader` for every audience (by the N2 decision), no longer behind `showStatus`.
+- 2026-11-01: Docs phase (03-docs-plan, against the code at `b60039b`). Not committed (the caller commits).
+  - `docs/architecture/overview.md`:
+    - "Screens": `ShowScreen` entry after `DashboardScreen` (signature, `DetailAudience` table with I.1.C/I.2.D/I.2.E/I.3.E, sections per audience, not-found, privacy, media, map gap, layout and scroll across rotation, timestamps, accessibility, previews, D-006 contract with `audience = DetailAudience.PUBLIC`, other handovers);
+    - "Shared components": `formatDateTime` added to the Dates bullet with the N7 follow-up; new `CoarseLocationMap` bullet (static placeholder, I.1.C gap, how to close it with osmdroid or Google Maps Compose);
+    - "ViewModel (D-003)": S4 item (projection must also blank `description` and clear `statusHistory`; until then UI-only; affects the expanded `TicketCard`).
+  - `docs/decisions/0007-ticket-detail-by-audience.md` (new): context with brief quotes, decision (audience enum passed by the caller, in `ui/screens`), rejected alternatives (isPublicView, role read in the screen, enum in `model/`, default, ...), consequences (S4 projection handover, REGISTERED creator/follower check, map gap, list/detail consistency with the expanded card under F-003 Q2).
+  - `docs/report/notes.md`: new "F-005: ShowScreen" section (technical solutions, options chosen, rejected, known gaps, verification, improvement opportunities incl. N7).
+  - Deviations from 03-docs-plan (all from Gate 1 / review): no map library section in "External services" (Q7 placeholder, so none chosen; the options are in "Shared components" and ADR 0007); the Q2 header recorded as revised at review (N2: badge shown to PUBLIC); decision 0006 not edited (the ADR format has no "Amended by" convention and 0006 is Diogo's; 0007 states the amendment in its status line).
+  - Not done, on purpose: `docs/tasks/phase-1/F-005-show-screen.md` untouched and its checks left unticked (N8/Q11 is the person's call; manual checks pending).
+  - Open for the person before `/push-task`: raise S4 (projection change + decision 0006 amendment) with Diogo as a task, together with the list/detail description inconsistency; N8 task-file wording.

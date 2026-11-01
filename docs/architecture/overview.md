@@ -96,6 +96,7 @@ Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phas
   - the location rounded to `ANONYMOUS_COORDINATE_DECIMALS = 2` (about 1 km; (0, 0) stays (0, 0)). Nearby tickets collapse onto one grid point (all three samples become (40.21, -8.42)), so a future anonymous map must cluster or offset markers, never use exact coordinates.
 
   A field added to `Ticket`, `StatusHistory` or `Attachment` later is copied through unchanged, so it must be checked against this list.
+- **Projection gap found by F-005 (review S4, handover to Diogo):** brief I.1.C limits the anonymous detail to media and a coarse map, so `toAnonymousView()` must also blank `description` and clear `statusHistory` (keeping `currentStatus`), and decision 0006 must be amended accordingly ([decision 0007](../decisions/0007-ticket-detail-by-audience.md)). **Until then these two fields are hidden from anonymous users only in the UI** (`ShowScreen`'s `when (audience)`), against the CLAUDE.md rule that privacy is enforced below the UI. The change also empties the expanded `TicketCard` description in the anonymous list (F-003 Gate 1 Q2), so decide it together with that card.
 - **Media is outside the projection.** `Attachment.file` and `thumbnail` are passed through unchanged. The media-upload task must strip EXIF GPS tags when it compresses images (`utils/`) and must use Storage paths that contain no user id.
 - **Contract for D-006:**
   - Create the ViewModel once, above the `NavHost` (in `MainActivity`'s content, `val vm: TicketsViewModel = viewModel()`), and pass state and callbacks down. Calling `viewModel()` inside each destination scopes it to that back-stack entry, so a reported ticket would not appear in the list.
@@ -167,7 +168,11 @@ Stateless composables in `ui/components/` (data in, events out; no ViewModel, `r
 - `StatusBadge(status)`: non-clickable `Surface` + `Text` with one colour and the localised label per `TicketStatus`. Colours: OPEN `primary`, INFO_REQUESTED `tertiary`, IN_PROGRESS `secondary`, RESOLVED `CityFixGreen` (see the exception above), CLOSED `inverseSurface`/`inverseOnSurface` (stands out on the card container). The label is always shown, so status is never conveyed by colour only.
 - `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. **Anonymous caveat:** `isExpanded = true` shows the free-text description, which brief I.1.B keeps out of the anonymous list (category, situation, thumbnail) and which may hold personal data; D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (see "Screens", `ListScreen`). The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
 - Enum labels: `statusLabelRes` (`StatusBadge.kt`) and `situationLabelRes` (`TicketCard.kt`) map each constant to its `R.string` id (plain `Int`) with an exhaustive `when`, never `.name`; a new constant does not compile until it has a label. PT labels are the brief's wording (Aberto, Pedido de informações, Em resolução, Resolvido, Encerrado; Dano, Avaria, Destruição, Roubo).
-- Dates: `utils/formatDate(epochMillis)` uses `java.text.DateFormat.MEDIUM` in the device locale (works on minSdk 24 without desugaring).
+- Dates: `utils/formatDate(epochMillis)` uses `java.text.DateFormat.MEDIUM` in the device locale (works on minSdk 24 without desugaring). `utils/formatDateTime(epochMillis, locale)` (F-005) adds a short time and takes the locale as a parameter, so callers pass `LocalConfiguration.current.locales[0]` and PT previews format in PT. The two helpers differ (review N7): `formatDate` should also take a locale, with `TicketCard` passing the `LocalConfiguration` one (follow-up, not done in F-005).
+- `CoarseLocationMap(location, modifier)` (F-005): the "Approximate location" section. A heading, a 200dp `surfaceVariant` box with a `LocationOn` icon and `cd_ticket_map`, and the caption "Approximate area (about 1 km)"; "Location not available" for the unset (0, 0) (decision 0003). It never renders coordinates as text. It is a **static placeholder**, chosen at F-005 Gate 1 (no library, no key, no manifest change), so it does not yet meet brief I.1.C's "mapa com zoom afastado". The map is behind this one component so it can be replaced in one file:
+  - osmdroid (`org.osmdroid:osmdroid-android` 6.1.x): no key or account; needs `INTERNET` + `ACCESS_NETWORK_STATE`, an `AndroidView { MapView }` wrapper with `onDetach()` in `onRelease`, a User-Agent and visible OSM attribution (tile policy). The repository was archived in Nov 2024;
+  - Google Maps Compose (`com.google.maps.android:maps-compose`): native composable, but needs a Maps API key from a Google Cloud project, kept out of git (CLAUDE.md: ask the person first);
+  - either way: fixed coarse zoom (about 14), all gestures off, a translucent circle of about 600 m instead of a pin, and a placeholder in previews through `LocalInspectionMode`.
 
 ### Screens
 Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, events out): the agreed signatures make the screen itself the stateless half, and the stateful half (collecting `TicketsViewModel` flows) lives in D-006's `composable<...>` blocks, with the single ViewModel created above the `NavHost` (see "ViewModel (D-003)").
@@ -213,6 +218,41 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
     )
     ```
     As for `ListScreen`, check landscape on a device with a camera cutout and add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if a card sits under the notch (F-003 review N3).
+- `ShowScreen(ticket: Ticket?, audience: DetailAudience, modifier)` (`ui/screens/ShowScreen.kt`, F-005): the ticket detail behind `TicketDetailRoute`. Details and reasons: [decision 0007](../decisions/0007-ticket-detail-by-audience.md).
+  - `enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }` lives in the same file (Gate 1: only this screen and D-006's call use it; move it to `model/` only if the Auth task needs it there). `audience` is required, with no default, so every caller states who is looking; `modifier` stays the first optional parameter (lint `ModifierParameter`). The screen branches with an exhaustive `when (audience)`, so a later task that adds messages or coordinates must decide for each audience to compile.
+  - Who gets which audience (the screen only receives it; the Auth/ViewModel layer maps role + creator/follower relation to it, review S3):
+
+    | Audience | Who | Brief |
+    | --- | --- | --- |
+    | `PUBLIC` | anonymous users, and any registered citizen viewing a public ticket they did not create and do not follow | I.1.C; I.2.D ("acesso às funcionalidades do utilizador anónimo") |
+    | `REGISTERED` | the registered citizen who created or follows this ticket | I.2.E ("Detalhe de uma ocorrência, com acesso a troca de mensagens", on "ocorrências (do utilizador)") |
+    | `OPERATOR` | any municipal operator | I.3.E ("visualização integral ... com coordenadas, contactos do autor e histórico completo") |
+
+  - Sections per audience:
+    - every audience: header (category as the page heading, fallback string if blank; situation; `StatusBadge`), "Photos and videos", "Approximate location";
+    - `REGISTERED` and `OPERATOR` also: "Reported on <date, time>" (skipped if `createdAt == 0L`), the description (skipped if blank) and the status history ("No status changes recorded." when empty). In phase 1 the two render the same thing; messages (I.2.E), exact coordinates and author contacts (I.3.E) are later tasks and go into the `when`.
+    - The PUBLIC header is brief I.1.B's list fields (category, situation) plus the status badge. Gate 1 Q2 first left the badge out; the person revised it at review (N2) so the detail matches the public list card, which already shows it.
+  - `ticket == null`: a centred "Ticket not found" / "Ocorrência não encontrada" for every audience.
+  - Privacy: the screen never reads `creatorId`, `followerIds`, `messages`, `responsibleId`, `justification`, `uploadedById`, `Attachment.file`/`thumbnail`, or coordinates as text. `ticket.location` is read once and goes only to `CoarseLocationMap`. `description` and `statusHistory` are read only in the non-PUBLIC branches. The projection itself stays upstream (decision 0006); see the S4 item in "ViewModel (D-003)" for the two fields the projection does not yet drop.
+  - Media: one `MediaTile` per attachment in a horizontally scrolling row (type icon on a `surfaceVariant` box, "Photo"/"Video" and "Not available yet"), or "No photos or videos.". It reads only `attachment.type`. Phase 1 has no real files, so it never draws an image that is not the ticket's; the media task replaces the tile body with Coil. The visible samples have no attachments, so on a device the empty message shows.
+  - Map: `CoarseLocationMap` is a **static placeholder** (Gate 1 Q7: no map library, no API key, no manifest change). **Known gap against brief I.1.C** ("mapa com zoom afastado"): there is no real map. See "Shared components" for how to close it.
+  - Layout: portrait is one `Column` with `verticalScroll` (16dp padding, 16dp spacing). Landscape is a `Row` of two `weight(1f).fillMaxHeight()` panes, each scrolling on its own: left `DetailsPane` (header, description for non-PUBLIC, media), right `LocationPane` (map, then divider + history for non-PUBLIC). Both orientations use the same two private pane composables. Orientation from `LocalConfiguration`. The two `rememberScrollState()`s are hoisted after the `null` check, so both orientations use the same call sites and the details scroll position survives rotation (review S2).
+  - Timestamps: `formatDateTime(epochMillis, locale)` (medium date + short time), locale from `LocalConfiguration.current.locales[0]` so the PT previews show PT dates, device time zone. The history is shown in stored order, oldest first, with no sort: `currentStatus` is a copy of the last entry (decision 0004), so a UI sort could hide a data bug.
+  - Accessibility: the category and every section title are headings; each history row and each media tile is one TalkBack item (`semantics(mergeDescendants = true)`); decorative icons have `contentDescription = null` next to a text label; the map box has `cd_ticket_map`. Nothing is interactive. Known nit left (review N6): the map description and caption are two TalkBack stops, and the description promises a map that is not there yet.
+  - Previews (private, `CityFixTheme`): PUBLIC and REGISTERED with `previewTicket` (already in anonymous form, 3 history entries, an IMAGE and a VIDEO attachment) in portrait, landscape, PT and PT landscape; not-found in the same four; empty history / no media / no location in EN and PT; a privacy preview with the raw `sample-2` (selected by id) in PUBLIC.
+  - **Contract for D-006:**
+    ```kotlin
+    composable<TicketDetailRoute> { backStackEntry ->
+        val id = backStackEntry.toRoute<TicketDetailRoute>().ticketId
+        ShowScreen(
+            ticket = tickets.firstOrNull { it.id == id },
+            audience = DetailAudience.PUBLIC,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
+    ```
+    `tickets` is the collected `vm.tickets` (see "ViewModel (D-003)"), so the screen updates when the list changes and shows "not found" if the ticket leaves the public list. As for the other screens, check landscape on a device with a camera cutout (F-003 review N3).
+  - Other handovers to Diogo: the projection change (S4, "ViewModel (D-003)"); optionally an IMAGE and a VIDEO attachment (`file = ""`) on a visible sample so the tiles show on a device; the Auth task maps role + creator/follower relation to `DetailAudience` as in the table above.
 
 ## External services
 Firebase Auth (+MFA), Cloud Firestore (offline persistence), Firebase Storage, FCM; Android location/geofencing and sensors.
