@@ -33,6 +33,13 @@
     <string name="ticket_map_unavailable">Location not available</string>
     <string name="cd_ticket_map">Map of the approximate area of the issue</string>
 
+    <!-- Report form -->
+    <string name="report_error_category">Choose a category.</string>
+    <string name="report_error_situation">Choose a situation.</string>
+    <string name="report_error_description">Describe the issue.</string>
+    <string name="report_error_scope">Choose public or private.</string>
+    <string name="report_error_not_created">The report could not be submitted. Try again.</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
     <string name="situation_breakdown">Breakdown</string>

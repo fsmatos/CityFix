@@ -32,6 +32,13 @@
     <string name="ticket_map_unavailable">Localização indisponível</string>
     <string name="cd_ticket_map">Mapa da área aproximada da ocorrência</string>
 
+    <!-- Report form -->
+    <string name="report_error_category">Escolha uma categoria.</string>
+    <string name="report_error_situation">Escolha uma situação.</string>
+    <string name="report_error_description">Descreva a ocorrência.</string>
+    <string name="report_error_scope">Escolha público ou privado.</string>
+    <string name="report_error_not_created">Não foi possível enviar a ocorrência. Tente novamente.</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>
     <string name="situation_breakdown">Avaria</string>
