@@ -13,9 +13,9 @@ Dashboard for the anonymous citizen.
 `DashboardScreen.kt`
 
 ## Acceptance checks
-- [ ] Shows the three values from `DashboardStats`.
-- [ ] Handles zero tickets (no NaN).
-- [ ] `@Preview` in portrait and landscape.
+- [x] Shows the three values from `DashboardStats`.
+- [x] Handles zero tickets (no NaN).
+- [x] `@Preview` in portrait and landscape.
 
 ## References
 - Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`; domain model: `docs/architecture/overview.md` (Option A, decision 0002).

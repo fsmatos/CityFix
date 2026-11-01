@@ -13,9 +13,9 @@ Public active tickets list (category, status, thumbnail).
 `ListScreen.kt`
 
 ## Acceptance checks
-- [ ] Empty list shows an empty-state message.
-- [ ] Lazy list uses stable keys.
-- [ ] `@Preview` with data and empty, portrait and landscape.
+- [x] Empty list shows an empty-state message.
+- [x] Lazy list uses stable keys.
+- [x] `@Preview` with data and empty, portrait and landscape.
 
 ## References
 - Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`; domain model: `docs/architecture/overview.md` (Option A, decision 0002).

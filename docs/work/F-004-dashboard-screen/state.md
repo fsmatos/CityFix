@@ -70,3 +70,4 @@ Append-only.
   - No ADR (Gate 1 picked no non-default with lasting impact). Task file acceptance checks left unticked: manual Android Studio checks are pending.
   - Q5 handover to Diogo (D-006): wire `onSeeTicketsClick` to `navigate(TicketListRoute)` and pass `innerPadding`; recorded in the overview contract.
 - 2026-11-01: pushed dev/Francisco to origin (693b05d..72a43a9) after verify (assembleDebug + lint) passed; includes the origin/main merge (D-005). Manual Android Studio checks (previews, PT landscape, TalkBack) still not run.
+- 2026-11-01: manual Android Studio checks done by the person (preview texts EN/PT against the coding-plan table, landscape row, interactive button, UI Check/TalkBack); all acceptance checks in `docs/tasks/phase-1/F-004-dashboard-screen.md` ticked.
