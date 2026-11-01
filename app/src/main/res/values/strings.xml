@@ -28,6 +28,10 @@
     <string name="ticket_media_photo">Photo</string>
     <string name="ticket_media_video">Video</string>
     <string name="ticket_media_unavailable">Not available yet</string>
+    <string name="ticket_map_title">Approximate location</string>
+    <string name="ticket_map_caption">Approximate area (about 1 km)</string>
+    <string name="ticket_map_unavailable">Location not available</string>
+    <string name="cd_ticket_map">Map of the approximate area of the issue</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>

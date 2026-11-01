@@ -27,6 +27,10 @@
     <string name="ticket_media_photo">Fotografia</string>
     <string name="ticket_media_video">Vídeo</string>
     <string name="ticket_media_unavailable">Ainda não disponível</string>
+    <string name="ticket_map_title">Localização aproximada</string>
+    <string name="ticket_map_caption">Área aproximada (cerca de 1 km)</string>
+    <string name="ticket_map_unavailable">Localização indisponível</string>
+    <string name="cd_ticket_map">Mapa da área aproximada da ocorrência</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

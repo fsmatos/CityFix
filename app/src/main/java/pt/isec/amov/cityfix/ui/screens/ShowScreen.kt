@@ -41,6 +41,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
@@ -54,7 +55,7 @@ enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 
 /**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
- * PUBLIC (brief I.1.C): category, situation and photo/video tiles only. REGISTERED and OPERATOR also get the status
+ * PUBLIC (brief I.1.C): category, situation, photo/video tiles and the approximate location only. REGISTERED and OPERATOR also get the status
  * badge, "Reported on", the description and the status history. Never reads author ids, follower ids, messages,
  * responsible ids, justifications or uploader ids; the anonymous projection happens upstream
  * (decision 0006).
@@ -99,10 +100,15 @@ fun ShowScreen(
     ) {
         TicketHeader(ticket, showStatus)
         when (audience) {
-            DetailAudience.PUBLIC -> MediaSection(ticket.attachments)
+            DetailAudience.PUBLIC -> Unit
+            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
+        }
+        MediaSection(ticket.attachments)
+        // The only location read: the map shows the approximate area, never coordinates
+        CoarseLocationMap(ticket.location)
+        when (audience) {
+            DetailAudience.PUBLIC -> Unit
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
-                DescriptionSection(ticket, locale)
-                MediaSection(ticket.attachments)
                 HorizontalDivider()
                 StatusHistorySection(ticket.statusHistory, locale)
             }
