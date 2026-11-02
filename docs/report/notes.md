@@ -60,6 +60,39 @@ Decisions: [0002](../decisions/0002-grouped-reports-single-ticket.md), [0003](..
 - Use `FieldValue.arrayUnion` for `followerIds` so a repeated report never adds a duplicate follower.
 - Show a placeholder on other devices until an attachment's `uploadState` is `UPLOADED` (before that, `file` is a local URI only the author's device can open).
 
+## F-002: StatusBadge and TicketCard
+No decision record (the choices follow the course style and existing rules). Details: `docs/architecture/overview.md`, "Shared components".
+
+### Technical solutions
+- Stateless Compose components (data in, events out) in `ui/components/`, reused by the list (F-003) and the detail screen (F-005); previewable with sample tickets in portrait, landscape and `locale = "pt"`.
+- `StatusBadge`: `Surface` + `Text`, one colour per `TicketStatus` from the theme roles (primary, tertiary, secondary, inverse surface) plus `CityFixGreen` for RESOLVED.
+- `TicketCard`: M3 `Card(onClick)`, which gives the whole card a large accessible touch target and the ripple for free. Collapsed: thumbnail, category, situation, badge. Expanded: adds description (max 3 lines) and date.
+- Placeholder thumbnail: a vector drawable (Material "image" outline) tinted in Compose, so no `material-icons-extended` dependency for one icon.
+- Dates: `java.text.DateFormat` (medium, device locale). Works on minSdk 24 without core-library desugaring; `createdAt == 0L` (unset) is skipped instead of showing 1 Jan 1970.
+
+### Options chosen
+- Collapsed content taken from brief I.1.B (category, situation, thumbnail) plus the status badge; expanded adds only description and date.
+- PT labels verbatim from the brief: Aberto, Pedido de informações, Em resolução, Resolvido, Encerrado; Dano, Avaria, Destruição, Roubo.
+- One global expand/collapse toggle (top bar, D-005/D-006) instead of per-card state: the card stays stateless and the screen owns the flag (to survive rotation with `rememberSaveable`).
+- Text label on every badge, so status is not conveyed by colour only (accessibility).
+- Exhaustive `when` for enum labels (`statusLabelRes`, `situationLabelRes`), so a new constant cannot ship without a translation; never `enum.name`. The helpers return a plain `Int` without `@StringRes`, to match the course material.
+- CLOSED badge in `inverseSurface`/`inverseOnSurface` and thumbnail box in `surface`: `surfaceVariant` (first choice) was almost the same as the card container and did not stand out (review S2).
+- `CityFixGreen` with white text for RESOLVED: the only raw colour used outside the theme, because the M3 scheme has no green role.
+- The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`: no location, author, followers or messages.
+
+### Rejected
+- Interactive chips (`AssistChip`, `FilterChip`) for the badge: they look clickable and add a touch target that does nothing.
+- `material-icons-extended` for one placeholder icon (large dependency).
+- Coil before there are real images to load.
+- Labels from `enum.name` (not translatable; the names are a persisted contract).
+
+### Improvement opportunities
+- Real thumbnails with Coil from `Attachment.thumbnail` once uploaded (placeholder while `uploadState != UPLOADED`).
+- Relative dates ("3 days ago").
+- Status icons in addition to colour and text.
+- Custom container colours for a softer badge palette, and dark-theme badge colours (with a green role in the theme instead of the raw `CityFixGreen`).
+- Placeholder `contentDescription` that does not announce a photo when there is none (review N1).
+
 ## D-002: Tickets list and dashboard rules
 Decision: [0005](../decisions/0005-tickets-list-rules.md). Code: `model/TicketsList.kt`, `model/DashboardStats.kt`, `utils/Distance.kt`.
 
@@ -173,6 +206,39 @@ No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs
 - Nested navigation graphs per role (anonymous, registered citizen, operator) in later phases.
 - Bump kotlinx-serialization together with Kotlin 2.3.
 
+## F-003: ListScreen
+No decision record (Gate 1 kept the defaults). Code: `ui/screens/ListScreen.kt`, `ticket_list_empty` in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens".
+
+### Technical solutions
+- Stateless screen `ListScreen(tickets, isExpanded, onTicketClick, modifier)` over a `LazyColumn`, which composes only the visible rows.
+- Stable keys: `items(tickets, key = { it.id })`, so Compose keeps each item's identity (and state) when the list changes, instead of matching rows by position. Ids are guaranteed unique and non-blank upstream (`TicketsList.add`).
+- Reuses `TicketCard` (F-002) for every row; the screen itself reads only `ticket.id`.
+- Empty state as a separate branch (`tickets.isEmpty()`): a centred, localised `Text` in `bodyLarge`/`onSurfaceVariant`, with horizontal padding so long PT text wraps.
+- `modifier` as the last parameter, applied to the root of the drawn branch, so the caller applies the `Scaffold` inner padding (edge-to-edge).
+- Scroll position survives rotation through the default saveable `rememberLazyListState()`; the list itself lives in the ViewModel.
+- Previews with private sample data (6 active PUBLIC tickets, already in anonymous form): collapsed in portrait and landscape, expanded, and empty in portrait, landscape and PT.
+
+### Options chosen
+- Filtering and the anonymous projection kept upstream: `TicketsList.publicActive()` holds the single "active" rule in `model/`, and `TicketsViewModel.tickets` applies `toAnonymousView()`, so privacy is enforced before the UI and the screen renders the list as received.
+- The click passes only the id (`(String) -> Unit`), matching the type-safe `TicketDetailRoute(ticketId: String)`.
+- One layout for both orientations (Gate 1, Q3): the card already fills the width with ellipsis, and the list scrolls in landscape.
+- Gate 1, Q1: no stateful wrapper; the agreed signature makes `ListScreen` the stateless half and D-006 collects `vm.tickets` in `composable<TicketListRoute>` (this is the stateful half graded by brief V).
+- Gate 1, Q2: `isExpanded` is passed through, so expanded cards show the description. This goes beyond brief I.1.B for anonymous users; the person accepted it, and D-005/D-006 must hide or force off the toggle for anonymous users once roles exist (handover recorded in the overview).
+
+### Rejected
+- Filtering by `Scope.PUBLIC`/`isActive` in the screen: duplicates the D-002 rule and could drift from it.
+- Passing the ViewModel (or a `UiState`) to the screen: breaks the agreed signature and the D-003 contract (one ViewModel above the `NavHost`), and the screen would no longer be previewable with plain data.
+- A `(Ticket) -> Unit` click callback: tempts the caller to put the ticket in the route, which D-004 forbids.
+- A stateful `ListScreen(viewModel)` + `ListContent` split in F-003: would change the agreed signature for all screens.
+
+### Improvement opportunities
+- Two-column adaptive grid (`LazyVerticalGrid(GridCells.Adaptive(320.dp))`) in landscape and on tablets.
+- Pull-to-refresh and filters by category/status once Firestore is in.
+- Empty state with an illustration and a "report an issue" action.
+- Hide the expand toggle (description) for anonymous users once roles exist.
+- Display-cutout insets in landscape (`WindowInsets.displayCutout`/`safeDrawing`).
+- PT preview with data and a landscape expanded preview (review N1, N2).
+
 ## D-005: MainTopAppBar
 No decision record (docs plan). Code: `ui/navigation/MainTopAppBar.kt`, `res/values/strings.xml`, `res/values-pt/strings.xml`. Overview: `docs/architecture/overview.md`, "Top bar (D-005)".
 
@@ -207,3 +273,161 @@ No decision record (docs plan). Code: `ui/navigation/MainTopAppBar.kt`, `res/val
 
 ### Improvement opportunities
 - Move to Material Symbols vectors, as the icons library is no longer updated.
+
+## F-004: DashboardScreen
+No decision record (Gate 1 kept the defaults except Q4). Code: `ui/screens/DashboardScreen.kt`, the `dashboard_*` strings and plurals in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens". Relies on decision [0005](../decisions/0005-tickets-list-rules.md) for what the figures count.
+
+### Technical solutions
+- Stateless screen `DashboardScreen(stats, onSeeTicketsClick, modifier)` that only formats `DashboardStats`; the figures are computed once, upstream, by `TicketsList.stats()` and exposed by `TicketsViewModel.stats`.
+- Locale-aware `NumberFormat` (integer for the total, percent for % active), with the locale taken from `LocalConfiguration`, so the `locale = "pt"` preview and the device agree ("67%" in EN, "67 %" in PT). `Locale.getDefault()` would ignore the preview locale (F-002 review S3).
+- Average repair time split into whole days and hours (both truncated) and shown with Android plurals ("3 days", "1 day and 4 hours", "5 hours", "Less than 1 hour"); `null` shows "No repairs yet" instead of "0 days". These are the first `<plurals>` in the project. PT needs `one`/`many`/`other`, and the PT `one` category also covers 0, which no call site passes.
+- No defensive guards in the UI: the screen relies on the model's documented contract (`activeRatio` never NaN and 0.0 with no tickets, a `null` average when nothing is resolved). Each rule has one owner, and a model regression shows up in the zero-ticket preview instead of being hidden.
+- Supporting lines: "Based on N repairs" under the average, and "N of M issues" under % active. The second is pluralised on `totalTickets`, but its numbers are pre-formatted strings (`%1$s`/`%2$s`) from the same integer format as the total card, so "M" always looks like the total above it.
+- The percent rounds to whole numbers, so 1 of 300 shows "0%" and 299 of 300 shows "100%"; the "N of M issues" line gives the exact figure, which is a reason it exists (review N5).
+- Landscape: one `Row` with `height(IntrinsicSize.Min)` and `weight(1f).fillMaxHeight()` cards, so the three cards have equal widths and heights even when a PT label wraps or only some cards have a supporting line.
+- `semantics(mergeDescendants = true)` on each card, so TalkBack reads label, value and supporting line as one item.
+- `verticalScroll` on the root, so nothing is clipped at large font scales or in landscape.
+- The M3 `Button` is 40dp tall visually and gets a 48dp minimum touch target from `minimumInteractiveComponentSize` (review N4).
+
+### Options chosen
+- Q1: no stateful wrapper, as in F-003; D-006 collects `vm.stats`.
+- Q2: whole days and hours, truncated, with plurals.
+- Q3: "0%" with zero tickets, because the model defines `activeRatio = 0.0`; the "0" total next to it makes the meaning clear.
+- Q4 (changed from the default): both supporting lines; "N of M issues" omitted with zero tickets. The % label says "not yet repaired", because RESOLVED is not active.
+- Q5: a "See active issues" button calling `onSeeTicketsClick`, because D-005's top bar has no list action. D-006 wires it to `navigate(TicketListRoute)`.
+- Q6: a row of three cards in landscape, orientation from `LocalConfiguration` (as in P07).
+- Q7: private preview data: `previewStats` (30 / 12 / 8), the zero state, the sample figures (3 / 2 / 1) and a single-ticket state (1 / 0 / 1, 30 min) for the singular plurals and "Less than 1 hour". The single-ticket preview has 0 active of 1, not 1 of 1, because a resolved ticket is never active (D-002 contract); a review suggestion of 1 of 1 was adjusted for that reason.
+- Formatting stays in the screen, not in `utils/`: it needs string resources, and `utils/` must stay pure Kotlin because `model/` imports it (decision 0005).
+- `NumberFormat`s are created on each composition, without `remember(locale)` (review N2, skipped by the person): the formatters are cheap, the screen recomposes only when `stats` or the configuration changes, and the screen stays free of `remember` apart from the scroll state, which is easier to explain.
+- Three explicit `StatCard` calls per orientation instead of a helper taking a `cardModifier`: the helper added a `ModifierParameter` lint warning, and one shared `modifier` would have been applied to three children.
+
+### Rejected
+- Decimal days ("3.2 days"): awkward plural rules and less clear than days and hours.
+- `FlowRow` for the cards: less predictable and harder to explain than choosing Column or Row.
+- Window size classes / `BoxWithConstraints` in phase 1: orientation is enough for a phone.
+- Recomputing stats in the screen from tickets: duplicates decision 0005 and the screen would need every ticket, private ones included.
+- A duplicate NaN/clamp guard in the UI: hides model bugs, two owners for one rule.
+- "0 of 0 issues" with zero tickets: repeats the total and the percent.
+- "—" for % active with zero tickets: the model documents 0.0.
+
+### Known difference: figures vs list (review N1)
+- The figures count every ticket, private ones included (decision 0005: the brief says "nº total de ocorrências"), while "See active issues" opens the public active list (`publicActive()`). With the PUBLIC-only samples they match; once private tickets exist, "12 of 30 issues" can lead to a list of 9.
+- The person kept the button wording (Gate 1, Q5). It is recorded in the overview as a handover and an answer for the defence.
+
+### Verification
+- F-004 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no `MissingTranslation`/`MissingQuantity`), by the plan's greps (no recomputing, no guards) and by code review, which traced the duration maths. The manual Android Studio checks (previews in EN/PT and landscape, TalkBack, the interactive tap) are still pending, so the task's acceptance checks are not ticked yet.
+
+### Improvement opportunities
+- Align the figures and the button: rename it "See public issues", or show public-only figures next to the totals, or explain the difference in the UI.
+- A median repair time, or excluding outliers.
+- Small charts (active vs resolved).
+- Per-category figures.
+- Window-size-based layouts for tablets (`WindowSizeClass`).
+- One decimal in the percent (`maximumFractionDigits = 1`) if whole-number rounding hides small values.
+- An aggregate Firestore stats document (or `count()` aggregation allowed by the rules) for anonymous users in the Firebase phase, since they cannot read private tickets (decision 0005).
+- Display-cutout insets in landscape, as for the list.
+
+## F-005: ShowScreen
+Decision: [0007](../decisions/0007-ticket-detail-by-audience.md) (amends [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `ui/screens/ShowScreen.kt`, `ui/components/CoarseLocationMap.kt`, `formatDateTime` in `utils/DateFormatting.kt`, the `ticket_detail_*`, `ticket_media_*`, `ticket_map_*` and `cd_ticket_map` strings in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Screens" and "Shared components".
+
+### Technical solutions
+- One stateless screen `ShowScreen(ticket, audience, modifier)` with `enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }`. The brief defines three detail views (I.1.C anonymous, I.2.E registered on their own tickets, I.3.E operator), and the enum maps them one to one. An exhaustive `when (audience)` means a later task adding messages or coordinates cannot compile until it decides for every audience.
+- The caller decides the audience, never the screen: anonymous or a registered citizen on someone else's ticket -> PUBLIC (I.1.C, I.2.D); the citizen who created or follows the ticket -> REGISTERED (I.2.E); any operator -> OPERATOR (I.3.E). The relation to the ticket matters, not only the role (review S3).
+- Privacy in layers: the projection upstream (`toAnonymousView()`, decision 0006) blanks author fields and rounds the location; the screen reads `description` and `statusHistory` only in the non-PUBLIC branches; the location is read once and goes only into the map component, which never prints coordinates. The review checked this with greps on property access and a privacy preview fed with the raw, unprojected `sample-2`.
+- The map behind one component, `CoarseLocationMap(location, modifier)`, so a library swap touches one file. In phase 1 it is a static placeholder (see "Known gaps").
+- Honest media placeholders: a tile per attachment with a type icon, "Photo"/"Video" and "Not available yet", reading only `attachment.type`. Phase 1 has no real files, so no image loader and no fake photo.
+- Locale-aware date and time with `java.text.DateFormat.getDateTimeInstance(MEDIUM, SHORT, locale)` (minSdk 24, no desugaring), the locale from `LocalConfiguration` so the PT previews show PT dates; device time zone; `0L` (unset) is skipped.
+- History in stored order with no sort: `currentStatus` duplicates the last entry (decision 0004), so a sort in the UI could hide a data bug instead of showing it.
+- Two-pane landscape: the same two private composables (`DetailsPane`, `LocationPane`) are stacked in one scrolling column in portrait and placed side by side, each scrolling on its own, in landscape. No section is written twice.
+- Scroll kept across rotation: the two `rememberScrollState()` calls are hoisted to the top of the screen, after the `null` check, so both orientations use the same call sites. When they sat inside each branch, `rememberSaveable` found no saved value after rotation and the page jumped to the top (review S2). A good example for the defence of how saveable state is keyed by call site.
+- Accessibility: the category and section titles are headings; each history row and media tile is one TalkBack item; decorative icons have no description next to a text label.
+
+### Options chosen
+- Q1: a required three-value enum, no default; in `ui/screens/` (Gate 1), not `model/`.
+- Q2 (interpretation of "apenas com imagem(ns) e/ou vídeo(s) e mapa"): for the defence, the literal reading leaves an unlabelled map and photos. Gate 1 chose I.1.B's list fields (category, situation); at review (N2) the person added the status badge so the detail matches the public list card. The anonymous detail shows nothing the list does not already show for that ticket.
+- Q3: history as stored, oldest first.
+- Q4: medium date + short time, `LocalConfiguration` locale, device time zone; non-PUBLIC only.
+- Q5: two panes in landscape (left: header, description, media; right: map, history).
+- Q6: type-icon tiles, no Coil yet.
+- Q7: a static map placeholder; no library, key or manifest change (the person's choice at Gate 1).
+- Q12: "Reported on" only for REGISTERED/OPERATOR (not in I.1.B or I.1.C).
+- Media tile box in `surfaceVariant`: `surface` equals the screen background, so the tile was invisible (review S1). The same colour was rejected in F-002 for the opposite reason (it matched the card container).
+
+### Rejected
+- Revision 1 of the plan: description and history for anonymous users. Rejected at Gate 1, because the brief is followed strictly (I.1.C "apenas").
+- `isPublicView: Boolean` (cannot express three views); reading the role inside the screen (not stateless, not previewable, and it needs the creator/follower relation); `DetailAudience` in `model/`; a default `audience = PUBLIC`.
+- Coordinate text, a pin on the rounded point, an interactive map; a sample photo shown as the ticket's photo; projecting in the screen; `LazyColumn` for a handful of history rows inside a scrolling page.
+- osmdroid and Google Maps Compose for now (see "Known gaps").
+
+### Known gaps
+- **No real map (brief I.1.C "mapa com zoom afastado").** Accepted knowingly at Gate 1: no dependency, permission or key in this task, and the no-key option (osmdroid) is archived. To close it, replace the body of `CoarseLocationMap` with osmdroid (no key; `INTERNET` + `ACCESS_NETWORK_STATE`; `AndroidView` + `onRelease { onDetach() }`; User-Agent and OSM attribution) or Google Maps Compose (needs a Maps API key kept out of git). Either way: fixed zoom about 14, gestures off, a ~600 m circle instead of a pin, a placeholder in previews through `LocalInspectionMode`.
+- **Description and history hidden only in the UI (review S4).** `toAnonymousView()` still passes them through; Diogo's projection change should drop them (decision 0007 amends 0006).
+- **List/detail inconsistency.** The expanded anonymous list card shows the description that the detail hides (F-003 Gate 1 Q2). To be decided together with the projection change.
+- Media tiles never show real images on a device in phase 1: the visible samples have no attachments.
+- The non-anonymous view is preview-only until the Auth task.
+
+### Verification
+- F-005 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no `ModifierParameter` or `MissingTranslation`), by the plan's privacy greps (no author fields, `description`/`statusHistory` only in non-PUBLIC branches, `location` read once, no `latitude|longitude`), and by code review. The manual Android Studio checks (previews in EN/PT and landscape, TalkBack) are still pending, so the task's acceptance checks are not ticked yet.
+
+### Improvement opportunities
+- A real coarse map (osmdroid or Google Maps Compose) in `CoarseLocationMap`; a maintained library if osmdroid is chosen; offline tiles.
+- Real media with Coil and thumbnails once uploaded.
+- Exact map, coordinates and author contacts for operators (I.3.E); messages for registered citizens (I.2.E).
+- A "no longer public" message when a watched ticket gets RESOLVED, instead of "Ticket not found".
+- Clustering coarse markers on a future overview map (projected tickets collapse onto one grid point).
+- `formatDate` should take a locale, like `formatDateTime`, with `TicketCard` passing the `LocalConfiguration` locale; today a PT preview of the card and of the detail can format dates in different languages (review N7).
+- Merge the map description and caption into one TalkBack item, and make the description honest while there is no map (review N6, skipped).
+
+## F-006: ReportScreen
+Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `ui/screens/ReportScreen.kt`, `viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, the `report_*` and `scope_*` strings in `values/` and `values-pt/`. Overview: `docs/architecture/overview.md`, "Report form (F-006)", "Screens" and "Shared components".
+
+### Technical solutions
+- **The P08 pattern.** One immutable `ReportUiState` with a computed `isValid`, exposed by a `ReportViewModel` as a `StateFlow`; events in as plain functions; the ViewModel created per route with `viewModel()`, so the draft survives rotation and is discarded when the user leaves. Plan revision 1 used `rememberSaveable` in the screen; Gate 1 moved to the class pattern (Diogo's doc "Dicas da aula P08 para o CityFix").
+- **Errors as `@StringRes` ids in the state.** The ViewModel never holds text, the messages are localised by the screen, and the ViewModel has no Compose or Context import (checked by grep).
+- **Live per-field validation.** The description error follows every keystroke; choosing a category, situation or visibility clears its error; Submit sets the error of every field still missing and shows a summary. An untouched form shows no red until the user tries to submit.
+- **One gate.** `submit()` builds the state with every field's error and then checks `isValid` (P08 slide 15). The first version repeated the rules in `submit()`; the review (S2) noticed that F-007 would then add the attachment rule to `isValid` only and a report without media would still pass. A good example for the defence of "one owner per rule".
+- **Double-submit lock and the `onSubmitResult` round trip.** `submit()` returns the `ReportSubmission` and sets `submitted`; the caller creates the ticket with `TicketsViewModel.reportTicket` and returns whether it worked; `onSubmitResult(false)` unlocks and shows "could not be submitted", `true` keeps the lock. The ViewModel never references the other ViewModel, and no factory is needed.
+- **Nothing preselected.** `Situation?` and `Scope?` start `null`, so the user must choose (I.2.E "preenchimento obrigatório") and a default never lands in the 10 m grouping key or publishes a report by accident.
+- **Active categories only (I.3.E).** `data/SampleCategories` has three active categories and an inactive "Graffiti"; the ViewModel keeps the active ones, and `submit()` rejects an id not in the list. With no categories the field is disabled and says so, and that message wins over "Choose a category." (review S1).
+- **`ExposedDropdownMenuBox`** (P08 slide 32) with a read-only text field, opted in with `@OptIn(ExperimentalMaterial3Api::class)` on the private composable. The material3 1.4.0 sources were checked in the Gradle cache: the non-deprecated anchor is `menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)`, and `enabled = false` hides the expand action from TalkBack when the list is empty.
+- **Accessible radio groups.** `selectableGroup()` plus one `selectable(role = RadioButton)` row of at least 48dp per option, with `RadioButton(onClick = null)`, so the whole row is one TalkBack item with its state; section titles are headings; text fields carry `error` semantics with the real message; form-level messages are polite live regions.
+- **Keyboard with edge-to-edge.** `adjustResize` was already in the manifest, but with `enableEdgeToEdge` the window does not shrink, so Compose applies `imePadding()`. Lesson learned: it must go **before** `verticalScroll`. Outside the scroll container it shrinks the viewport, so the focused field is scrolled above the keyboard; inside it (the plan's order) it only adds blank space after the content. The caller must also `consumeWindowInsets(innerPadding)` so the navigation-bar inset is not added twice.
+- **Landscape in two panes** (left: category, situation; right: description, media note, visibility, Submit), each scrolling on its own, written once as private composables and used by both orientations; the two scroll states are hoisted (F-005 review S2).
+
+### Options chosen and rejected
+- As in decision 0008: route-scoped `ReportViewModel` over `rememberSaveable` in the screen, form state in `TicketsViewModel`, a ViewModel holding another, or a constructor-injected reporter (needs a factory); nothing preselected over the doc's `DAMAGE`/`PRIVATE`; Submit always enabled over `enabled = isValid`.
+- Radio groups for situation and visibility over a dropdown (hides options, extra tap) and `SingleChoiceSegmentedButtonRow` (four PT labels such as "Destruição" do not fit a portrait row, and a segmented row with nothing selected looks odd). Dropdown only for the category, whose list is municipality data of any length.
+- `collectAsState()` until D-006 adds `lifecycle-runtime-compose`, so the two branches do not both edit the version catalog.
+- No `SavedStateHandle`: the draft is lost on process death, as `TicketsViewModel`'s reports are.
+
+### Submit control (Gate 1 Q6 and Q8)
+- **Full-width "Submit report" button at the end of the form, not the P08 slide-20 FAB.** The FAB is the class pattern and matches brief V's "botões flutuantes ... dinâmicos", but on this form it floats over the content (the slide needs a bottom spacer), is icon-only (needs a `contentDescription`, no visible label), needs a `Scaffold` nested in D-006's, and in landscape covers the right pane with the description, near the keyboard. The button is in reading and TalkBack order with a visible label. A top-bar check action was also rejected (Diogo's `MainTopAppBar`, and the validation result would have to be hoisted to D-006). The "dynamic" part of brief V is still met by the top bar hiding the add button on this route.
+- **Always clickable, P08-style.** Slide 20 keeps the Save FAB clickable and only changes its colour with `isValid`; slide 15 returns early when invalid. F-006 goes one step further: instead of a silent return, Submit shows every missing field's error and an announced summary. The optional `isValid` colour cue was left off at Gate 1; it would be a hint only, never the only signal.
+
+### Known gaps
+- **No image or video (brief I.2.E "deve ser carregada uma imagem/vídeo"), open until F-007.** The form shows a note that attachments come later and will then be required. F-007 (report attachments, following P09; the person writes the task file) adds the system photo picker (`PickVisualMedia.ImageAndVideo`, no permission), the camera (`TakePicture` + `FileProvider`), local copies in `filesDir`, Coil previews, and the "at least one" rule in `isValid`. It needs an attachments parameter on `TicketsViewModel.reportTicket` (Diogo's file). Thumbnails, compression, EXIF stripping and the upload stay in the upload phase.
+- No location, so no 10 m grouping (decision 0006); the location task adds it with the runtime permission.
+- Anonymous users can open the form until the Auth task hides the add button by role.
+- Category names are shown as stored, not translated.
+- Process death loses the draft.
+- Nothing has run on a device yet: D-006 wires the route.
+
+### Verification
+- F-006 has no automated tests. It was verified by `./gradlew assembleDebug` and `./gradlew lint` after every slice and after the review fixes (0 errors, the 13-warning baseline, no deprecation warning from the dropdown API), by greps (no Compose or Context in the ViewModel files, no ViewModel in `ReportContent`, no `data`/navigation import in the screen, `TicketsViewModel.kt` unchanged) and by code review, which traced `submit()` on an empty form. The Android Studio previews, the accessibility inspector, TalkBack and the emulator checks (rotation, keyboard, insets) are still pending.
+
+### Improvement opportunities
+- `SavedStateHandle` in `ReportViewModel` so a draft survives process death.
+- In the Firebase phase, a categories repository (active categories of the municipality) and ticket creation through a repository, injected with a `ViewModelProvider.Factory` (the doc's "later" list); then a `suspend` submit with a progress state ("Sending...") instead of the synchronous `Boolean`.
+- Impact-detection prefill (brief I.2.F): a `prefill(situation, categoryId)` event that opens the form for a pavement anomaly.
+- A description length limit with a character counter, if the data layer needs one.
+- Defence checks from the doc: rotate a half-filled form (values and errors stay), force-close the app (the draft is gone, by design), leave and reopen (empty).
+- Nits left open by the person's choice (review), with their fixes:
+  - N1: the `error` semantics on the radio-group column are never read (not focusable); remove them or comment that the visible error text is what TalkBack reads;
+  - N2: a second failed Submit may not be re-announced by the live region; if so, move focus to the first field with an error (a `FocusRequester` per field), which also helps keyboard users; check that the description error is not read twice;
+  - N3: the dropdown closes on rotation (its `rememberSaveable` is keyed under a different parent per orientation); acceptable, or use `remember` and drop the claim;
+  - N4: only the left scroll position carries over a rotation from portrait;
+  - N5: write the submit wiring (`submit()?.let { onSubmitResult(onSubmit(it)) }`) as three explained statements;
+  - N6: PT summary "Faltam preencher campos obrigatórios." could read "Há campos obrigatórios por preencher.";
+  - N7: a PT preview for the submit-failed state;
+  - N8: `@StringRes` on `scopeLabelRes`, and move it to `ui/components/` if another screen uses it.
+- Optional `isValid` colour cue on Submit (P08 slide 20), as a hint next to the errors.

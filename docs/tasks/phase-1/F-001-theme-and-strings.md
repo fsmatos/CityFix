@@ -13,9 +13,9 @@ Material 3 theme; `strings.xml` in English (default) and `values-pt/strings.xml`
 `Theme.kt`, `strings.xml` (EN/PT)
 
 ## Acceptance checks
-- [ ] No hard-coded user-visible strings in new code.
-- [ ] Switching the device language to Portuguese shows Portuguese strings.
-- [ ] Touch targets at least 48dp.
+- [x] No hard-coded user-visible strings in new code.
+- [x] Switching the device language to Portuguese shows Portuguese strings.
+- [x] Touch targets at least 48dp.
 
 ## References
 - Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`; domain model: `docs/architecture/overview.md` (Option A, decision 0002).
