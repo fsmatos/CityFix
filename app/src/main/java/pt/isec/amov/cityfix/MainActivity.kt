@@ -24,12 +24,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
+import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketListRoute
 import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
+import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ListScreen
+import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 
@@ -102,7 +106,17 @@ private fun CityFixApp() {
                 ListScreen(
                     tickets = tickets,
                     isExpanded = isExpanded,
-                    onTicketClick = {}, // slice 4
+                    onTicketClick = { id ->
+                        navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
+                    },
+                )
+            }
+            composable<TicketDetailRoute> { entry ->
+                val id = entry.toRoute<TicketDetailRoute>().ticketId
+                ShowScreen(
+                    ticket = tickets.firstOrNull { it.id == id },
+                    // Phase 1 has no login: every user is anonymous (decisions 0006, 0007).
+                    audience = DetailAudience.PUBLIC,
                 )
             }
         }
@@ -113,5 +127,6 @@ private fun CityFixApp() {
 private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     this == null -> TopBarScreen.DASHBOARD
     hasRoute<TicketListRoute>() -> TopBarScreen.LIST
+    hasRoute<TicketDetailRoute>() -> TopBarScreen.DETAIL
     else -> TopBarScreen.DASHBOARD
 }
