@@ -98,14 +98,12 @@ Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phas
   - the location rounded to `ANONYMOUS_COORDINATE_DECIMALS = 2` (about 1 km; (0, 0) stays (0, 0)). Nearby tickets collapse onto one grid point (all three samples become (40.21, -8.42)), so a future anonymous map must cluster or offset markers, never use exact coordinates.
 
   A field added to `Ticket`, `StatusHistory` or `Attachment` later is copied through unchanged, so it must be checked against this list.
-- **Projection gap found by F-005 (review S4, handover to Diogo):** brief I.1.C limits the anonymous detail to media and a coarse map, so `toAnonymousView()` must also blank `description` and clear `statusHistory` (keeping `currentStatus`), and decision 0006 must be amended accordingly ([decision 0007](../decisions/0007-ticket-detail-by-audience.md)). **Until then these two fields are hidden from anonymous users only in the UI** (`ShowScreen`'s `when (audience)`), against the CLAUDE.md rule that privacy is enforced below the UI. The change also empties the expanded `TicketCard` description in the anonymous list (F-003 Gate 1 Q2), so decide it together with that card.
+- **Projection gap found by F-005 (review S4, handover to Diogo):** brief I.1.C limits the anonymous detail to media and a coarse map, so `toAnonymousView()` must also blank `description` and clear `statusHistory` (keeping `currentStatus`), and decision 0006 must be amended accordingly ([decision 0007](../decisions/0007-ticket-detail-by-audience.md)). **Until then these two fields are hidden from anonymous users only in the UI** (`ShowScreen`'s `when (audience)`), against the CLAUDE.md rule that privacy is enforced below the UI. The change also empties the expanded `TicketCard` description in the anonymous list (F-003 Gate 1 Q2), so decide it together with that card. D-006 left this open at Gate 1; the work is task [D-007](../tasks/phase-1/D-007-anonymous-projection.md), to finish before delivery.
 - **Media is outside the projection.** `Attachment.file` and `thumbnail` are passed through unchanged. The media-upload task must strip EXIF GPS tags when it compresses images (`utils/`) and must use Storage paths that contain no user id.
-- **Contract for D-006:**
-  - Create the ViewModel once, above the `NavHost` (in `MainActivity`'s content, `val vm: TicketsViewModel = viewModel()`), and pass state and callbacks down. Calling `viewModel()` inside each destination scopes it to that back-stack entry, so a reported ticket would not appear in the list.
-  - Add `lifecycle-viewmodel-compose` (for `viewModel()`) and `lifecycle-runtime-compose` (for `collectAsStateWithLifecycle`); D-003 adds neither.
-  - Take the detail ticket from the collected `tickets` value (`tickets.firstOrNull { it.id == id }`, or `remember(id, tickets)`) rather than calling `getTicketById` once, so the detail screen recomposes when the list changes (review N4).
-  - Do not navigate to the id that `reportTicket` returns: a PRIVATE report is not in `tickets`, so `getTicketById` returns `null` and the detail screen would show "Ticket not found" (review N1). Show a confirmation (for example a snackbar) instead, and handle a `null` return.
-  - `reportTicket` is called from `ReportScreen`'s `onSubmit` with the fields of a `ReportSubmission` (F-006). On a non-null id: snackbar + `navigateUp()`, and return `true`. On `null`: return `false`, and the form stays open with "The report could not be submitted. Try again." (see "Screens", `ReportScreen`).
+- **How D-006 uses it** (see "App shell (D-006)"):
+  - The ViewModel is created once, above the `NavHost`, in `CityFixApp`. Calling `viewModel()` inside each destination would scope it to that back-stack entry, so a reported ticket would not appear in the list.
+  - The detail ticket comes from the collected `tickets` value (`tickets.firstOrNull { it.id == id }`), not from one call to `getTicketById`, so the detail screen recomposes when the list changes (review N4). `getTicketById` has no caller today and is kept as D-003's API.
+  - The id that `reportTicket` returns is only a success flag and is never navigated to: a PRIVATE report is not in `tickets`, so the detail screen would show "Ticket not found" (review N1).
 - Screens receive tickets already projected (blank author fields, coarse location), so F-003/F-005 must not try to show the author.
 
 ### Report form (F-006)
@@ -129,7 +127,7 @@ Details and reasons: [decision 0008](../decisions/0008-report-form-state.md). Co
   - the screen is split into a stateful `ReportScreen(viewModel)` and a stateless `ReportContent(state, ...)` (brief V, previews);
   - no file, repository or `suspend` save: the ViewModel only validates, and the ticket is created in memory by the caller;
   - nothing preselected (the doc's example preselects `DAMAGE`/`PRIVATE`);
-  - `collectAsState()` instead of `collectAsStateWithLifecycle()` until D-006 adds `lifecycle-runtime-compose`.
+  - `collectAsStateWithLifecycle()` since D-006, as in the rest of the app; F-006 used `collectAsState()` until `lifecycle-runtime-compose` was in the catalog.
 - **Attachments: F-007.** `ReportUiState` has no `attachments` field yet (it would be dead state). Its KDoc says what F-007 adds: `attachments` + `@StringRes attachmentsError` after `scope`, `attachments.isNotEmpty() && attachmentsError == null` in `isValid`, `attachmentsError` set in `submit()`, and the attachments in `ReportSubmission`. Because `submit()` gates on `isValid` (review S2), that one term blocks a report without an image/video.
 
 ### Navigation (D-004)
@@ -144,13 +142,8 @@ Code: `ui/navigation/Destinations.kt`. No decision record (D-004 Gate 1, Q5): ty
   - the Kotlin Serialization compiler plugin (`org.jetbrains.kotlin.plugin.serialization`, catalog alias `kotlin-serialization`, `version.ref = "kotlin"`) generates the serializers. The root build declares it `apply false` and `:app` applies it, like `kotlin-compose` (AGP 9 built-in Kotlin, no `kotlin-android` plugin);
   - the runtime `kotlinx-serialization-core` 1.11.0 provides `@Serializable`, the version used in class (P08). It pulls `kotlin-stdlib` up to 2.3.20 at runtime, while the compiler stays at Kotlin 2.2.10; the build accepts this with no compiler warnings, so Kotlin was not changed.
 - Checking the plugin ran: with AGP 9 built-in Kotlin the compiled classes are under `app/build/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes/` (not `app/build/tmp/kotlin-classes/debug/`). `pt/isec/amov/cityfix/ui/navigation/TicketDetailRoute$$serializer.class` must exist there.
-- Accepted lint warnings: lint reports newer versions as `NewerVersionAvailable` (not `GradleDependency`). D-004 adds two, both accepted: `kotlinx-serialization-core` (1.11.0 vs newer, kept to match the class) and the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs newer, the same warning `kotlin-compose` already has).
-- **Contract for D-006:**
-  - Add `androidx.navigation:navigation-compose` (suggested 2.9.8) through the version catalog. D-004 does not add it.
-  - After adding it, run `./gradlew :app:dependencies --configuration debugRuntimeClasspath` and check that `kotlinx-serialization-core` still resolves to 1.11.0. `navigation-compose` depends on it too, and Gradle picks the highest version requested, so a newer one would silently change the runtime.
-  - Build `NavHost(startDestination = DashboardRoute)` with `composable<DashboardRoute>`, `composable<TicketListRoute>`, `composable<TicketDetailRoute>` and `composable<ReportTicketRoute>`.
-  - In the detail destination, read the id with `backStackEntry.toRoute<TicketDetailRoute>().ticketId`.
-  - Never navigate to the id returned by `reportTicket` (see "ViewModel (D-003)").
+- Accepted lint warnings: D-004 adds two, both reported as `NewerVersionAvailable` and both accepted: `kotlinx-serialization-core` (1.11.0 vs newer, kept to match the class) and the `org.jetbrains.kotlin.plugin.serialization` plugin (2.2.10 vs newer, the same warning `kotlin-compose` already has). That id applies to these entries, not to every newer version: lint reports `navigation-compose` (D-006) and the Compose BOM as `GradleDependency`.
+- **How D-006 uses it** (see "App shell (D-006)"): the `NavHost` starts at `DashboardRoute` with one `composable<T>` per route, the detail destination reads the id with `toRoute<TicketDetailRoute>().ticketId`, and `navigation-compose` came in at 2.9.8. `kotlinx-serialization-core` still resolves to 1.11.0.
 
 ### Top bar (D-005)
 Code: `ui/navigation/MainTopAppBar.kt`. No decision record (D-005 docs plan): these are local UI choices, explained here and in the report notes.
@@ -171,18 +164,56 @@ Code: `ui/navigation/MainTopAppBar.kt`. No decision record (D-005 docs plan): th
 - Icons: `androidx.compose.material:material-icons-core`, with no version in the catalog. The Compose BOM sets 1.7.8, the library's frozen last release, so this is not a mismatch with the other Compose libraries. It is needed because `material3` 1.4 no longer brings icons. `KeyboardArrowUp`/`KeyboardArrowDown` are used because `ExpandLess`/`ExpandMore` are only in the extended library.
 - Strings: titles use the `top_bar_` prefix and content descriptions the `cd_` prefix. The Portuguese strings say "ocorrência(s)", the brief's term and the one in Francisco's strings, never "ticket" or "problema" (D-005 review S1). The English strings keep "ticket", so the string names do too. D-005 created the first `values-pt/strings.xml`.
 - **Merge note (`origin/dev/Francisco`):** his branch also adds `values-pt/strings.xml`, so expect an add/add conflict. Keep both sides, except `app_name`: he marks it `translatable="false"` in `values/strings.xml`, so keep that line and delete `app_name` from `values-pt/strings.xml`, then run lint. Until that merge our file is correct: without `translatable="false"`, lint needs the translation.
-- **Contract for D-006:**
-  - Place the bar in the `Scaffold`. Nothing calls it before D-006, so it has not run on a device yet.
-  - Convert the current destination to `TopBarScreen` with `hasRoute<T>()`.
-  - Pass `canNavigateBack = navController.previousBackStackEntry != null`. `previousBackStackEntry` is not Compose state, so reading it alone does not cause a recomposition and the back arrow can go stale. Read it in the same scope as `currentBackStackEntryAsState()`, which `hasRoute` needs anyway.
-  - Keep `isExpanded` in `rememberSaveable` above the `NavHost`, and pass it to both the bar and `ListScreen`.
-  - Set `onBackClick = navController::navigateUp`; `onAddClick` navigates to `ReportTicketRoute` with `launchSingleTop = true`, as a double tap could otherwise open the form twice.
-  - Check landscape on an emulator with a display cutout: no controls should sit under it (D-005 review N5).
+- **How D-006 uses it:** `CityFixApp` places the bar in the `Scaffold`, and the bar first ran on an emulator there. Back-arrow rule, `isExpanded` owner and the cutout result: "App shell (D-006)". `MainTopAppBar.kt` did not change.
+
+### App shell (D-006)
+Code: `MainActivity.kt`. No decision record: state ownership and ViewModel scopes follow decisions [0006](../decisions/0006-anonymous-projection-phase-1.md), [0007](../decisions/0007-ticket-detail-by-audience.md) and [0008](../decisions/0008-report-form-state.md), and the Compose mix below did not change the plan.
+- `MainActivity` keeps its `enableEdgeToEdge` setup and calls one private composable, `CityFixApp`, inside `CityFixTheme`. `CityFixApp` is the stateful layer over the stateless screens and the only code that knows about navigation. The screens and `MainTopAppBar` import no `NavController`.
+- Who owns which state:
+
+  | State | Owner | Scope and why |
+  | --- | --- | --- |
+  | `TicketsViewModel` | `viewModel()` above the `NavHost` | Activity. One instance, so a report reaches the list; survives rotation |
+  | `tickets`, `stats` | `collectAsStateWithLifecycle()` above the `NavHost` | Passed down to the destinations |
+  | `NavController` | `rememberNavController()` | Restores the back stack after rotation |
+  | `isExpanded` | `rememberSaveable` above the `NavHost` | Read by the bar and the list; survives rotation and leaving the list |
+  | `SnackbarHostState`, coroutine scope | `remember` / `rememberCoroutineScope` above the `NavHost` | Must outlive the report destination, which is popped straight away |
+  | `ReportViewModel` | `viewModel()` inside `composable<ReportTicketRoute>` | Back-stack entry. Survives rotation; cleared when the entry is popped, so the next visit starts empty (decision 0008) |
+
+  The same `viewModel()` call gives two lifetimes because it uses `LocalViewModelStoreOwner`: the activity above the `NavHost`, the `NavBackStackEntry` inside `composable`.
+- Top bar: `backStackEntry` comes from `currentBackStackEntryAsState()`, and a private `NavDestination?.toTopBarScreen()` maps it with `hasRoute<T>()`. Its `else` means a new route silently gets the dashboard title, so new routes must be added there by hand. `canNavigateBack = navController.previousBackStackEntry != null` is read in the body of `CityFixApp`, next to `backStackEntry`: `previousBackStackEntry` is not Compose state, so read alone it could leave the arrow stale (D-005 review N4).
+- Navigation: every forward `navigate` uses `launchSingleTop = true`, to stop a double tap stacking a screen. This covers forward navigation only: a double tap on the back arrow goes back two screens (review N1, left as planned). The add button stays on the detail screen (D-005 Q2), which is how detail -> report works.
+- Detail: always `DetailAudience.PUBLIC`, because phase 1 has no login. The ticket comes from the collected, projected `tickets`.
+- Report flow across the two ViewModels, which never reference each other:
+  1. Submit calls `ReportViewModel.submit()`, which validates and returns a `ReportSubmission` or `null`.
+  2. `ReportScreen` passes the submission to `onSubmit`, in `CityFixApp`.
+  3. `onSubmit` calls `TicketsViewModel.reportTicket(...)`, its only caller, with **named arguments**: `ReportSubmission`'s order differs and three of the values are `String`, so positional arguments could compile with fields swapped.
+  4. On a non-null id it launches the snackbar (`report_submitted`, "Report submitted." / "Ocorrência enviada."), calls `navigateUp()` and returns `true`. On `null` it returns `false`, and the form stays open with "The report could not be submitted. Try again."; this branch cannot be reached from the form, so it was checked by reading the code.
+  5. `ReportScreen` passes the `Boolean` to `onSubmitResult`.
+
+  One text serves both scopes (Gate 1 Q4), as phase 1 has no "my tickets" screen to point to. Rotating while the snackbar shows loses it, by design of `remember` state; the ticket still exists.
+- Insets: `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`, with one `Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)` on the `NavHost`, in that order. By design the inner padding covers system bars, cutout and keyboard, and the consume stops `imePadding()` in `ReportContent` adding them again.
+- **Intended difference from the F-003 to F-006 contract snippets:** the screens receive no `modifier` from the caller, because the padding is on the `NavHost`. Their `modifier` parameter stays optional. The effect is the same with less repetition, and the consume then covers the report route too.
+- Dependencies, added through the version catalog:
+  - `navigation-compose` **2.9.8**, not 2.10.x: 2.10.2 (latest stable) requires Compose `runtime` 1.11.2, past our limit. 2.10.0 and 2.10.1 were not checked.
+  - `lifecycle-viewmodel-compose` (for `viewModel()`) and `lifecycle-runtime-compose` (for `collectAsStateWithLifecycle`), declared explicitly at 2.11.0 with `version.ref = "lifecycleRuntimeKtx"`, because the code imports them directly.
+  - Two limits, both at 1.11.0: `kotlinx-serialization-core` and Compose `runtime`.
+  - Resolved `debugRuntimeClasspath` (2026-11-02): `kotlinx-serialization-core` 1.11.0, `runtime` 1.11.0, `ui` 1.11.0 (was 1.10.4), `foundation` 1.10.4, `material3` 1.4.0, `navigation-compose` 2.9.8, both lifecycle artifacts 2.11.0, `kotlin-stdlib` 2.3.20.
+  - The BOM (2026.02.01) sets `runtime` and `ui` to 1.10.4. Lifecycle 2.11.0 pulls both up to 1.11.0, and Gradle picks the highest version requested. So `ui` 1.11.0 runs next to `foundation` 1.10.4, a mix accepted at Gate 1 Q5 if it ran cleanly. On the emulator's first run there was no crash and no `NoSuchMethodError`; it has not run on a real device.
+  - Lint: 0 errors, 14 warnings, the baseline 13 plus one accepted `GradleDependency` for `navigation-compose` (2.9.8 vs 2.10.2).
+- No `configChanges` in the manifest: rotation recreates the activity, which is what the state above relies on.
+- **Open privacy work: [D-007](../tasks/phase-1/D-007-anonymous-projection.md), before delivery.** D-006 wires the expand toggle unconditionally (Gate 1 Q2), so an anonymous user can read the free-text description and "Reported on" in the list, which the PUBLIC detail hides and brief I.1.B leaves out. `description` and `statusHistory` are also still hidden only in the UI (see "ViewModel (D-003)"). Hiding the add button and the form by role stays with the Auth task.
+- What ran, and what did not (2026-11-02, AVD `Iphone_Diogo`, driven through adb, not by hand). The full list is in `docs/work/D-006-main-activity-nav/state.md`.
+  - Passed: dashboard -> list -> detail -> report; system back and arrow back to the dashboard; arrow absent on the dashboard; rotation on all four screens; expanded state on rotation (3 runs); half-filled form on rotation, empty after leaving and after a submit; empty submit; PUBLIC and PRIVATE reports; anonymous detail showing only header, media and map.
+  - Cutout (tall overlay, both landscape rotations): the bar's controls clear it on the dashboard and list, so the optional `MainTopAppBar` line was not added. Detail and report were not checked under the cutout.
+  - **Unexplained:** in the first expanded-list rotation test the app showed the dashboard afterwards, with no crash in the log. Three repeats from a clean start did not reproduce it. The cause is unknown: it may be a test artefact or a rare real loss of the screen.
+  - Not checked: double taps; back on the dashboard after the final build (it left the app in the earlier run); the flash after rotation (review N2); keyboard overlap and double gap in landscape; the PT snackbar text; a real device. PT strings were seen on the dashboard only.
+  - Slice 6 (`safeDrawing`) came after the review, so the reviewer did not see it.
 
 ## UI foundation
 - Theme: the course template trio in `ui/theme/` (`Color.kt`, `Theme.kt`, `Type.kt`). Light only (dark mode is not required by the brief): `CityFixTheme` has one `lightColorScheme` with primary `CityFixBlue`, secondary `CityFixTeal`, tertiary `CityFixOrange`. `Type.kt` stays the template. Screens read `MaterialTheme.colorScheme` and `MaterialTheme.typography`, never raw colours.
 - `dynamicColor` defaults to `false`, the one change to the template: on Android 12+ dynamic colour would replace the CityFix colours with the wallpaper palette.
-- `MainActivity` calls `enableEdgeToEdge` with `SystemBarStyle.light(TRANSPARENT, TRANSPARENT)` for status and navigation bars. The default style follows the device, so in device dark mode it would draw light icons over the light-only UI; the light style keeps them dark and readable.
+- `MainActivity` calls `enableEdgeToEdge` with `SystemBarStyle.light(TRANSPARENT, TRANSPARENT)` for status and navigation bars. The default style follows the device, so in device dark mode it would draw light icons over the light-only UI; the light style keeps them dark and readable. The template `Greeting` and `welcome_message` are gone: the activity's content is `CityFixApp` (see "App shell (D-006)").
 - Strings: English default in `values/strings.xml`, Portuguese in `values-pt/strings.xml`, same snake_case keys; the device language picks the file, falling back to English. Composables use `stringResource(R.string.x)`, no literals. `app_name` is `translatable="false"`. Each task adds its strings with the screen that uses them, EN and PT in the same commit (lint `MissingTranslation` catches gaps). Plurals use `<plurals>` with `pluralStringResource(R.plurals.x, count, args...)` (first added by F-004): EN needs `one`/`other`, PT needs `one`/`many`/`other` (`many` equal to `other`; lint accepts it, with no `MissingQuantity`/`UnusedQuantity`). PT `one` also covers 0 (CLDR `i = 0..1`), so a plural that could show 0 would read "0 reparação"; no current call site passes 0. A plural whose numbers are pre-formatted (`dashboard_active_of_total`) uses `%1$s`/`%2$s`, while the quantity argument stays an `Int`.
 - Sizes: `dp` for layout, `sp` for text (so text follows the font scale).
 - Touch targets: 48dp through Material 3 components (`Button`, `IconButton`, ...), which enforce the minimum size; no custom size constants.
@@ -193,7 +224,7 @@ Code: `ui/navigation/MainTopAppBar.kt`. No decision record (D-005 docs plan): th
 ### Shared components
 Stateless composables in `ui/components/` (data in, events out; no ViewModel, `remember` or Firebase), reused by the list (F-003) and the detail screen (F-005). Task F-002.
 - `StatusBadge(status)`: non-clickable `Surface` + `Text` with one colour and the localised label per `TicketStatus`. Colours: OPEN `primary`, INFO_REQUESTED `tertiary`, IN_PROGRESS `secondary`, RESOLVED `CityFixGreen` (see the exception above), CLOSED `inverseSurface`/`inverseOnSurface` (stands out on the card container). The label is always shown, so status is never conveyed by colour only.
-- `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. **Anonymous caveat:** `isExpanded = true` shows the free-text description, which brief I.1.B keeps out of the anonymous list (category, situation, thumbnail) and which may hold personal data; D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (see "Screens", `ListScreen`). The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
+- `TicketCard(ticket, isExpanded, onClick)`: M3 `Card(onClick)`. Collapsed it shows a placeholder thumbnail (vector drawable on a `surface` box), the category name (fallback string if blank), the situation and the `StatusBadge`, the content brief I.1.B lists for the ticket list. Expanded (`isExpanded = true`) it also shows the description (up to 3 lines, skipped if blank) and "Reported on <date>" (skipped if `createdAt == 0L`). `isExpanded` is the global top-bar toggle owned by the screen (D-005/D-006), not per-card state. **Anonymous caveat:** `isExpanded = true` shows the free-text description, which brief I.1.B keeps out of the anonymous list (category, situation, thumbnail) and which may hold personal data; D-006 wired the toggle unconditionally, and [D-007](../tasks/phase-1/D-007-anonymous-projection.md) decides what it does for anonymous users (see "Screens", `ListScreen`). The card reads only `categoryName`, `situation`, `currentStatus`, `description` and `createdAt`; never `location`, `creatorId`, `followerIds` or `messages`.
 - Enum labels: `statusLabelRes` (`StatusBadge.kt`), `situationLabelRes` (`TicketCard.kt`) and `scopeLabelRes` (F-006, in `ui/screens/ReportScreen.kt`, "Public"/"Público", "Private"/"Privado"; move it next to the others in `ui/components/` if another screen needs it, and add `@StringRes` to its return type then, review N8) map each constant to its `R.string` id (plain `Int`) with an exhaustive `when`, never `.name`; a new constant does not compile until it has a label. PT labels are the brief's wording (Aberto, Pedido de informações, Em resolução, Resolvido, Encerrado; Dano, Avaria, Destruição, Roubo).
 - Dates: `utils/formatDate(epochMillis)` uses `java.text.DateFormat.MEDIUM` in the device locale (works on minSdk 24 without desugaring). `utils/formatDateTime(epochMillis, locale)` (F-005) adds a short time and takes the locale as a parameter, so callers pass `LocalConfiguration.current.locales[0]` and PT previews format in PT. The two helpers differ (review N7): `formatDate` should also take a locale, with `TicketCard` passing the `LocalConfiguration` one (follow-up, not done in F-005).
 - `CoarseLocationMap(location, modifier)` (F-005): the "Approximate location" section. A heading, a 200dp `surfaceVariant` box with a `LocationOn` icon and `cd_ticket_map`, and the caption "Approximate area (about 1 km)"; "Location not available" for the unset (0, 0) (decision 0003). It never renders coordinates as text. It is a **static placeholder**, chosen at F-005 Gate 1 (no library, no key, no manifest change), so it does not yet meet brief I.1.C's "mapa com zoom afastado". The map is behind this one component so it can be replaced in one file:
@@ -202,26 +233,17 @@ Stateless composables in `ui/components/` (data in, events out; no ViewModel, `r
   - either way: fixed coarse zoom (about 14), all gestures off, a translucent circle of about 600 m instead of a pin, and a placeholder in previews through `LocalInspectionMode`.
 
 ### Screens
-Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, events out): the agreed signatures make the screen itself the stateless half, and the stateful half (collecting `TicketsViewModel` flows) lives in D-006's `composable<...>` blocks, with the single ViewModel created above the `NavHost` (see "ViewModel (D-003)"). The exception is the report form (F-006): it has its own route-scoped `ReportViewModel`, so it follows the P08 split, a stateful `ReportScreen(viewModel, ...)` over a stateless `ReportContent(state, ...)`.
+Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, events out): the agreed signatures make the screen itself the stateless half, and the stateful half is `CityFixApp`, which creates the single ViewModel and collects its flows above the `NavHost` (see "App shell (D-006)"). The exception is the report form (F-006): it has its own route-scoped `ReportViewModel`, so it follows the P08 split, a stateful `ReportScreen(viewModel, ...)` over a stateless `ReportContent(state, ...)`.
 - `ListScreen(tickets, isExpanded, onTicketClick: (String) -> Unit, modifier)` (`ui/screens/ListScreen.kt`, F-003): the public list behind `TicketListRoute` (brief I.1.B).
   - Renders the list exactly as received. Filtering (PUBLIC + `isActive`), newest-first order and `toAnonymousView()` happen upstream in `TicketsList.publicActive()` and `TicketsViewModel.tickets`; the screen does not filter, sort or check `isActive`, and reads only `ticket.id` itself.
   - `LazyColumn` (16dp content padding, 8dp spacing) with `items(tickets, key = { it.id })`, one `TicketCard` per ticket. Stable keys keep item identity when the list changes; ids are unique and non-blank because `TicketsList.add` refuses others.
   - Empty list: a centred, localised message (`ticket_list_empty`, EN + PT) instead of the `LazyColumn`.
   - A tap calls `onTicketClick(ticket.id)`: only the id, ready for `navigate(TicketDetailRoute(id))`.
-  - `modifier` is applied to the root of whichever branch is drawn, so the caller passes the `Scaffold` inner padding.
+  - `modifier` is applied to the root of whichever branch is drawn. D-006 passes none, because the `Scaffold` inner padding is on the `NavHost`.
   - Same layout in portrait and landscape (Gate 1, Q3); the scroll position survives rotation through the default saveable `LazyListState`.
   - No stateful wrapper (Gate 1, Q1): D-006 collects `vm.tickets`. `isExpanded` is passed straight through to every card (Gate 1, Q2).
-  - **Handover to D-005/D-006 (F-003 review S1):** `isExpanded = true` shows the free-text description on every card. In phase 1 every user is anonymous, so D-005/D-006 must hide or force off the expand toggle for anonymous users once roles exist (brief I.1.B; CLAUDE.md: anonymous users never see the author's personal data). Until then, wiring the toggle unconditionally shows descriptions in the anonymous list.
-  - **Contract for D-006:**
-    ```kotlin
-    ListScreen(
-        tickets = vm.tickets.collectAsStateWithLifecycle().value,
-        isExpanded = expanded,
-        onTicketClick = { navController.navigate(TicketDetailRoute(it)) },
-        modifier = Modifier.padding(innerPadding),
-    )
-    ```
-    In landscape on a device with a camera cutout, check that no card sits under the notch; add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if needed (F-003 review N3).
+  - **Open handover (F-003 review S1):** `isExpanded = true` shows the free-text description on every card. In phase 1 every user is anonymous (brief I.1.B; CLAUDE.md: anonymous users never see the author's personal data), and D-006 wired the toggle unconditionally as its task requires, so the anonymous list shows descriptions today. [D-007](../tasks/phase-1/D-007-anonymous-projection.md) closes this before delivery.
+  - Wired by D-006 in `CityFixApp` (see "App shell (D-006)"). F-003 review N3 chose `safeDrawing` on the `Scaffold`. Under the tall cutout only the bar's controls were checked, so whether a card or the last item clears the cutout and the navigation bar is still open.
 - `DashboardScreen(stats, onSeeTicketsClick: () -> Unit, modifier)` (`ui/screens/DashboardScreen.kt`, F-004): the anonymous dashboard behind `DashboardRoute`, the start destination (brief I.1.A). No decision record (Gate 1 kept the defaults except Q4).
   - Formats `DashboardStats` and recomputes nothing: it never reads a `Ticket`. It trusts the D-002 contract (`activeRatio` in 0.0..1.0 and never NaN, 0.0 with no tickets; `averageRepairTimeMillis` `null` when nothing is resolved and never negative) and adds no guard of its own (Gate 1: one owner per rule). Any change to `DashboardStats` must keep that contract, or the fault shows directly in the UI (for example "NaN" in the zero-ticket preview).
   - Three `Card`s in the brief's order:
@@ -236,15 +258,7 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
   - **Known difference (review N1, wording kept by the person):** the figures count every ticket, private ones included (decision 0005), while the button opens the list of PUBLIC active tickets (`publicActive()`). Today they match because all samples are PUBLIC; once private tickets exist, "12 of 30 issues" can lead to a list of 9. At the defence: the brief's "nº total de ocorrências" is not limited to public ones, while the anonymous list is. If this confuses users, rename the button "See public issues" / "Ver ocorrências públicas" (`dashboard_see_tickets`).
   - Previews (private data, `CityFixTheme`): `previewStats` (30 / 12 / 8, 3 days 4 hours) in portrait, landscape and PT landscape; `DashboardStats()` in portrait, landscape and PT; the sample figures (3 / 2 / 1, exactly 3 days) in EN and PT; a single-ticket preview `DashboardStats(1, 0, 1, 30 min)` in EN and PT for "Less than 1 hour", "Based on 1 repair" and "0 of 1 issue". It uses 0 active of 1, not 1 of 1, because a resolved ticket is never active (D-002 contract). The "hours only" branch ("5 hours") has no preview and is checked by reading the code.
   - No stateful wrapper (Q1, as in F-003): D-006 collects `vm.stats`.
-  - **Contract for D-006 (Q5 handover to Diogo):** D-005's top bar has no list action, so dashboard -> list goes through this button.
-    ```kotlin
-    DashboardScreen(
-        stats = vm.stats.collectAsStateWithLifecycle().value,
-        onSeeTicketsClick = { navController.navigate(TicketListRoute) },
-        modifier = Modifier.padding(innerPadding),
-    )
-    ```
-    As for `ListScreen`, check landscape on a device with a camera cutout and add `WindowInsets.displayCutout` padding (or `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`) if a card sits under the notch (F-003 review N3).
+  - Wired by D-006 in `CityFixApp` (see "App shell (D-006)"). D-005's top bar has no list action, so dashboard -> list goes through this button (Q5). As for `ListScreen`, the tall-cutout check covered the bar's controls, not the cards.
 - `ShowScreen(ticket: Ticket?, audience: DetailAudience, modifier)` (`ui/screens/ShowScreen.kt`, F-005): the ticket detail behind `TicketDetailRoute`. Details and reasons: [decision 0007](../decisions/0007-ticket-detail-by-audience.md).
   - `enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }` lives in the same file (Gate 1: only this screen and D-006's call use it; move it to `model/` only if the Auth task needs it there). `audience` is required, with no default, so every caller states who is looking; `modifier` stays the first optional parameter (lint `ModifierParameter`). The screen branches with an exhaustive `when (audience)`, so a later task that adds messages or coordinates must decide for each audience to compile.
   - Who gets which audience (the screen only receives it; the Auth/ViewModel layer maps role + creator/follower relation to it, review S3):
@@ -267,19 +281,8 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
   - Timestamps: `formatDateTime(epochMillis, locale)` (medium date + short time), locale from `LocalConfiguration.current.locales[0]` so the PT previews show PT dates, device time zone. The history is shown in stored order, oldest first, with no sort: `currentStatus` is a copy of the last entry (decision 0004), so a UI sort could hide a data bug.
   - Accessibility: the category and every section title are headings; each history row and each media tile is one TalkBack item (`semantics(mergeDescendants = true)`); decorative icons have `contentDescription = null` next to a text label; the map box has `cd_ticket_map`. Nothing is interactive. Known nit left (review N6): the map description and caption are two TalkBack stops, and the description promises a map that is not there yet.
   - Previews (private, `CityFixTheme`): PUBLIC and REGISTERED with `previewTicket` (already in anonymous form, 3 history entries, an IMAGE and a VIDEO attachment) in portrait, landscape, PT and PT landscape; not-found in the same four; empty history / no media / no location in EN and PT; a privacy preview with the raw `sample-2` (selected by id) in PUBLIC.
-  - **Contract for D-006:**
-    ```kotlin
-    composable<TicketDetailRoute> { backStackEntry ->
-        val id = backStackEntry.toRoute<TicketDetailRoute>().ticketId
-        ShowScreen(
-            ticket = tickets.firstOrNull { it.id == id },
-            audience = DetailAudience.PUBLIC,
-            modifier = Modifier.padding(innerPadding),
-        )
-    }
-    ```
-    `tickets` is the collected `vm.tickets` (see "ViewModel (D-003)"), so the screen updates when the list changes and shows "not found" if the ticket leaves the public list. As for the other screens, check landscape on a device with a camera cutout (F-003 review N3).
-  - Other handovers to Diogo: the projection change (S4, "ViewModel (D-003)"); optionally an IMAGE and a VIDEO attachment (`file = ""`) on a visible sample so the tiles show on a device; the Auth task maps role + creator/follower relation to `DetailAudience` as in the table above.
+  - Wired by D-006 in `composable<TicketDetailRoute>` with `DetailAudience.PUBLIC` (see "App shell (D-006)"). `tickets` is the collected `TicketsViewModel.tickets`, so the screen updates when the list changes and shows "not found" if the ticket leaves the public list. The detail was not checked under the cutout (F-003 review N3).
+  - Other handovers to Diogo: the projection change ([D-007](../tasks/phase-1/D-007-anonymous-projection.md), S4 in "ViewModel (D-003)"); optionally an IMAGE and a VIDEO attachment (`file = ""`) on a visible sample so the tiles show on a device; the Auth task maps role + creator/follower relation to `DetailAudience` as in the table above.
 - `ReportScreen(viewModel: ReportViewModel, onSubmit: (ReportSubmission) -> Boolean, modifier)` / `ReportContent(state, onCategorySelected, onSituationSelected, onDescriptionChange, onScopeSelected, onSubmitClick, modifier)` (`ui/screens/ReportScreen.kt`, F-006): the provisional report form behind `ReportTicketRoute` (brief I.2.E "Abertura"). State and rules: "Report form (F-006)" and [decision 0008](../decisions/0008-report-form-state.md).
   - `ReportScreen` is the stateful half and the only code that touches the ViewModel: it collects `uiState` and wires the events. On Submit it calls `viewModel.submit()`; if that returns a `ReportSubmission`, it calls `onSubmit(submission)` and passes the `Boolean` to `viewModel.onSubmitResult(...)`. `ReportContent` is stateless (no ViewModel parameter) and is what the previews draw.
   - Fields in the brief's order, all required, nothing preselected, under the note "All fields are required.":
@@ -297,29 +300,12 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
   - Layout: portrait is one `Column(fillMaxSize().imePadding().verticalScroll(leftScroll).padding(16.dp))`. Landscape is a `Row` of two `weight(1f).fillMaxHeight().imePadding().verticalScroll(...)` panes: left `ChoicesPane` (note, category, situation), right `DetailsPane` (description, media note, visibility, messages, Submit). Both orientations use the same two private composables. Orientation from `LocalConfiguration`. The two scroll states are hoisted to the top of `ReportContent` (F-005 review S2). On rotation only the left (portrait) scroll position carries over: a user scrolled to the description in portrait finds the right pane at the top in landscape (review N4). The dropdown's `expanded` is `rememberSaveable`, but the field sits under a different parent in each orientation, so the menu closes on rotation (review N3); that is intended.
   - Keyboard: the manifest already sets `android:windowSoftInputMode="adjustResize"`, but with `enableEdgeToEdge` the window does not shrink for the keyboard, so Compose must apply the IME inset. **`imePadding()` goes before `verticalScroll`** (implementation deviation, agreed at review): outside the scroll container it shrinks the viewport, so the focused field is scrolled above the keyboard; inside it (the plan's order) it only adds blank space after the last item and the description can stay hidden.
   - Previews (private, `CityFixTheme`, built from `ReportUiState` values, no ViewModel; `previewCategories` copies the active samples so the file imports nothing from `data/`): empty, filled and error in EN, PT, EN landscape and PT landscape; no categories, and no categories after a Submit, in EN and PT; submit failed in EN (no PT preview, review N7).
-  - **Contract for D-006:**
-    ```kotlin
-    composable<ReportTicketRoute> {
-        val reportVm: ReportViewModel = viewModel()      // per route: not above the NavHost
-        ReportScreen(
-            viewModel = reportVm,
-            onSubmit = { s ->
-                val id = vm.reportTicket(s.description, s.categoryId, s.categoryName, s.situation, s.scope)
-                if (id != null) {
-                    // snackbar "submitted"; never navigate to id
-                    navController.navigateUp()
-                }
-                id != null                               // false: the form stays and shows the error
-            },
-            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
-        )
-    }
-    ```
-    - `viewModel()` **inside** the destination, so the draft is scoped to the route; `vm` is the shared `TicketsViewModel` from above the `NavHost`.
-    - **Never navigate to the returned id**: a PRIVATE report is not in the anonymous `tickets`, so the detail would say "Ticket not found" ("ViewModel (D-003)"). The snackbar strings are D-006's.
-    - **`consumeWindowInsets(innerPadding)`** after `padding(innerPadding)`: the `Scaffold` padding already includes the navigation-bar inset, and `imePadding()` would add it again while the keyboard is open. `MainActivity` today uses only `Modifier.padding(innerPadding)`, so this must be added for this route.
-    - Switch `collectAsState()` to `collectAsStateWithLifecycle()` in `ReportScreen` once `lifecycle-runtime-compose` is in the catalog (one line).
-    - Check on an emulator: rotation keeps values and errors; leaving and reopening starts empty; the keyboard does not cover the description in either orientation; no double bottom inset; TalkBack behaviour (N2). As for the other screens, check landscape with a camera cutout (F-003 review N3).
+  - Wired by D-006 in `composable<ReportTicketRoute>` (report flow in "App shell (D-006)"):
+    - `viewModel()` **inside** the destination, so the draft is scoped to the route.
+    - **The returned id is never navigated to**: a PRIVATE report is not in the anonymous `tickets`, so the detail would say "Ticket not found" ("ViewModel (D-003)").
+    - **`consumeWindowInsets(innerPadding)`** after `padding(innerPadding)`, on the `NavHost`: the `Scaffold` padding already includes these insets, and `imePadding()` would otherwise add them again while the keyboard is open.
+    - `ReportScreen` now uses `collectAsStateWithLifecycle()`.
+    - Emulator: a half-filled form kept its values on rotation, and leaving started it empty. Still open: the keyboard over the description and the double bottom gap; TalkBack behaviour (N2); the report screen under the cutout (F-003 review N3).
   - Other handovers to Diogo: confirm the three new files F-006 added in his folders (`viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, Gate 1 Q7a); the `reportTicket` attachments parameter for F-007 (Q7f); later, impact detection (I.2.F) prefills the form through a new `ReportViewModel` event (for example `prefill(situation, categoryId)`), not added now (Q7d).
 
 ## External services

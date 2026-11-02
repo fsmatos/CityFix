@@ -9,7 +9,7 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-11-02 | Approved by Diogo with the planner's recommended answers; S4 goes to its own task |
 | Code | done | 2026-11-02 | 6 slices (d359cb2, 8147a46, 9ea90fb, aefec5e, 1181701, ba4ae8d); assembleDebug and lint pass; emulator checks run, see Log |
 | Review | done | 2026-11-02 | review.md: 0 blocking, 1 should-fix, 3 nits; slice 6 and emulator checks treated as known open items |
-| Docs | | | |
+| Docs | done | 2026-11-02 | overview.md, report notes, phase-1 README; no new decision record; task file left unticked, see Log |
 | Pushed | | | |
 | Merged | | | |
 
@@ -31,3 +31,4 @@ Append-only.
 - 2026-11-02 Unexplained: in the first expanded-list rotation test the app showed the dashboard afterwards, with no crash in the log. Three repeats from a clean start, including that exact sequence, did not reproduce it. Cause unknown; the first run's script was not instrumented, so it may be a test artefact or a rare real loss of the screen.
 - 2026-11-02 Not checked: double taps; back on the dashboard after the final build (it left the app in the earlier run); title flash after rotation (review N2, needs frame-level viewing); keyboard overlap and double gap in landscape; PT snackbar text; a real device.
 - 2026-11-02 Review S1: fixed by adding `docs/tasks/phase-1/D-007-anonymous-projection.md`. N1 left as planned (double tap on the back arrow). N2 and N3 are for Docs or a manual check.
+- 2026-11-02 Docs: docs-writer updated overview.md (new "App shell (D-006)", contract blocks replaced, stale lines fixed, N3 fixed by naming `GradleDependency` and limiting the D-004 sentence, D-007 linked), docs/report/notes.md (D-006 section) and docs/tasks/phase-1/README.md (D-007 row, signatures). No decision 0009, as Q5 did not change the plan. Deviation: `D-006-main-activity-nav.md` was left unticked at status "to do", because the plan ticks it once Diogo confirms on the emulator and the checks ran through adb, not by hand. Not committed (no shell).
