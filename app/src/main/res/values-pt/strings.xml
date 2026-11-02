@@ -47,6 +47,7 @@
     <string name="scope_private">Privado</string>
     <string name="report_error_summary">Faltam preencher campos obrigatórios.</string>
     <string name="report_submit">Enviar ocorrência</string>
+    <string name="report_submitted">Ocorrência enviada.</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

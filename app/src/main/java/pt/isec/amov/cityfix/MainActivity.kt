@@ -10,12 +10,17 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
@@ -25,16 +30,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
+import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketListRoute
 import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ListScreen
+import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +75,11 @@ private fun CityFixApp() {
 
     var isExpanded by rememberSaveable { mutableStateOf(false) }
 
+    // Above the NavHost: the report destination is popped while the snackbar is showing.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val reportSubmittedMessage = stringResource(R.string.report_submitted)
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val screen = backStackEntry?.destination.toTopBarScreen()
@@ -82,9 +96,12 @@ private fun CityFixApp() {
                 isExpanded = isExpanded,
                 onBackClick = { navController.navigateUp() },
                 onToggleExpandedClick = { isExpanded = !isExpanded },
-                onAddClick = {}, // slice 5
+                onAddClick = {
+                    navController.navigate(ReportTicketRoute) { launchSingleTop = true }
+                },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -119,6 +136,30 @@ private fun CityFixApp() {
                     audience = DetailAudience.PUBLIC,
                 )
             }
+            composable<ReportTicketRoute> {
+                // Inside the destination: scoped to this entry, so a finished form is cleared.
+                val reportViewModel: ReportViewModel = viewModel()
+                ReportScreen(
+                    viewModel = reportViewModel,
+                    onSubmit = { submission ->
+                        val id = ticketsViewModel.reportTicket(
+                            description = submission.description,
+                            categoryId = submission.categoryId,
+                            categoryName = submission.categoryName,
+                            situation = submission.situation,
+                            scope = submission.scope,
+                        )
+                        if (id != null) {
+                            // Never navigate to id: a PRIVATE ticket is not visible (decision 0006).
+                            snackbarScope.launch {
+                                snackbarHostState.showSnackbar(reportSubmittedMessage)
+                            }
+                            navController.navigateUp()
+                        }
+                        id != null
+                    },
+                )
+            }
         }
     }
 }
@@ -128,5 +169,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     this == null -> TopBarScreen.DASHBOARD
     hasRoute<TicketListRoute>() -> TopBarScreen.LIST
     hasRoute<TicketDetailRoute>() -> TopBarScreen.DETAIL
+    hasRoute<ReportTicketRoute>() -> TopBarScreen.REPORT
     else -> TopBarScreen.DASHBOARD
 }

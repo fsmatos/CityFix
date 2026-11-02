@@ -49,6 +49,7 @@
     <string name="scope_private">Private</string>
     <string name="report_error_summary">Some required fields are missing.</string>
     <string name="report_submit">Submit report</string>
+    <string name="report_submitted">Report submitted.</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
