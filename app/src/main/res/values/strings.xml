@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">CityFix</string>
-    <string name="welcome_message">Welcome to CityFix</string>
 
     <!-- Ticket status labels -->
     <string name="status_open">Open</string>
