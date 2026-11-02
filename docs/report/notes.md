@@ -431,3 +431,58 @@ Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../d
   - N7: a PT preview for the submit-failed state;
   - N8: `@StringRes` on `scopeLabelRes`, and move it to `ui/components/` if another screen uses it.
 - Optional `isValid` colour cue on Submit (P08 slide 20), as a hint next to the errors.
+
+## D-006: MainActivity with Scaffold and NavHost
+Decisions: no new record; follows [0006](../decisions/0006-anonymous-projection-phase-1.md), [0007](../decisions/0007-ticket-detail-by-audience.md) and [0008](../decisions/0008-report-form-state.md). Code: `MainActivity.kt`, one line in `ui/screens/ReportScreen.kt`, `report_submitted` in `values/` and `values-pt/`, the catalog and `app/build.gradle.kts`. Overview: `docs/architecture/overview.md`, "App shell (D-006)".
+
+### Technical solutions
+- **One composition root.** `CityFixApp` is the stateful layer over the stateless screens, with each piece of state hoisted to the lowest level that serves all its users. It is the only code that knows about navigation.
+- **Three kinds of state, three reasons to survive rotation.** `isExpanded` (UI state shared by the bar and the list) is in `rememberSaveable`, which saves it in the instance state. Data is in ViewModels, which outlive the recreated activity. The back stack is restored by `rememberNavController`. The manifest has no `configChanges`: the design relies on normal recreation.
+- **Type-safe routes** with `toRoute<T>()` to read the id and `hasRoute<T>()` to map the destination to the bar's enum.
+- **Back-arrow trap.** `previousBackStackEntry` is not Compose state, so it is read in the same scope as `currentBackStackEntryAsState()`. A change of the current entry recomposes that line, and the arrow cannot go stale.
+- **Two ViewModels at two scopes.** `TicketsViewModel` belongs to the activity and `ReportViewModel` to the back-stack entry. For the defence: `viewModel()` uses `LocalViewModelStoreOwner`, which is the activity above the `NavHost` and the `NavBackStackEntry` inside `composable`. That is why the same call gives different lifetimes. With activity scope, the old values and the `submitted` lock would come back on the next visit.
+- **One-way hand-off between ViewModels.** The form passes a `ReportSubmission` to a callback that returns `Boolean`, so neither ViewModel holds the other.
+- **Snackbar state above the `NavHost`,** because the destination that triggers it is popped at once. The message is resolved in the composable body, since `stringResource` cannot be called from `launch`.
+- **Named arguments on `reportTicket`,** because three of the parameters are `String` and the order differs from `ReportSubmission`: positional arguments could compile with fields swapped.
+- **Insets.** Edge-to-edge with `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`, and one `padding(innerPadding).consumeWindowInsets(innerPadding)` on the `NavHost`, in that order, so `imePadding()` in the report form does not add an inset twice. Screens receive no `modifier` from the caller, an intended difference from the screens' contract snippets. For the defence: why the order matters.
+- **Audience `PUBLIC` in phase 1, and three layers of privacy:** the list filter (`publicActive()`), the projection (`toAnonymousView()`) and the UI branch (`when (audience)`). The third layer is doing work that belongs to the second; see Known gaps.
+
+### Options chosen and rejected
+- `navigation-compose` 2.9.8 over the latest 2.10.2: its transitive requirement of Compose `runtime` 1.11.2 would pass our limit of 1.11.0. A good example of how Gradle's "highest requested version wins" affects a choice. 2.10.0 and 2.10.1 were not checked.
+- The same rule has a visible side effect: lifecycle 2.11.0 pulls `runtime` and `ui` to 1.11.0, above the BOM's 1.10.4, while `foundation` stays at 1.10.4 (Gate 1 Q5, accepted if it ran cleanly). A BOM bump or moving lifecycle down would change more than this task needs.
+- Explicit lifecycle dependencies rather than relying on transitive ones, because the code imports them directly.
+- `launchSingleTop` on all forward navigation, for double taps.
+- `CityFixApp` in `MainActivity.kt`, as the task names, rather than its own file in `ui/navigation/`.
+- One confirmation text for both scopes (Q4): there is no "my tickets" screen to point to.
+- `safeDrawing` once on the `Scaffold`, rather than default insets plus `displayCutout` padding on each of the four screens.
+- Rejected: navigating to the new ticket (a PRIVATE one is not visible); `getTicketById` for the detail (a snapshot that would not update); `ReportViewModel` at activity scope; a one-shot event in a ViewModel for the confirmation (an event type and a collector to save a 4-second message); `configChanges` to avoid recreation.
+
+### Known gaps
+- **Anonymous list shows more than the brief allows, open until [D-007](../tasks/phase-1/D-007-anonymous-projection.md), before delivery.** The expand toggle is wired unconditionally as D-006's task requires (Gate 1 Q2), so a device now shows the free-text description and "Reported on" in the anonymous list. The PUBLIC detail hides both and brief I.1.B leaves them out. Blanking `description` alone would not close this, as `createdAt` stays in the projection, so D-007 decides the toggle too.
+- **`description` and `statusHistory` are hidden from anonymous users only in the UI** (F-005 review S4), against the rule that privacy is enforced below the UI. D-007 also closes this and amends decision 0006.
+- Anonymous users can open the report form and see the add button until the Auth task (decision 0008).
+- A double tap on the back arrow goes back two screens (review N1, left as planned); `launchSingleTop` guards forward navigation only.
+- Rotating while the snackbar shows loses it, and a reported ticket is lost on process death, in which case a route that still holds its id shows "Ticket not found". Both accepted; neither was run.
+- A future route silently gets the dashboard title, because `toTopBarScreen()` needs an `else`.
+
+### Verification
+- D-006 has no automated tests. `./gradlew assembleDebug` and `./gradlew lint` passed on every slice: 0 errors, 14 warnings (baseline 13, plus one `GradleDependency` for `navigation-compose`). The exception is one edit in slice 3 (the blank line in `values-pt/strings.xml`), after which lint was not rerun until slice 4. The review reran both with `--rerun-tasks`, before slice 6.
+- `:app:dependencies --configuration debugRuntimeClasspath` resolved `kotlinx-serialization-core` 1.11.0, `runtime` 1.11.0, `ui` 1.11.0, `foundation` 1.10.4, `material3` 1.4.0, `navigation-compose` 2.9.8, both lifecycle artifacts 2.11.0 and `kotlin-stdlib` 2.3.20, none above a limit.
+- Code review: 0 blocking, 1 should-fix (S1, fixed by adding the D-007 task file), 3 nits. N1 was left as planned, N2 stays a manual check and N3 is closed in the docs. Slice 6 came after the review, so the reviewer did not see it. The `null` branch of `onSubmit` cannot be reached from the form and was checked by reading the code.
+- Emulator, 2026-11-02, AVD `Iphone_Diogo`, driven through adb, not by hand:
+  - First run: no crash and no `NoSuchMethodError`, so the Compose `ui` 1.11.0 and `foundation` 1.10.4 mix runs on the emulator.
+  - Passed: dashboard -> list -> detail -> report; system back and arrow through report -> detail -> list -> dashboard; arrow absent on the dashboard; rotation keeps all four screens; expanded state kept on rotation (3 runs); half-filled form kept on rotation and empty after leaving; empty submit shows every field error and stays on the form; PUBLIC report (snackbar, in the list, total 3 -> 4); PRIVATE report (snackbar, no "not found", not in the list, total 4 -> 5); form empty after a submit; anonymous detail shows only header, media and map; PT strings on the dashboard.
+  - Cutout: with the tall cutout overlay (126 px) in both landscape rotations, the bar's controls clear the cutout on the dashboard and list, so the `MainTopAppBar` line was not needed. Detail and report were not checked under the cutout.
+  - **Unexplained result:** in the first expanded-list rotation test the app showed the dashboard afterwards, with no crash in the log. Three repeats from a clean start, including that exact sequence, did not reproduce it. The cause is unknown. The first run's script was not instrumented, so it may be a test artefact or a rare real loss of the screen. "Rotation keeps the screen" therefore rests on the repeats, not on every run.
+  - Not checked: double taps; back on the dashboard after the final build (it left the app in the earlier run); the flash after rotation (review N2, needs frame-level viewing); keyboard overlap and double gap in landscape; the PT snackbar text; a real device.
+- Earlier checks this first run closed: the Compose mix (slice 3's stop condition), the F-005 anonymous detail on screen, and the F-006 form's values on rotation and its reset after leaving. Partly closed: the cutout for the bar (D-005 N5, dashboard and list only). Still open: the content under the cutout (F-003 N3), the keyboard, TalkBack (F-006 N2) and the Android Studio previews and accessibility inspector, none of which `state.md` records as run.
+
+### Improvement opportunities
+- Instrument the rotation test and repeat it, to explain or rule out the unexplained result.
+- Guard the back arrow with the entry's lifecycle (`currentState == Lifecycle.State.RESUMED`), the fix in review N1. `dropUnlessResumed` does not work above the `NavHost`, as it would read the activity's lifecycle. The cost is that a deliberate second tap waits for the crossfade.
+- Keep the snackbar across rotation with a one-shot event.
+- A different confirmation for PRIVATE reports once a "my tickets" screen exists.
+- Align the Compose BOM with the resolved versions when Kotlin moves to 2.3, and move to Navigation 2.10 at that point too.
+- Nested graphs per role and deep links from FCM (already in the D-004 notes).
+- Screen transitions.
+- `LazyColumn` content drawn behind the navigation bar, using `innerPadding` as `contentPadding`.

@@ -17,6 +17,7 @@ Source: Notion "Plano de trabalho – Fase 1 (modelo + UI base)". Phase 1 uses l
 | D-004 | D4 | Diogo | ui.navigation | Navigation routes | - |
 | D-005 | D5 | Diogo | ui.navigation | MainTopAppBar | D-004 |
 | D-006 | D6 | Diogo | ui.screens | MainActivity with Scaffold and NavHost | D-003, D-004, D-005, F-003, F-004, F-005, F-006 |
+| D-007 | - | Diogo | model / ui.navigation | Anonymous projection and expand toggle | D-006 |
 | F-001 | F1 | Francisco | ui.theme / res | Theme, strings and accessibility base | - |
 | F-002 | F2 | Francisco | ui.components | StatusBadge and TicketCard | D-001, F-001 |
 | F-003 | F3 | Francisco | ui.screens | ListScreen | D-001, F-002 |
@@ -31,7 +32,7 @@ Source: Notion "Plano de trabalho – Fase 1 (modelo + UI base)". Phase 1 uses l
 3. Then F-002, then F-003, F-004, F-005, F-006 and D-003.
 4. D-006 last: it wires the screens together.
 
-Agree the screen signatures first (plan "Step 0"): `ListScreen(tickets, isExpanded, onTicketClick)`, `DashboardScreen(stats, ...)`, `ShowScreen(ticket?, ...)`, `TicketCard(ticket, isExpanded, onClick)`.
+Agree the screen signatures first (plan "Step 0"). As built, and the code is the source of truth: `ListScreen(tickets, isExpanded, onTicketClick)`, `DashboardScreen(stats, onSeeTicketsClick)`, `ShowScreen(ticket?, audience)`, `ReportScreen(viewModel, onSubmit)`, `TicketCard(ticket, isExpanded, onClick)`.
 - ViewModel API (D-003) that the screens are wired against in D-006: `tickets: StateFlow<List<Ticket>>`, `stats: StateFlow<DashboardStats>`, `getTicketById(id): Ticket?` and `reportTicket(description, categoryId, categoryName, situation, scope): String?` (`null` when description, category id or category name is blank after trimming). Tickets reach the screens already projected for anonymous users (blank author fields, location rounded to about 1 km), so screens must not show the author. The sample category ids are `pavement`, `lighting` and `furniture`; F-006's provisional category list should reuse them. D-006 creates one shared `TicketsViewModel` above the `NavHost`, takes the detail ticket from the collected `tickets`, and does not open the id returned by a PRIVATE report (it is not in the anonymous list). Details: `docs/architecture/overview.md`, "ViewModel (D-003)".
 
 ## Done when
