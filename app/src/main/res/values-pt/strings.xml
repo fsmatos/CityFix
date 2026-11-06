@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="welcome_message">Bem-vindo ao CityFix</string>
-
     <!-- Ticket status labels -->
     <string name="status_open">Aberto</string>
     <string name="status_info_requested">Pedido de informações</string>
@@ -49,6 +47,7 @@
     <string name="scope_private">Privado</string>
     <string name="report_error_summary">Faltam preencher campos obrigatórios.</string>
     <string name="report_submit">Enviar ocorrência</string>
+    <string name="report_submitted">Ocorrência enviada.</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>

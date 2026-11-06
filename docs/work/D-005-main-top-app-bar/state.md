@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-10-31 | Approve after S1; 0 blocking, 1 should-fix, 5 nits; see review.md |
 | Docs | done | 2026-10-31 | overview.md and report notes updated; no decision record, as planned; review N1-N4 covered; N5 preview check still open |
 | Pushed | done | 2026-10-31 | origin/dev/Diogo at 3707b66 |
-| Merged | pending | | |
+| Merged | done | 2026-10-31 | main at df56f9b, pushed |
 
 ## Log
 Append-only.
@@ -35,3 +35,5 @@ Append-only.
 - 2026-10-31 Chore (agreed by Diogo and Francisco, outside the D-005 plan): `kotlinxSerialization` moved from 1.9.0 to 1.11.0 to match the course (P08). This reverses D-004 Q2. Kotlin stays at 2.2.10 because the build does not need a change: `:app:compileDebugKotlin` has no compiler warnings, `kotlin-stdlib` resolves to 2.3.20 at runtime, and `TicketDetailRoute$$serializer.class` is still generated. Verify: assembleDebug and lint pass, 0 errors, 13 warnings. Not run on a device. `overview.md` and `docs/report/notes.md` updated.
 - 2026-10-31 Push: approved by Diogo; verify (assembleDebug + lint) green; pushed the serialization bump at 3707b66. Not merged into main.
 - 2026-10-31 Preview pane check (review N5): done by Diogo in Android Studio; previews seen and approved.
+- 2026-10-31 Merge: dev/Diogo into main (asked by Diogo) as df56f9b, no conflicts (origin/main had nothing new); assembleDebug + lint green on main, 0 errors, 13 warnings. main merged back into dev/Diogo. main not pushed yet: the push was refused by this session's permissions, so Diogo pushes it.
+- 2026-10-31 Push main: Diogo ran `git push origin main` (9b15733..df56f9b) and pushed dev/Diogo; origin/main confirmed at df56f9b with kotlinxSerialization 1.11.0.

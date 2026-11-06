@@ -28,7 +28,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Scope
@@ -73,8 +73,7 @@ fun ReportScreen(
     onSubmit: (ReportSubmission) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // collectAsStateWithLifecycle once D-006 adds lifecycle-runtime-compose.
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     ReportContent(
         state = state,
         onCategorySelected = viewModel::onCategorySelected,

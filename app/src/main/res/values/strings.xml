@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">CityFix</string>
-    <string name="welcome_message">Welcome to CityFix</string>
 
     <!-- Ticket status labels -->
     <string name="status_open">Open</string>
@@ -50,6 +49,7 @@
     <string name="scope_private">Private</string>
     <string name="report_error_summary">Some required fields are missing.</string>
     <string name="report_submit">Submit report</string>
+    <string name="report_submitted">Report submitted.</string>
 
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
