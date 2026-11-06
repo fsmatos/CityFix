@@ -38,7 +38,7 @@ data class ReportUiState(
     val submitted: Boolean = false,
 ) {
     val remainingAttachments: Int
-        get() = MAX_REPORT_ATTACHMENTS - attachments.size
+        get() = (MAX_REPORT_ATTACHMENTS - attachments.size).coerceAtLeast(0)
 
     val canAddAttachment: Boolean
         get() = remainingAttachments > 0 && !submitted

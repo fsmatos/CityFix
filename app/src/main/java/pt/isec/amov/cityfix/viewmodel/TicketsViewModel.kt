@@ -42,8 +42,9 @@ class TicketsViewModel : ViewModel() {
     fun getTicketById(id: String): Ticket? = _tickets.value.firstOrNull { it.id == id }
 
     /**
-     * Opens a new ticket from the provisional report form (F-006). Returns its id, or null when
-     * description, categoryId or categoryName is blank (all three are trimmed). No location yet,
+     * Opens a new ticket from the report form (F-006, F-007). Returns its id, or null when
+     * description, categoryId or categoryName is blank (all three are trimmed) or attachments is
+     * empty. The attachments are stored as PENDING, uploaded by the local user. No location yet,
      * so no 10 m grouping (00-plan Q8).
      */
     fun reportTicket(

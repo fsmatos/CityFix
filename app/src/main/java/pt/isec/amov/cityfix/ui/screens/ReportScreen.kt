@@ -131,12 +131,16 @@ fun ReportScreen(
             }
         },
         onTakePhotoClick = {
-            val (file, uri) = FileUtils.createTempImageFile(context)
-            tempCameraPath = file.absolutePath
-            if (!launchCamera(takePhoto, uri)) {
-                tempCameraPath = null
-                file.delete()
-                viewModel.onCameraUnavailable()
+            // A second tap before the camera opens would overwrite the path and orphan its file.
+            // The takePhoto callback and a failed launch both clear it, so this cannot stick.
+            if (tempCameraPath == null) {
+                val (file, uri) = FileUtils.createTempImageFile(context)
+                tempCameraPath = file.absolutePath
+                if (!launchCamera(takePhoto, uri)) {
+                    tempCameraPath = null
+                    file.delete()
+                    viewModel.onCameraUnavailable()
+                }
             }
         },
         onRemoveAttachment = viewModel::onRemoveAttachment,
@@ -168,14 +172,24 @@ private fun launchCamera(
     false
 }
 
-/** A cancelled capture deletes its file silently; an empty "success" also shows the notice. */
+/**
+ * A cancelled capture deletes its file silently; an empty "success" also shows the notice. The
+ * limit is checked here too: a pick that started with the camera can take the last slot first.
+ */
 private fun attachCaptured(viewModel: ReportViewModel, path: String, success: Boolean) {
     val file = File(path)
-    if (success && file.length() > 0) {
-        viewModel.onPhotosAttached(listOf(path))
-    } else {
-        file.delete()
-        if (success) viewModel.onCameraUnavailable()
+    val hasPhoto = success && file.length() > 0
+    when {
+        hasPhoto && viewModel.uiState.value.remainingAttachments > 0 ->
+            viewModel.onPhotosAttached(listOf(path))
+        hasPhoto -> {
+            file.delete()
+            viewModel.onAttachmentLimitReached()
+        }
+        else -> {
+            file.delete()
+            if (success) viewModel.onCameraUnavailable()
+        }
     }
 }
 
