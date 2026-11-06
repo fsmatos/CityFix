@@ -41,3 +41,8 @@ Status: accepted (F-006, Gate 1 on 2026-11-01, plan revision 3; S2 review fix on
 - **The Firebase phase** replaces `SampleCategories` with a repository query (active categories of the municipality) injected through a factory, and may move ticket creation into the repository. The UI state, events and screen stay the same.
 - **Later features hook into the ViewModel:** impact detection (I.2.F) prefills through a new event; the location task adds coordinates and the 10 m grouping.
 - Anonymous users can open the form until the Auth task hides the add button by role (overview, "Top bar (D-005)").
+
+## Note from F-007 (2026-11-06)
+The form-state decisions above stand unchanged. Two things are added:
+- **The I.2.E gap is closed in code.** `isValid` and `reportTicket` both refuse a report with no attachment. Build, lint and static checks pass; nothing has run on a device or emulator yet.
+- **Accepted exception to `.claude/rules/kotlin.md` line 15 (F-007 Gate 1, Q13 and Q6).** The person chose literal P09: the attachment copy runs synchronously on the main thread, in the launcher callback (slide 26), and so do `delete`, `mkdirs` and `length`. Known risk: a large video can freeze the UI or cause an ANR, with no upper bound, because there is no video size limit (Q7). Moving the copy off the main thread is an improvement opportunity in `docs/report/notes.md`.

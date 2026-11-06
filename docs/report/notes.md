@@ -405,7 +405,7 @@ Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../d
 - **Always clickable, P08-style.** Slide 20 keeps the Save FAB clickable and only changes its colour with `isValid`; slide 15 returns early when invalid. F-006 goes one step further: instead of a silent return, Submit shows every missing field's error and an announced summary. The optional `isValid` colour cue was left off at Gate 1; it would be a hint only, never the only signal.
 
 ### Known gaps
-- **No image or video (brief I.2.E "deve ser carregada uma imagem/vídeo"), open until F-007.** The form shows a note that attachments come later and will then be required. F-007 (report attachments, following P09; the person writes the task file) adds the system photo picker (`PickVisualMedia.ImageAndVideo`, no permission), the camera (`TakePicture` + `FileProvider`), local copies in `filesDir`, Coil previews, and the "at least one" rule in `isValid`. It needs an attachments parameter on `TicketsViewModel.reportTicket` (Diogo's file). Thumbnails, compression, EXIF stripping and the upload stay in the upload phase.
+- **No image or video (brief I.2.E "deve ser carregada uma imagem/vídeo"), open until F-007.** (Closed in code by F-007; see that section.) The form shows a note that attachments come later and will then be required. F-007 (report attachments, following P09; the person writes the task file) adds the system photo picker (`PickVisualMedia.ImageAndVideo`, no permission), the camera (`TakePicture` + `FileProvider`), local copies in `filesDir`, Coil previews, and the "at least one" rule in `isValid`. It needs an attachments parameter on `TicketsViewModel.reportTicket` (Diogo's file). Thumbnails, compression, EXIF stripping and the upload stay in the upload phase.
 - No location, so no 10 m grouping (decision 0006); the location task adds it with the runtime permission.
 - Anonymous users can open the form until the Auth task hides the add button by role.
 - Category names are shown as stored, not translated.
@@ -486,3 +486,52 @@ Decisions: no new record; follows [0006](../decisions/0006-anonymous-projection-
 - Nested graphs per role and deep links from FCM (already in the D-004 notes).
 - Screen transitions.
 - `LazyColumn` content drawn behind the navigation bar, using `innerPadding` as `contentPadding`.
+
+## F-007: Report attachments
+Decision: no new record; see the note in [0008](../decisions/0008-report-form-state.md). Code: `utils/FileUtils.kt`, `ui/components/AttachmentGallery.kt`, `ui/screens/ReportScreen.kt`, `viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `res/xml/file_paths.xml`. Overview: `docs/architecture/overview.md`, "Report attachments (F-007)".
+
+**Nothing here has run on a device or emulator yet.** The behaviour below is what the code is written to do.
+
+### Technical solutions
+- **No `CAMERA` permission.** `TakePicture` hands the capture to the system camera app through a `FileProvider` Uri, so the app needs no permission. It would fail if `CAMERA` were ever declared in the manifest and not granted: the launch then throws `SecurityException`, which `launchCamera` catches to show a notice. The merged manifest has none.
+- **`maxItems` must be above 1.** `PickMultipleVisualMedia` requires it, so the last free slot uses the single `PickVisualMedia`.
+- **The fallback picker ignores the limit.** Where the photo picker is missing, `ACTION_OPEN_DOCUMENT` ignores `maxItems`. So the real rule sits in the callbacks: `take(remainingAttachments)` for picks, a slot check for the camera. The review found the camera check missing (S1): a fast tap on both buttons could reach 4. A good example for the defence of a rule with two entrances.
+- **Position-based `rememberSaveable`.** The launchers and `tempCameraPath` sit in `ReportScreen`, above the orientation branch. Inside a pane their saved key would differ after a rotation and the result would be lost. Same lesson as F-005 review S2.
+- **Grid height cap.** `heightIn(max = 240.dp)` must stay: a lazy grid measured with unbounded height crashes inside a `verticalScroll` column.
+- **Pinning Coil.** 3.0.4 is the P09 version. 3.5+ needs Kotlin 2.4 and Compose foundation 1.11+, past the project's limits. 3.4.0 is the fallback if 3.0.4 crashes on Compose `ui` 1.11.
+- **The type in the file name.** A `VID_` prefix gives the type back from a saved path. Names are always generated, so the source's display name cannot spoof a prefix or traverse a path.
+
+### Options chosen
+- **Copy on the main thread (Gate 1 Q13, the person's decision).** Literal P09 (slide 26): the launcher callback copies synchronously, with no coroutine and no "Adding..." state. It stays close to the class material and keeps `ReportViewModel` no-arg with no `Context`. It is an accepted exception to `.claude/rules/kotlin.md` line 15. The cost: a large video can freeze the UI or cause an ANR, and the risk is unbounded, because there is no video size limit (Q7).
+- **Differences from P09:**
+  - real extensions and a `VID_` prefix, not a fixed `.jpg`, because the form takes videos;
+  - `rememberSaveable` and no `!!`, unlike slide 7, because Test Case 3 needs it;
+  - no `coil-network-okhttp`, unlike slide 16: local files only, no `INTERNET`;
+  - `coil-video` added, and remove buttons on the grid;
+  - the limit counts across picks, not per pick;
+  - `List<Attachment>`, not `List<String>`, because the model already has it.
+
+### Known limits
+- **The form can freeze** during a large copy (see above).
+- **Metadata is kept.** Local files hold EXIF and video location metadata. They must be stripped before `MediaTile` draws real files, not only at upload, or the anonymous detail would hold exact coordinates. Decision 0006 and F-007's 00-plan assumed upload time, which is too late if the detail draws local files first.
+- **Orphaned files.** Attachments added before a process death are lost and their files stay on disk; so do the files of in-memory tickets after a restart (Q3, Q10).
+- **Device-local paths.** `Attachment.file` is an absolute path, valid only on this device and install, until the upload phase.
+- **Nested scroll in narrow landscape.** With 2 columns the grid scrolls inside the scrolling pane. By calculation the third tile's remove button shows without scrolling; dragging from the grid into the pane is unchecked.
+- **Auto Backup.** The media in `filesDir` is included, because the backup rules were left unchanged (Q10).
+- **Unknown MIME type (review N3).** On the `ACTION_OPEN_DOCUMENT` fallback, a video whose provider reports no `video/*` type is stored as `IMG_`: it shows as a photo with the placeholder.
+- **No media on the detail or the card yet.** `ShowScreen` and `TicketCard` did not change (Q11), so a new ticket shows "Not available yet".
+
+### Verification
+- F-007 has no automated tests. `./gradlew assembleDebug` and `./gradlew lint` passed on every slice and after the review fixes: 0 errors, 16 warnings (the baseline 14 plus two accepted Coil `NewerVersionAvailable`).
+- Static checks by the review: the merged manifest has no `CAMERA` or `INTERNET`, `ReportViewModel` has no `Context`, and all 389 Compose references in Coil 3.0.4 resolve. That rules out a `NoSuchMethodError` on those references; it does not prove the images draw.
+- **No acceptance check beyond build, lint and static checks has run.** No device or emulator was used, previews were not rendered, and the S1 and S2 fixes came after the review and are unverified at runtime. The checks left are in `docs/work/F-007-report-attachments/review.md`, "Manual checks left to the person".
+
+### Improvement opportunities
+- **Move the copy off the main thread.** The planned alternative was `viewModel.viewModelScope` with `Dispatchers.IO`, because a rotation would cancel `rememberCoroutineScope` and lose the picks. It needs an "Adding..." state, and the limit must count copies in flight. A video size limit would also bound the risk.
+- Compression and metadata stripping (brief V), for images and videos, before any file is drawn for other users.
+- Real media in `ShowScreen` and `TicketCard`, after the stripping.
+- Video capture with `CaptureVideo` (Q8).
+- A newer Coil, together with the Kotlin and Compose upgrades.
+- The photo picker backport entry in the manifest (Q9), so API 24-29 gets the limit in the picker too.
+- `SavedStateHandle` for the draft, and a clean-up of unreferenced files in `filesDir/images`.
+- Review nits not fixed: N1 (a notice can outlive its cause; add `onAttachmentNoticeDismissed()`), N2 (`getType` and `mediaFolder` run outside the `try`, so "null on any failure" is not literal), N5 (add a `submitted` check to `onRemoveAttachment`), N6 (`@param:StringRes` for the 7 compiler warnings).
