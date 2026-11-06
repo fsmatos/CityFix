@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">CityFix</string>
 
     <!-- Ticket status labels -->
@@ -47,7 +47,8 @@
     <string name="report_no_categories">No categories are available.</string>
     <string name="report_situation_title">Situation</string>
     <string name="report_description_label">Description</string>
-    <string name="report_media_pending">Adding a photo or video comes in a later version; it will then be required.</string>
+    <string name="report_attachments_hint" tools:ignore="PluralsCandidate">Add up to %1$d photos or videos.</string>
+    <string name="report_attachments_gallery">Add from gallery</string>
     <string name="report_scope_title">Visibility</string>
     <string name="scope_public">Public</string>
     <string name="scope_private">Private</string>
@@ -66,6 +67,10 @@
     <string name="top_bar_title_list">Tickets</string>
     <string name="top_bar_title_detail">Ticket details</string>
     <string name="top_bar_title_report">Report an issue</string>
+    <string name="cd_attachment_photo">Photo %1$d</string>
+    <string name="cd_attachment_video">Video %1$d</string>
+    <string name="cd_remove_attachment_photo">Remove photo %1$d</string>
+    <string name="cd_remove_attachment_video">Remove video %1$d</string>
     <string name="cd_navigate_back">Go back</string>
     <string name="cd_expand_tickets">Expand tickets</string>
     <string name="cd_collapse_tickets">Collapse tickets</string>

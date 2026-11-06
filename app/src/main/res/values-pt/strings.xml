@@ -45,7 +45,8 @@
     <string name="report_no_categories">Não há categorias disponíveis.</string>
     <string name="report_situation_title">Situação</string>
     <string name="report_description_label">Descrição</string>
-    <string name="report_media_pending">A adição de fotografias ou vídeos chega numa versão posterior; nessa altura será obrigatória.</string>
+    <string name="report_attachments_hint">Adicione até %1$d fotografias ou vídeos.</string>
+    <string name="report_attachments_gallery">Adicionar da galeria</string>
     <string name="report_scope_title">Alcance</string>
     <string name="scope_public">Público</string>
     <string name="scope_private">Privado</string>
@@ -64,6 +65,10 @@
     <string name="top_bar_title_list">Ocorrências</string>
     <string name="top_bar_title_detail">Detalhes da ocorrência</string>
     <string name="top_bar_title_report">Reportar ocorrência</string>
+    <string name="cd_attachment_photo">Fotografia %1$d</string>
+    <string name="cd_attachment_video">Vídeo %1$d</string>
+    <string name="cd_remove_attachment_photo">Remover fotografia %1$d</string>
+    <string name="cd_remove_attachment_video">Remover vídeo %1$d</string>
     <string name="cd_navigate_back">Voltar</string>
     <string name="cd_expand_tickets">Expandir ocorrências</string>
     <string name="cd_collapse_tickets">Recolher ocorrências</string>
