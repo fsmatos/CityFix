@@ -49,6 +49,7 @@
     <string name="report_description_label">Description</string>
     <string name="report_attachments_hint" tools:ignore="PluralsCandidate">Add up to %1$d photos or videos.</string>
     <string name="report_attachments_gallery">Add from gallery</string>
+    <string name="report_attachments_camera">Take a photo</string>
     <string name="report_scope_title">Visibility</string>
     <string name="scope_public">Public</string>
     <string name="scope_private">Private</string>
