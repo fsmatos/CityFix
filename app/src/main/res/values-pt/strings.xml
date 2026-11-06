@@ -36,6 +36,10 @@
     <string name="report_error_description">Descreva a ocorrência.</string>
     <string name="report_error_scope">Escolha público ou privado.</string>
     <string name="report_error_not_created">Não foi possível enviar a ocorrência. Tente novamente.</string>
+    <string name="report_error_attachments">Adicione pelo menos uma fotografia ou um vídeo.</string>
+    <string name="report_attachments_limit">Atingiu o limite, por isso os ficheiros a mais não foram adicionados.</string>
+    <string name="report_attachment_copy_failed">Não foi possível adicionar um ficheiro. Tente novamente.</string>
+    <string name="report_camera_failed">Não foi possível usar a câmara.</string>
     <string name="report_required_note">Todos os campos são obrigatórios.</string>
     <string name="report_category_label">Categoria</string>
     <string name="report_no_categories">Não há categorias disponíveis.</string>

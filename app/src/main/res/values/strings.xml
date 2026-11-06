@@ -38,6 +38,10 @@
     <string name="report_error_description">Describe the issue.</string>
     <string name="report_error_scope">Choose public or private.</string>
     <string name="report_error_not_created">The report could not be submitted. Try again.</string>
+    <string name="report_error_attachments">Add at least one photo or video.</string>
+    <string name="report_attachments_limit">You reached the limit, so the extra files were not added.</string>
+    <string name="report_attachment_copy_failed">A file could not be added. Try again.</string>
+    <string name="report_camera_failed">The camera could not be used.</string>
     <string name="report_required_note">All fields are required.</string>
     <string name="report_category_label">Category</string>
     <string name="report_no_categories">No categories are available.</string>

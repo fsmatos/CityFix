@@ -7,9 +7,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.SampleCategories
+import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
+import pt.isec.amov.cityfix.utils.FileUtils
+import java.io.File
 
 /**
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
@@ -58,6 +62,45 @@ class ReportViewModel : ViewModel() {
         }
     }
 
+    /** [paths] are local copies already in filesDir/images. Empty when every copy failed. */
+    fun onPhotosAttached(paths: List<String>) {
+        if (paths.isEmpty()) return
+        _uiState.update {
+            it.copy(
+                attachments = it.attachments + paths.map(::attachmentFor),
+                attachmentsError = null,
+                attachmentsNotice = null,
+                submitError = null,
+            ).withSummaryRefreshed()
+        }
+    }
+
+    fun onAttachmentCopyFailed() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_attachment_copy_failed) }
+    }
+
+    fun onAttachmentLimitReached() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_attachments_limit) }
+    }
+
+    fun onCameraUnavailable() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_camera_failed) }
+    }
+
+    /** Deletes the local copy. Removing the last one sets the error, as deleting the description does. */
+    fun onRemoveAttachment(attachment: Attachment) {
+        File(attachment.file).delete()
+        _uiState.update {
+            val remaining = it.attachments - attachment
+            it.copy(
+                attachments = remaining,
+                attachmentsError = if (remaining.isEmpty()) R.string.report_error_attachments else null,
+                attachmentsNotice = null,
+                submitError = null,
+            ).withSummaryRefreshed()
+        }
+    }
+
     /**
      * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
      * so isValid is the one rule that decides. Returns the data when valid and not yet submitted
@@ -92,6 +135,7 @@ class ReportViewModel : ViewModel() {
             situation = situation,
             description = checked.description.trim(),
             scope = scope,
+            attachments = checked.attachments,
         )
     }
 
@@ -102,6 +146,20 @@ class ReportViewModel : ViewModel() {
             it.copy(submitted = false, submitError = R.string.report_error_not_created)
         }
     }
+
+    /** Leaving without submitting discards the draft: its files have no ticket to belong to. */
+    override fun onCleared() {
+        val state = _uiState.value
+        if (!state.submitted) {
+            state.attachments.forEach { File(it.file).delete() }
+        }
+    }
+
+    private fun attachmentFor(path: String): Attachment = Attachment(
+        id = File(path).name,
+        type = if (FileUtils.isVideoPath(path)) AttachmentType.VIDEO else AttachmentType.IMAGE,
+        file = path,
+    )
 
     /** The summary stays only while something is still missing. */
     private fun ReportUiState.withSummaryRefreshed(): ReportUiState =
