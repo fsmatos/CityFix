@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import pt.isec.amov.cityfix.data.SampleTickets
+import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.DashboardStats
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
@@ -12,6 +13,7 @@ import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
+import pt.isec.amov.cityfix.model.UploadState
 import pt.isec.amov.cityfix.model.toAnonymousView
 import java.util.UUID
 
@@ -50,11 +52,16 @@ class TicketsViewModel : ViewModel() {
         categoryName: String,
         situation: Situation,
         scope: Scope,
+        attachments: List<Attachment>,
     ): String? {
         val text = description.trim()
         val cleanCategoryId = categoryId.trim()
         val cleanCategoryName = categoryName.trim()
-        if (text.isBlank() || cleanCategoryId.isBlank() || cleanCategoryName.isBlank()) return null
+        if (text.isBlank() || cleanCategoryId.isBlank() || cleanCategoryName.isBlank() ||
+            attachments.isEmpty()
+        ) {
+            return null
+        }
 
         val now = System.currentTimeMillis()
         val ticket = Ticket(
@@ -68,6 +75,9 @@ class TicketsViewModel : ViewModel() {
             categoryName = cleanCategoryName,
             creatorId = LOCAL_USER_ID,
             statusHistory = listOf(StatusHistory(TicketStatus.OPEN, now, null, LOCAL_USER_ID)),
+            attachments = attachments.map {
+                it.copy(uploadState = UploadState.PENDING, uploadedById = LOCAL_USER_ID)
+            },
         )
 
         if (!ticketsList.add(ticket)) return null

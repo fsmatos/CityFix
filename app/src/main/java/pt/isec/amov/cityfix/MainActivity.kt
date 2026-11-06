@@ -151,6 +151,7 @@ private fun CityFixApp() {
                             categoryName = submission.categoryName,
                             situation = submission.situation,
                             scope = submission.scope,
+                            attachments = submission.attachments,
                         )
                         if (id != null) {
                             // Never navigate to id: a PRIVATE ticket is not visible (decision 0006).
