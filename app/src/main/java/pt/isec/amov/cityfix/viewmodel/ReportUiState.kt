@@ -46,8 +46,9 @@ data class ReportUiState(
     val isValid: Boolean
         get() = categoryId.isNotBlank() && categories.any { it.id == categoryId } &&
             situation != null && scope != null && description.isNotBlank() &&
+            attachments.isNotEmpty() &&
             categoryError == null && situationError == null &&
-            descriptionError == null && scopeError == null
+            descriptionError == null && scopeError == null && attachmentsError == null
 }
 
 /** Validated values, ready for TicketsViewModel.reportTicket(...). Description is trimmed. */

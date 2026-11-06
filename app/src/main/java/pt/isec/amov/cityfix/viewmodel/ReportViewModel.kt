@@ -122,6 +122,8 @@ class ReportViewModel : ViewModel() {
             descriptionError =
                 if (state.description.isBlank()) R.string.report_error_description else null,
             scopeError = if (scope == null) R.string.report_error_scope else null,
+            attachmentsError =
+                if (state.attachments.isEmpty()) R.string.report_error_attachments else null,
         )
         if (!checked.isValid || situation == null || scope == null) {
             _uiState.value = checked.copy(showErrorSummary = true)

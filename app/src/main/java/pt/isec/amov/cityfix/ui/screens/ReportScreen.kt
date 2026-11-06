@@ -537,6 +537,12 @@ private val previewCategories = listOf(
     Category(id = "furniture", name = "Urban furniture"),
 )
 
+private val previewAttachments = listOf(
+    Attachment(id = "IMG_1.jpg", file = "IMG_1.jpg"),
+    Attachment(id = "VID_2.mp4", type = AttachmentType.VIDEO, file = "VID_2.mp4"),
+    Attachment(id = "IMG_3.jpg", file = "IMG_3.jpg"),
+)
+
 private val emptyState = ReportUiState(categories = previewCategories)
 
 private val filledState = emptyState.copy(
@@ -545,6 +551,7 @@ private val filledState = emptyState.copy(
     situation = Situation.BREAKDOWN,
     description = "The street lamp in front of number 12 is off every night.",
     scope = Scope.PUBLIC,
+    attachments = previewAttachments.take(1),
 )
 
 private val errorState = emptyState.copy(
@@ -552,6 +559,7 @@ private val errorState = emptyState.copy(
     situationError = R.string.report_error_situation,
     descriptionError = R.string.report_error_description,
     scopeError = R.string.report_error_scope,
+    attachmentsError = R.string.report_error_attachments,
     showErrorSummary = true,
 )
 
@@ -563,12 +571,6 @@ private val noCategoriesSubmittedState = noCategoriesState.copy(
 )
 
 private val submitFailedState = filledState.copy(submitError = R.string.report_error_not_created)
-
-private val previewAttachments = listOf(
-    Attachment(id = "IMG_1.jpg", file = "IMG_1.jpg"),
-    Attachment(id = "VID_2.mp4", type = AttachmentType.VIDEO, file = "VID_2.mp4"),
-    Attachment(id = "IMG_3.jpg", file = "IMG_3.jpg"),
-)
 
 private val withAttachmentsState = filledState.copy(attachments = previewAttachments.take(2))
 
