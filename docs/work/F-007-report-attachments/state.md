@@ -1,6 +1,6 @@
 # F-007: Report attachments (photos and videos)
 Branch: dev/Francisco · Base: 1487976
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-06 | 7 slices, commits 8248601..be0dff1; no manual check run yet |
 | Review | done | 2026-11-06 | Approve with should-fixes: 0 blocking, 3 should-fix, 7 nits; `review.md`. Nothing ran on a device: F-007 stays open until the runtime checks pass |
 | Docs | done | 2026-11-06 | Overview, note in decision 0008, report notes, README, 00-plan wording; no new decision record. Runtime checks still open |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-07 | e56a5d9 to origin/dev/Francisco; not merged into main |
 | Merged | pending | | |
 
 ## Log
@@ -31,3 +31,4 @@ Append-only.
 - 2026-11-06 Docs: executed `03-docs-plan.md` against the code at a3ccd96; no code changed, nothing committed, nothing run. `overview.md`: new "Report attachments (F-007)" section, plus updates to "Layers", "Report form (F-006)", "ViewModel (D-003)" (`reportTicket`, media and metadata), "App shell (D-006)" (Coil, resolved versions, lint 16, `tempCameraPath`), "Shared components" (`AttachmentGallery`; the `remember` line, review N4) and "Screens". `docs/decisions/0008-report-form-state.md`: one note (I.2.E gap closed in code; main-thread exception Q13/Q6 with its ANR risk). `docs/report/notes.md`: F-007 section, including review N3 and the unfixed nits N1, N2, N5, N6. `docs/tasks/phase-1/README.md:36`: new signature. `00-plan.md`: Limit of 3 now says both callbacks (S1, a3ccd96). The acceptance checks stay unticked: only build, lint and static checks have run.
 - 2026-11-06 Docs handover to Diogo, recorded in the overview ("Screens", `ReportScreen`) and not edited here: `reportTicket` KDoc changed (S3; he still has to be told); `Attachment.id` and `Attachment.file` KDoc wording (N7, Q12); decision 0006's no-attachment consequence no longer holds, and its media point lacks video metadata and the timing; EXIF and video metadata must be stripped before `MediaTile` draws real files, not only at upload.
 - 2026-11-06 Docs, left as they are: `00-plan.md` line 87 still says the upload phase strips the metadata (a Gate 1 record; the overview has the stricter rule). The KDoc above `MediaTile` in `ShowScreen.kt` still says "Phase 1 has no real files", which F-007 made stale: a code comment, so out of the docs phase.
+- 2026-11-07: Pushed dev/Francisco to origin at e56a5d9 (verify skipped: no Kotlin or Gradle changes since the last pass before a3ccd96). Manual device checks still open.
