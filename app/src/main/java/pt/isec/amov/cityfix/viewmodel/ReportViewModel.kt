@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import pt.isec.amov.cityfix.R
-import pt.isec.amov.cityfix.data.SampleCategories
+import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
@@ -17,13 +17,14 @@ import java.io.File
 
 /**
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
- * composable<ReportTicketRoute>): it survives rotation and is cleared when the user leaves.
- * Does not create tickets: the caller does it with TicketsViewModel.reportTicket (D-006).
+ * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
+ * when the user leaves. Does not create tickets: the caller does it with
+ * TicketsViewModel.reportTicket (D-006). Categories come from [repository], active ones only.
  */
-class ReportViewModel : ViewModel() {
+class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        ReportUiState(categories = SampleCategories.all.filter { it.active }),
+        ReportUiState(categories = repository.activeCategories()),
     )
 
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
