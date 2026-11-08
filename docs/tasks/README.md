@@ -6,4 +6,4 @@ Start one with `/feature-dev <file-name>`.
 
 ## Phase 1 (model + base UI)
 
-The 13 phase 1 tasks (D-001..D-006 for Diogo, F-001..F-007 for Francisco) are in [`phase-1/`](phase-1/README.md), with dependencies and a suggested order. Start one with `/feature-dev phase-1/F-001-theme-and-strings`.
+The 15 phase 1 tasks (D-001..D-007 for Diogo, F-001..F-008 for Francisco) are in [`phase-1/`](phase-1/README.md), with dependencies and a suggested order. Start one with `/feature-dev phase-1/F-001-theme-and-strings`.

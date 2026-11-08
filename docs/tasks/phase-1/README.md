@@ -25,6 +25,7 @@ Source: Notion "Plano de trabalho – Fase 1 (modelo + UI base)". Phase 1 uses l
 | F-005 | F5 | Francisco | ui.screens | ShowScreen (ticket detail) | D-001, F-002 |
 | F-006 | F6 | Francisco | ui.screens | ReportScreen (provisional) | D-001, F-001 |
 | F-007 | - | Francisco | ui.screens / viewmodel / utils | Report attachments (photos and videos, P09) | F-006 |
+| F-008 | - | Francisco | data / viewmodel | Tickets repository, local implementation (refactor; agree with Diogo) | F-007, D-007 |
 
 ## Suggested order
 1. **D-001 first**, then push `dev/Diogo`. Francisco merges it before the tasks that use the model.
