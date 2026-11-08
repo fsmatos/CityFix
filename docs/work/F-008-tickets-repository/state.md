@@ -1,6 +1,6 @@
 # F-008: Tickets repository (local implementation)
 Branch: dev/Francisco · Base: b0ff237
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-08 | 4 slices: 1648351, 934980b, c7ec657, e51ef62; build + lint pass (0 errors, 16 warnings); not run on a device |
 | Review | done | 2026-11-08 | re-review after b539da0: approve for the device checks; B1 and S1 resolved; S2 (emulator checks) open; nits N1-N6, N9 optional; build + lint pass (0 errors, 16 warnings) |
 | Docs | done | 2026-11-08 | decision 0009; 0006/0008 marked superseded in part; overview, report notes, phase-1 README; not committed |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-08 | 6b3055b to origin/dev/Francisco; not merged into main |
 | Merged | pending | | |
 
 ## Log
@@ -50,3 +50,4 @@ Append-only.
   - `docs/tasks/phase-1/README.md`: `ReportScreen(viewModel, onSubmitted)` and the ViewModel API line (`refresh()`, factory, `reportTicket` moved to the repository). D-007's task file not edited (Diogo's).
   - Deviation from 03-docs-plan: the report notes list `modelClass.cast` as a difference from Contacts_#3; the code uses `@Suppress("UNCHECKED_CAST")` (Code deviation 1), so the notes say it matches Contacts_#3 instead.
   - No code changed; nothing committed. S2 (emulator checks) still open.
+- 2026-11-08: Pushed dev/Francisco to origin at 6b3055b after verify (assembleDebug passes, lint 0 errors, 16 warnings). The person chose to push before the emulator checks (review S2), which are still open.
