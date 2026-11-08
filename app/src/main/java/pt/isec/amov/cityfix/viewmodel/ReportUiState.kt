@@ -38,12 +38,14 @@ data class ReportUiState(
     val submitted: Boolean = false,
     /** True while the repository saves the ticket. */
     val isSaving: Boolean = false,
+    /** True while picked media are copied into filesDir/images; blocks adding more and Submit. */
+    val isCopyingAttachments: Boolean = false,
 ) {
     val remainingAttachments: Int
         get() = (MAX_REPORT_ATTACHMENTS - attachments.size).coerceAtLeast(0)
 
     val canAddAttachment: Boolean
-        get() = remainingAttachments > 0 && !submitted
+        get() = remainingAttachments > 0 && !submitted && !isCopyingAttachments
 
     val isValid: Boolean
         get() = categoryId.isNotBlank() && categories.any { it.id == categoryId } &&

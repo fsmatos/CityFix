@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
@@ -21,9 +23,13 @@ import java.io.File
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
  * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
  * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
- * in Contacts_#3); categories come from it too, active ones only.
+ * in Contacts_#3); categories come from it too, active ones only. Picked media are copied off the
+ * main thread by [attachmentStorage].
  */
-class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
+class ReportViewModel(
+    private val repository: TicketsRepository,
+    private val attachmentStorage: AttachmentStorage,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         ReportUiState(categories = repository.activeCategories()),
@@ -62,6 +68,24 @@ class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
     fun onScopeSelected(scope: Scope) {
         _uiState.update {
             it.copy(scope = scope, scopeError = null, submitError = null).withSummaryRefreshed()
+        }
+    }
+
+    /**
+     * Gallery pick: keeps only what fits under the limit, copies it in viewModelScope (off the main
+     * thread) and attaches what copied. The add buttons and Submit stay disabled meanwhile. If the
+     * user leaves mid-copy, AttachmentStorage deletes the copies.
+     */
+    fun onMediaPicked(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val accepted = uris.take(_uiState.value.remainingAttachments)
+        _uiState.update { it.copy(isCopyingAttachments = true) }
+        viewModelScope.launch {
+            val savedPaths = attachmentStorage.copyToInternalStorage(accepted)
+            onPhotosAttached(savedPaths)
+            if (savedPaths.size < accepted.size) onAttachmentCopyFailed()
+            else if (accepted.size < uris.size) onAttachmentLimitReached()
+            _uiState.update { it.copy(isCopyingAttachments = false) }
         }
     }
 
@@ -113,7 +137,7 @@ class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
      */
     fun submit(onSuccess: () -> Unit) {
         val state = _uiState.value
-        if (state.submitted || state.isSaving) return
+        if (state.submitted || state.isSaving || state.isCopyingAttachments) return
 
         // Locals so the null checks below smart-cast (no !!).
         val situation = state.situation

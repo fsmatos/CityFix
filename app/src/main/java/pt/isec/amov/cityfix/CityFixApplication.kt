@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix
 
 import android.app.Application
+import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.LocalTicketsRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 
@@ -11,4 +12,7 @@ import pt.isec.amov.cityfix.data.TicketsRepository
  */
 class CityFixApplication : Application() {
     val ticketsRepository: TicketsRepository by lazy { LocalTicketsRepository() }
+
+    /** Copies picked media off the main thread (report form). */
+    val attachmentStorage: AttachmentStorage by lazy { AttachmentStorage(this) }
 }

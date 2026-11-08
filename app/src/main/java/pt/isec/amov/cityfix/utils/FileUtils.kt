@@ -21,7 +21,10 @@ object FileUtils {
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
 
-    /** Blocking (Q13). Null on any failure, including a null stream; deletes a partial file. */
+    /**
+     * Blocking: call off the main thread (AttachmentStorage does). Null on any failure, including
+     * a null stream; deletes a partial file.
+     */
     fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {
         val mimeType = context.contentResolver.getType(sourceUri)
         val target = File(mediaFolder(context), fileNameFor(mimeType))

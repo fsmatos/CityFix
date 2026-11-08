@@ -148,7 +148,9 @@ private fun CityFixApp(app: CityFixApplication) {
             composable<ReportTicketRoute> {
                 // Inside the destination: scoped to this entry, so a finished form is cleared.
                 val reportViewModel: ReportViewModel =
-                    viewModel(factory = ReportViewModelFactory(app.ticketsRepository))
+                    viewModel(
+                        factory = ReportViewModelFactory(app.ticketsRepository, app.attachmentStorage),
+                    )
                 ReportScreen(
                     viewModel = reportViewModel,
                     // Like saveContact { refreshContacts(); popBackStack() } in Contacts_#3.

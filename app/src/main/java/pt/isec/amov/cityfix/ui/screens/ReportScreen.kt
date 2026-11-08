@@ -1,7 +1,6 @@
 package pt.isec.amov.cityfix.ui.screens
 
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -100,10 +99,10 @@ fun ReportScreen(
     // inside a pane a rotation with the picker or camera open would lose the result.
     val pickSeveral = rememberLauncherForActivityResult(
         remember { PickMultipleVisualMedia() },
-    ) { uris -> attachPicked(viewModel, context, uris) }
+    ) { uris -> viewModel.onMediaPicked(uris) }
     val pickOne = rememberLauncherForActivityResult(
         remember { PickVisualMedia() },
-    ) { uri -> attachPicked(viewModel, context, listOfNotNull(uri)) }
+    ) { uri -> viewModel.onMediaPicked(listOfNotNull(uri)) }
     val takePhoto = rememberLauncherForActivityResult(
         remember { TakePicture() },
     ) { success ->
@@ -146,16 +145,6 @@ fun ReportScreen(
         onSubmitClick = { viewModel.submit(onSuccess = onSubmitted) },
         modifier = modifier,
     )
-}
-
-// Synchronous on the main thread as P09 slide 26: accepted exception, see 00-plan Q13.
-private fun attachPicked(viewModel: ReportViewModel, context: Context, uris: List<Uri>) {
-    if (uris.isEmpty()) return
-    val accepted = uris.take(viewModel.uiState.value.remainingAttachments)
-    val savedPaths = accepted.mapNotNull { FileUtils.copyUriToInternalStorage(context, it) }
-    viewModel.onPhotosAttached(savedPaths)
-    if (savedPaths.size < accepted.size) viewModel.onAttachmentCopyFailed()
-    else if (accepted.size < uris.size) viewModel.onAttachmentLimitReached()
 }
 
 /** False when there is no camera app, or Android refuses the launch. */
@@ -341,7 +330,7 @@ private fun DetailsPane(
         }
         Button(
             onClick = onSubmitClick,
-            enabled = !state.submitted,
+            enabled = !state.submitted && !state.isCopyingAttachments,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.report_submit))
