@@ -1,6 +1,6 @@
 # 0006: Anonymous projection of tickets in phase 1
 
-Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds.
+Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009.
 
 ## Context
 Phase 1 has no login, so every viewer of the app is an anonymous citizen. The brief limits what anonymous users see: the list of "ocorrências públicas ativas" (I.1.B), and a detail with images/videos and a coarse map zoom, "ocultando dados pessoais do autor" (I.1.C). CLAUDE.md makes this non-negotiable: anonymous users must never see the author's personal data or exact coordinates, and the rule is enforced below the UI, not only in the screens.
@@ -23,6 +23,7 @@ In phase 1 the lowest layer between the data and the screens is `TicketsViewMode
   - Rejected: 3 decimals (about 100 m), which still points to a street.
   - Rejected: zeroing the location. It clashes with "(0, 0) = unset" ([decision 0003](0003-domain-model-representation.md)), so map code would have to special-case it everywhere.
 - **Media files are not covered (review S2).** The brief requires anonymous users to see the images and videos, so `Attachment.file` and `thumbnail` pass through. The protection belongs where the files are created: the media-upload task strips EXIF GPS tags at compression (`utils/`) and uses Storage paths with no user id.
+  - **Amended 2026-11-08 ([F-009](../work/F-009-show-attachment-images/00-plan.md)).** Upload time is too late: since F-009 the card and the detail draw the local files. Photo GPS is now removed at report time, in `LocalTicketsRepository.reportTicket` (`FileUtils.removeImageLocation`, `androidx.exifinterface`), before the ticket is stored. It clears the whole EXIF GPS block; make, model and capture time stay. If the file cannot be rewritten (for example HEIC), the attachment and the report are kept with their tags (Gate 1 Q2), with no log. Known limits: video location metadata (needs a remux; deferred to the media task) and location in an XMP packet are not removed. A Firebase repository must keep the same step. Storage paths with no user id stay with the media-upload task.
 - **What the ViewModel exposes (Q3, Q4).**
   - `tickets` = `publicActive()` mapped through `toAnonymousView()`; registered-citizen and operator views are later tasks.
   - `getTicketById` searches only that visible list, so an anonymous user who knows the id of a PRIVATE, RESOLVED or CLOSED ticket cannot open it. Cost: `sample-3` (RESOLVED) cannot be opened in phase 1; it is not in the list anyway.

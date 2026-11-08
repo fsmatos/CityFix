@@ -519,7 +519,7 @@ Decision: no new record; see the note in [0008](../decisions/0008-report-form-st
 - **Nested scroll in narrow landscape.** With 2 columns the grid scrolls inside the scrolling pane. By calculation the third tile's remove button shows without scrolling; dragging from the grid into the pane is unchecked.
 - **Auto Backup.** The media in `filesDir` is included, because the backup rules were left unchanged (Q10).
 - **Unknown MIME type (review N3).** On the `ACTION_OPEN_DOCUMENT` fallback, a video whose provider reports no `video/*` type is stored as `IMG_`: it shows as a photo with the placeholder.
-- **No media on the detail or the card yet.** `ShowScreen` and `TicketCard` did not change (Q11), so a new ticket shows "Not available yet".
+- **No media on the detail or the card yet.** `ShowScreen` and `TicketCard` did not change (Q11), so a new ticket shows "Not available yet". (Fixed by F-009, with photo GPS stripping; see that section.)
 
 ### Verification
 - F-007 has no automated tests. `./gradlew assembleDebug` and `./gradlew lint` passed on every slice and after the review fixes: 0 errors, 16 warnings (the baseline 14 plus two accepted Coil `NewerVersionAvailable`).
@@ -583,3 +583,30 @@ Decision: [0009](../decisions/0009-tickets-repository.md) (supersedes in part [0
 - JSON persistence on `Dispatchers.IO`, as in Contacts_#3, if tickets must survive process death before Firestore.
 - A progress indicator and a "Copying..." string while `isCopyingAttachments` (review N5); a video size limit.
 - `AttachmentStorage` as an interface when the WorkManager upload task touches it (review N9); move `getType` inside the `try` in `FileUtils` so a `SecurityException` cannot escape the copy (review N6).
+
+## F-009: Show attachment images on the card and the detail (bug fix)
+Decision: no new record; [0006](../decisions/0006-anonymous-projection-phase-1.md) media point amended (2026-11-08). Code: `ui/components/AttachmentImage.kt` (new), `ui/components/AttachmentGallery.kt`, `ui/components/TicketCard.kt`, `ui/screens/ShowScreen.kt`, `utils/FileUtils.kt`, `data/LocalTicketsRepository.kt`, `model/TicketPrivacy.kt` (KDoc only), version catalog. Overview: "Shared components", "Screens" (`ShowScreen`), "Media is outside the projection".
+
+**Only a smoke check ran on the emulator** (install, list, a sample detail, no crash). Reporting with a camera photo or gallery video and checking the card, the detail and the stripped EXIF has not run (review S3).
+
+### Root cause
+- F-007 saved real files and the path reached the ticket (`Attachment.file`, kept by `toAnonymousView()`), but the two F-005 placeholders never read it: the card read the never-set `thumbnail`, and `MediaTile` drew only a type icon. The data path was right; the screens were not.
+- Lesson: when a later task makes data real, check every consumer built against the placeholder.
+
+### Technical solutions
+- **One shared `AttachmentImage`**, the Contacts_#3 `ContactAvatar` pattern: one composable that branches on a blank path and is reused by the list and the detail. Here it serves the form gallery, the card and the detail, so the video-frame logic (`VideoFrameDecoder` per request) exists once. Unlike `ContactAvatar` it takes its size from the caller's modifier, handles video, and takes a localised description from the caller.
+- **`SubcomposeAsyncImage`** with `loading`/`error` slots that draw the same small tinted icon as a blank file. A painter placeholder was untinted and stretched by Crop (review N1). `colorFilter` was not used, because it would tint the photo too.
+- **Photo GPS removed in the repository.** `FileUtils.removeImageLocation` clears every EXIF GPS tag with `androidx.exifinterface` 1.4.2 (32 constants, since `ExifInterface` has no call to clear the whole block); make, model and capture time stay. It runs in `reportTicket`, the one point the camera and gallery paths both pass through, on IO, before the ticket becomes visible. The form shows the file before stripping, but that is the author's own draft, and a decoded bitmap carries no EXIF.
+- **Failure keeps the report** (Gate 1 Q2): a HEIC that cannot be rewritten keeps its tags rather than losing the user's report.
+
+### Known limits
+- Video location metadata is kept (deferred to the media task, Gate 1 Q1), and so is location in an XMP packet (review N4).
+- A failed strip is silent: no log line (review N2).
+- The `TicketsRepository.reportTicket` contract does not say an implementation must strip GPS, so a Firebase repository could forget it (review N3).
+- The card's description reads "Ticket photo" also when the first attachment is a video (review N5).
+- The card has its own placeholder for "no attachment" next to `AttachmentImage`'s blank-file one (review N6, kept as a deliberate distinction).
+
+### Improvement opportunities
+- Strip video location with a remux (`MediaMuxer` or Media3 Transformer), and handle XMP.
+- Real thumbnails (`Attachment.thumbnail`) generated at compression, so the list does not decode full photos (Coil downsamples, but still reads the whole file).
+- A `Log.w` on a failed strip; one KDoc line on `TicketsRepository.reportTicket`; a "Ticket video" description.
