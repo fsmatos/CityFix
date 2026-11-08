@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-06 | Approve with should-fixes: 0 blocking, 3 should-fix, 7 nits; `review.md`. Nothing ran on a device: F-007 stays open until the runtime checks pass |
 | Docs | done | 2026-11-06 | Overview, note in decision 0008, report notes, README, 00-plan wording; no new decision record. Runtime checks still open |
 | Pushed | done | 2026-11-07 | e56a5d9 to origin/dev/Francisco; not merged into main |
-| Merged | pending | | |
+| Merged | done | 2026-11-08 | 54472b7 in origin/main; origin/main merged back into dev/Francisco (071b8cc) |
 
 ## Log
 Append-only.
@@ -33,3 +33,4 @@ Append-only.
 - 2026-11-06 Docs, left as they are: `00-plan.md` line 87 still says the upload phase strips the metadata (a Gate 1 record; the overview has the stricter rule). The KDoc above `MediaTile` in `ShowScreen.kt` still says "Phase 1 has no real files", which F-007 made stale: a code comment, so out of the docs phase.
 - 2026-11-07: Pushed dev/Francisco to origin at e56a5d9 (verify skipped: no Kotlin or Gradle changes since the last pass before a3ccd96). Manual device checks still open.
 - 2026-11-08: Merged dev/Francisco into local main as 54472b7 (`merge: dev/Francisco into main`, --no-ff, no conflicts; assembleDebug passes, lint 0 errors, 16 warnings). main not pushed yet; Merged row stays pending until it is in origin/main (/finish-task).
+- 2026-11-08: /finish-task: task commits confirmed in origin/main (merge 54472b7, pushed). Merged origin/main back into dev/Francisco (071b8cc, no conflicts, no file changes). Merged: done.
