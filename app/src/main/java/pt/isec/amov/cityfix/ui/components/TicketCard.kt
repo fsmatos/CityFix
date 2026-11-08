@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
@@ -52,7 +54,7 @@ fun TicketCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            TicketThumbnail()
+            TicketThumbnail(ticket.attachments.firstOrNull())
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -91,8 +93,9 @@ fun TicketCard(
     }
 }
 
+/** First attachment of the ticket, or the placeholder icon when it has none. */
 @Composable
-private fun TicketThumbnail() {
+private fun TicketThumbnail(attachment: Attachment?) {
     Box(
         modifier = Modifier
             .size(64.dp)
@@ -100,11 +103,20 @@ private fun TicketThumbnail() {
             .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_image_placeholder),
-            contentDescription = stringResource(R.string.ticket_thumbnail_description),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        val contentDescription = stringResource(R.string.ticket_thumbnail_description)
+        if (attachment == null) {
+            Icon(
+                painter = painterResource(R.drawable.ic_image_placeholder),
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            AttachmentImage(
+                attachment = attachment,
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 

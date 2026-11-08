@@ -15,10 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -43,6 +39,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.ui.components.AttachmentImage
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
@@ -330,8 +327,8 @@ private fun MediaSection(
 }
 
 /**
- * Type icon and label for one attachment. Phase 1 has no real files, so it says "Not available yet"
- * instead of drawing a fake photo; the media task replaces the icon with the thumbnail.
+ * Photo or video frame and its label for one attachment. Without a file (sample tickets) it shows
+ * the placeholder and "Not available yet" instead of drawing a fake photo.
  */
 @Composable
 private fun MediaTile(
@@ -357,29 +354,24 @@ private fun MediaTile(
             contentAlignment = Alignment.Center,
         ) {
             // Decorative: the label below says what it is
-            when (attachment.type) {
-                AttachmentType.IMAGE -> Icon(
-                    painter = painterResource(R.drawable.ic_image_placeholder),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                AttachmentType.VIDEO -> Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            AttachmentImage(
+                attachment = attachment,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
         Text(
             text = stringResource(labelRes),
             style = MaterialTheme.typography.bodyMedium,
         )
-        Text(
-            text = stringResource(R.string.ticket_media_unavailable),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        if (attachment.file.isBlank()) {
+            Text(
+                text = stringResource(R.string.ticket_media_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
