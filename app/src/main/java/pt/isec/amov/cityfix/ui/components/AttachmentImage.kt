@@ -17,7 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.video.VideoFrameDecoder
 import pt.isec.amov.cityfix.R
@@ -37,7 +37,6 @@ fun AttachmentImage(
 ) {
     val isVideo = attachment.type == AttachmentType.VIDEO
     val context = LocalContext.current
-    val placeholder = painterResource(R.drawable.ic_image_placeholder)
     // Coil decodes images from the path alone; a video needs the frame decoder for this request.
     val model: Any = remember(attachment.file, isVideo) {
         if (isVideo) {
@@ -52,19 +51,17 @@ fun AttachmentImage(
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (attachment.file.isBlank()) {
-            Icon(
-                painter = placeholder,
-                contentDescription = contentDescription,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            PlaceholderIcon(contentDescription)
         } else {
-            AsyncImage(
+            // Loading and error slots draw the same small tinted icon as a blank file; a painter
+            // placeholder would be untinted and stretched by Crop.
+            SubcomposeAsyncImage(
                 model = model,
                 contentDescription = contentDescription,
-                placeholder = placeholder,
-                error = placeholder,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
+                loading = { CenteredPlaceholder(contentDescription) },
+                error = { CenteredPlaceholder(contentDescription) },
             )
         }
         if (isVideo) {
@@ -78,4 +75,21 @@ fun AttachmentImage(
             )
         }
     }
+}
+
+/** Coil's loading/error slots do not apply the description, so the icon carries it. */
+@Composable
+private fun CenteredPlaceholder(contentDescription: String?) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        PlaceholderIcon(contentDescription)
+    }
+}
+
+@Composable
+private fun PlaceholderIcon(contentDescription: String?) {
+    Icon(
+        painter = painterResource(R.drawable.ic_image_placeholder),
+        contentDescription = contentDescription,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

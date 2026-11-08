@@ -22,17 +22,40 @@ object FileUtils {
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
 
-    private val GPS_LOCATION_TAGS = listOf(
-        ExifInterface.TAG_GPS_LATITUDE,
+    /** Every tag of the EXIF GPS IFD (EXIF 2.32), not only the latitude/longitude pair. */
+    private val GPS_TAGS = listOf(
+        ExifInterface.TAG_GPS_VERSION_ID,
         ExifInterface.TAG_GPS_LATITUDE_REF,
-        ExifInterface.TAG_GPS_LONGITUDE,
+        ExifInterface.TAG_GPS_LATITUDE,
         ExifInterface.TAG_GPS_LONGITUDE_REF,
-        ExifInterface.TAG_GPS_ALTITUDE,
+        ExifInterface.TAG_GPS_LONGITUDE,
         ExifInterface.TAG_GPS_ALTITUDE_REF,
+        ExifInterface.TAG_GPS_ALTITUDE,
         ExifInterface.TAG_GPS_TIMESTAMP,
-        ExifInterface.TAG_GPS_DATESTAMP,
+        ExifInterface.TAG_GPS_SATELLITES,
+        ExifInterface.TAG_GPS_STATUS,
+        ExifInterface.TAG_GPS_MEASURE_MODE,
+        ExifInterface.TAG_GPS_DOP,
+        ExifInterface.TAG_GPS_SPEED_REF,
+        ExifInterface.TAG_GPS_SPEED,
+        ExifInterface.TAG_GPS_TRACK_REF,
+        ExifInterface.TAG_GPS_TRACK,
+        ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
+        ExifInterface.TAG_GPS_IMG_DIRECTION,
+        ExifInterface.TAG_GPS_MAP_DATUM,
+        ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
+        ExifInterface.TAG_GPS_DEST_LATITUDE,
+        ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
+        ExifInterface.TAG_GPS_DEST_LONGITUDE,
+        ExifInterface.TAG_GPS_DEST_BEARING_REF,
+        ExifInterface.TAG_GPS_DEST_BEARING,
+        ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
+        ExifInterface.TAG_GPS_DEST_DISTANCE,
         ExifInterface.TAG_GPS_PROCESSING_METHOD,
         ExifInterface.TAG_GPS_AREA_INFORMATION,
+        ExifInterface.TAG_GPS_DATESTAMP,
+        ExifInterface.TAG_GPS_DIFFERENTIAL,
+        ExifInterface.TAG_GPS_H_POSITIONING_ERROR,
     )
 
     /**
@@ -64,13 +87,13 @@ object FileUtils {
     fun isVideoPath(path: String): Boolean = File(path).name.startsWith(VIDEO_PREFIX)
 
     /**
-     * Blocking. Clears the GPS EXIF tags of the image at [path] in place, so the file does not
-     * carry the exact place it was taken; make, model and capture time stay. False when the
-     * format cannot be written (e.g. HEIC) or IO fails.
+     * Blocking. Clears the GPS IFD of the image at [path] in place, so the file does not carry
+     * the place it was taken; make, model and capture time stay. False when the format cannot
+     * be written (e.g. HEIC) or IO fails.
      */
     fun removeImageLocation(path: String): Boolean = try {
         val exif = ExifInterface(path)
-        GPS_LOCATION_TAGS.forEach { exif.setAttribute(it, null) }
+        GPS_TAGS.forEach { exif.setAttribute(it, null) }
         exif.saveAttributes()
         true
     } catch (_: Exception) {
