@@ -535,3 +535,51 @@ Decision: no new record; see the note in [0008](../decisions/0008-report-form-st
 - The photo picker backport entry in the manifest (Q9), so API 24-29 gets the limit in the picker too.
 - `SavedStateHandle` for the draft, and a clean-up of unreferenced files in `filesDir/images`.
 - Review nits not fixed: N1 (a notice can outlive its cause; add `onAttachmentNoticeDismissed()`), N2 (`getType` and `mediaFolder` run outside the `try`, so "null on any failure" is not literal), N5 (add a `submitted` check to `onRemoveAttachment`), N6 (`@param:StringRes` for the 7 compiler warnings).
+- (Done by F-008: the gallery copy now runs off the main thread; see that section.)
+
+## F-008: Tickets repository
+Decision: [0009](../decisions/0009-tickets-repository.md) (supersedes in part [0006](../decisions/0006-anonymous-projection-phase-1.md) and [0008](../decisions/0008-report-form-state.md)). Code: `CityFixApplication.kt`, `data/TicketsRepository.kt`, `data/LocalTicketsRepository.kt`, `data/AttachmentStorage.kt`, `viewmodel/TicketsViewModel(+Factory).kt`, `viewmodel/ReportViewModel(+Factory).kt`, `ReportUiState.kt`, `ReportScreen.kt`, `MainActivity.kt`, manifest. Overview: "Layers", "ViewModel (D-003)", "Report form (F-006)", "Report attachments (F-007)", "App shell (D-006)".
+
+**Not run on a device or emulator yet.** Build and lint pass (0 errors, 16 warnings, baseline); the acceptance checks in `docs/work/F-008-tickets-repository/review.md` are open.
+
+### Why a repository before Firebase
+- `.claude/rules/kotlin.md` puts the anonymous filter in the repository layer; until F-008 `TicketsViewModel` called `toAnonymousView()`. Now it is called only in `LocalTicketsRepository`, so D-007's projection change lands in one place.
+- The ViewModels depend on the `TicketsRepository` interface, so the Firebase phase adds `FirestoreTicketsRepository` without rewiring screens or ViewModels.
+- Model: the class project Contacts_#3 (P08): `ContactsApp`, `ContactsRepository`, `ContactsViewModel(+Factory)`, `EditContactViewModel(+Factory)`.
+- Where we differ from Contacts_#3, one sentence each for the defence:
+  - an interface (Contacts_#3 has a concrete class): the Firebase reason above;
+  - a `Mutex` over the cache: the IO pool can run a load and a report at once, and `TicketsList` is not thread-safe; `getTicketById` is locked too (review S1), unlike `getContactById`;
+  - no JSON file: memory only, the samples come back after process death;
+  - the `submitted` lock is set before `launch` (Contacts_#3 sets `isSaving` inside `launch`, so it has a double-tap window);
+  - the gallery copy runs off the main thread (Contacts_#3 copies in the launcher callback).
+  - Same as Contacts_#3: the factories use `@Suppress("UNCHECKED_CAST") ... as T`; the planned `modelClass.cast(...)` gave a compiler warning.
+
+### Manual DI
+- `CityFixApplication` (registered with `android:name`) holds one repository and one `AttachmentStorage` `by lazy`. `MainActivity` reads `application as CityFixApplication` once in `onCreate` and passes it to `CityFixApp(app)`, which builds `TicketsViewModelFactory` and `ReportViewModelFactory`.
+- Why not Hilt or Koin: two ViewModels and two dependencies; a DI framework adds a Gradle plugin, annotations and generated code that both authors would have to explain, and the course uses manual factories.
+- Failure modes: a missing `android:name` crashes the cast at start; `viewModel()` without a factory crashes (no no-arg constructor).
+
+### Who owns state
+- Each ViewModel owns its `MutableStateFlow`s and fills them from `suspend` repository calls in `viewModelScope` (`TicketsViewModel.init { refresh() }`), as `ContactsViewModel` does. The repository returns values, not flows.
+- Cost: on cold start the flows start empty, so the dashboard and list can show the empty state for one frame; after process death on the detail route, "Ticket not found" flashes for one frame. Accepted in phase 1, no loading state.
+- `activeCategories()` stays synchronous so the dropdown has its list on the first frame.
+- Tickets now live as long as the process (the repository is in the `Application`), not the activity.
+
+### Async save
+- `ReportViewModel.submit(onSuccess)` validates, sets `submitted` and `isSaving` synchronously, then saves through the suspend `reportTicket` in `viewModelScope`. A double tap returns at the guard. `null` unlocks the form with an error.
+- `onSuccess` takes no id (D-006 rule: a PRIVATE ticket must never be opened). `MainActivity`'s callback: `refresh()`, snackbar, `navigateUp()`, like `saveContact { refreshContacts(); popBackStack() }`.
+- Known callback risks (accepted, as in Contacts_#3): rotation mid-save runs the old lambda on the old `NavController`, so the new screen keeps the form open and locked with no snackbar (`refresh()` still runs); back mid-save may skip the snackbar and `refresh()`, and if cancelled before the add, `onCleared` keeps the draft files (review N4). The save takes milliseconds in memory.
+- `isSaving` is not read by the UI yet (`submitted` locks the form); it is there for a progress indicator later (review N1).
+
+### Gallery copy off the main thread
+- `data/AttachmentStorage` copies on `Dispatchers.IO`, launched from `ReportViewModel.onMediaPicked` in `viewModelScope`, so a rotation does not cancel it; leaving the form cancels it and the copied files are deleted.
+- Async copy reopened F-007's limit race (review B1): two media results arriving back to back could exceed 3. Fix: the limit is checked again when each copy returns, against the slots free then; extra copies are deleted with the limit notice; copies returning after a submit are deleted. A `copiesInProgress` counter keeps Submit and the add buttons disabled until the last copy ends. A good example for the defence of how moving work off the main thread turns a synchronous check into a race.
+
+### Improvement opportunities
+- `FirestoreTicketsRepository` behind the same interface, with listeners instead of `refresh()` (also fixes the two separate locks in `refresh()`, review N2).
+- A separate `CategoriesRepository` (categories per municipality).
+- A `saved` flag in `ReportUiState` consumed by a `LaunchedEffect` instead of the `onSuccess` callback; `onCleared` keyed on "saved" rather than "submitted" (review N4, N7).
+- An `isLoading` state to hide the first empty frame.
+- JSON persistence on `Dispatchers.IO`, as in Contacts_#3, if tickets must survive process death before Firestore.
+- A progress indicator and a "Copying..." string while `isCopyingAttachments` (review N5); a video size limit.
+- `AttachmentStorage` as an interface when the WorkManager upload task touches it (review N9); move `getType` inside the `try` in `FileUtils` so a `SecurityException` cannot escape the copy (review N6).

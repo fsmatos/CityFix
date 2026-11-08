@@ -1,6 +1,6 @@
 # 0008: Report form state
 
-Status: accepted (F-006, Gate 1 on 2026-11-01, plan revision 3; S2 review fix on 2026-11-01). Related: [decision 0006](0006-anonymous-projection-phase-1.md) (its consequence "A phase-1 report has no attachment" stops holding after F-007; Diogo's record, not edited here).
+Status: accepted (F-006, Gate 1 on 2026-11-01, plan revision 3; S2 review fix on 2026-11-01). Superseded in part by [0009](0009-tickets-repository.md) (F-008): repository, factory, suspend save in the ViewModel, gallery copy off the main thread. Related: [decision 0006](0006-anonymous-projection-phase-1.md) (its consequence "A phase-1 report has no attachment" stops holding after F-007; Diogo's record, not edited here).
 
 ## Context
 - **Brief I.2.E, Abertura:** "indicação da Categoria (definidas pelo município), Situação (Dano, Avaria, Destruição ou Roubo), descrição e anexos de imagens e/ou vídeos, alcance (público/privado). Os dados são de preenchimento obrigatório (deve ser carregada uma imagem/vídeo)."
