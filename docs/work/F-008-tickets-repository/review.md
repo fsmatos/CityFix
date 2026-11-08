@@ -88,3 +88,33 @@ Then re-run the slice 4 device check "two quick picks never go over 3" with a ga
 
 ## Unverified at runtime
 No device or emulator was attached, so nothing was run. By reading only: list order and projection on screen, dashboard figures, categories dropdown, PUBLIC/PRIVATE report flow and snackbar, double-tap Submit, rotation on every screen and mid-save, responsiveness during a large video copy, the pick limit (B1 fails by reading), cleanup of `filesDir/images` on back mid-copy, cold-start empty frame, and process-death restore.
+
+## Re-review (2026-11-08)
+Range: `b539da0` (fix(F-008): address review findings) and `8e8698b` (state.md entry). Only `ReportViewModel.kt`, `TicketsRepository.kt` and `LocalTicketsRepository.kt` changed; no string, screen, `model/` or manifest change.
+
+**Verdict: approve for the device checks.** B1 and S1 are resolved by reading, with no new behaviour change. S2 (run the emulator acceptance checks) stays open and is now the only thing between F-008 and push. Nits N1-N6 and N9 stay open by choice (the implementer recorded that); N7 and N8 are now recorded in state.md, so they are closed.
+
+**Build and lint (reviewer, `./gradlew assembleDebug lint --rerun-tasks`, 46/46 tasks executed):** pass. Lint gives 0 errors and 16 warnings (baseline). The only compiler warnings are the 7 known `@StringRes` ones.
+
+**B1: resolved.** `onMediaPicked` now applies the limit when the copy returns: it reads `remainingAttachments` from the current state, so any photo or file attached while the copy ran has already taken its slot.
+- **Two quick gallery picks:** each copy cuts its result to the slots still free when it returns, so the total stays at 3 or below whichever copy finishes first.
+- **Gallery then camera:** `attachCaptured` attaches the photo if a slot is free at that moment. The copy then returns, sees the slot taken, deletes its extra files and shows the limit notice.
+- **Camera then gallery:** the photo is attached synchronously before `onMediaPicked` runs, so the order is handled as before.
+- **Extras:** `savedPaths.drop(fits.size)` are deleted, and `report_attachments_limit` shows when `fits.size < savedPaths.size`. "Copy failed" still takes precedence, as in F-007. With no race (`fits == savedPaths`), the notices are exactly the old ones, including the `remaining == 0` case (nothing copied, limit notice).
+- **Already submitted:** every returned copy is deleted and nothing is attached. In practice this only happens when a picker was launched just before a valid Submit, because `submit()` returns while a copy runs.
+- **`copiesInProgress`:**
+  - It is incremented before `launch` and decremented in `finally`. Both run on the main thread (`viewModelScope` is `Dispatchers.Main.immediate`), so a plain `Int` is safe.
+  - `isCopyingAttachments = copiesInProgress > 0` keeps the add buttons (`canAddAttachment`) and Submit (`enabled`, plus the guard in `submit()`) disabled until the last copy ends.
+  - `finally` also runs on cancellation and on the early `return@launch`, so the counter cannot get stuck.
+- **Cancellation cleanup:** unchanged. `AttachmentStorage` still deletes on `CancellationException`. The new `try/finally` neither swallows nor rethrows anything else.
+- **New behaviour change:** none. When there is no race, the visible result is the same as F-007. In a race the camera photo wins the slot over a copy still in flight. That is an outcome of enforcing the limit, not a new behaviour.
+
+**S1: resolved.** `TicketsRepository.getTicketById` is now `suspend`. `LocalTicketsRepository` reads under `withContext(Dispatchers.IO) { mutex.withLock { ... } }`, in the same shape as the loads, and the comment now gives the right reason (the list may be added to on another thread). The deviation from the plan's synchronous signature, and the contrast with `getContactById`, are recorded in state.md and in the KDoc. There is still no caller. `TicketsViewModel.getTicketById` is a different, synchronous read of its own flow, unchanged, so nothing else had to adapt. When the Firebase task gives it a caller, call it from `viewModelScope`.
+
+**Still open**
+- S2: no device attached, so nothing was run. Before `/push-task`, run every 00-plan acceptance check. Add these:
+  - gallery x2 fast taps: never more than 3;
+  - gallery + camera fast taps: never more than 3, with the limit notice;
+  - Submit stays disabled until both copies finish;
+  - a pick that lands after Submit leaves no new file in `filesDir/images`.
+- Nits N1-N6, N9: optional, as in the first review.
