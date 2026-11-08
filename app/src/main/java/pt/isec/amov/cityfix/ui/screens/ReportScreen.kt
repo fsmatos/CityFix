@@ -1,6 +1,14 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.ActivityNotFoundException
 import android.content.res.Configuration
+import android.net.Uri
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +31,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -30,11 +39,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -47,14 +58,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
+import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
-import pt.isec.amov.cityfix.viewmodel.ReportSubmission
+import pt.isec.amov.cityfix.utils.FileUtils
+import pt.isec.amov.cityfix.viewmodel.MAX_REPORT_ATTACHMENTS
 import pt.isec.amov.cityfix.viewmodel.ReportUiState
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
+import java.io.File
 
 /** Label for a ticket scope ("Alcance" in the brief). */
 fun scopeLabelRes(scope: Scope): Int = when (scope) {
@@ -63,26 +79,106 @@ fun scopeLabelRes(scope: Scope): Int = when (scope) {
 }
 
 /**
- * Stateful half of the report form (brief I.2.E): collects [viewModel] and calls [onSubmit] with
- * valid data. [onSubmit] returns true if the ticket was created; false keeps the form open and
+ * Stateful half of the report form (brief I.2.E): collects [viewModel], which validates and saves
+ * the ticket. [onSubmitted] runs once the ticket is saved; a refused save keeps the form open and
  * shows an error.
  */
 @Composable
 fun ReportScreen(
     viewModel: ReportViewModel,
-    onSubmit: (ReportSubmission) -> Boolean,
+    onSubmitted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // The pending photo survives rotation and process death while the camera app is open.
+    var tempCameraPath by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Launchers stay here, above the orientation branch: their saved key is position-based, so
+    // inside a pane a rotation with the picker or camera open would lose the result.
+    val pickSeveral = rememberLauncherForActivityResult(
+        remember { PickMultipleVisualMedia() },
+    ) { uris -> viewModel.onMediaPicked(uris) }
+    val pickOne = rememberLauncherForActivityResult(
+        remember { PickVisualMedia() },
+    ) { uri -> viewModel.onMediaPicked(listOfNotNull(uri)) }
+    val takePhoto = rememberLauncherForActivityResult(
+        remember { TakePicture() },
+    ) { success ->
+        val path = tempCameraPath
+        tempCameraPath = null
+        if (path != null) attachCaptured(viewModel, path, success)
+    }
+
     ReportContent(
         state = state,
         onCategorySelected = viewModel::onCategorySelected,
         onSituationSelected = viewModel::onSituationSelected,
         onDescriptionChange = viewModel::onDescriptionChange,
         onScopeSelected = viewModel::onScopeSelected,
-        onSubmitClick = { viewModel.submit()?.let { viewModel.onSubmitResult(onSubmit(it)) } },
+        onAddFromGalleryClick = {
+            val remaining = state.remainingAttachments
+            // maxItems must be above 1, so the last free slot uses the single picker.
+            if (remaining > 1) {
+                pickSeveral.launch(
+                    PickVisualMediaRequest(PickVisualMedia.ImageAndVideo, maxItems = remaining),
+                )
+            } else {
+                pickOne.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
+            }
+        },
+        onTakePhotoClick = {
+            // A second tap before the camera opens would overwrite the path and orphan its file.
+            // The takePhoto callback and a failed launch both clear it, so this cannot stick.
+            if (tempCameraPath == null) {
+                val (file, uri) = FileUtils.createTempImageFile(context)
+                tempCameraPath = file.absolutePath
+                if (!launchCamera(takePhoto, uri)) {
+                    tempCameraPath = null
+                    file.delete()
+                    viewModel.onCameraUnavailable()
+                }
+            }
+        },
+        onRemoveAttachment = viewModel::onRemoveAttachment,
+        onSubmitClick = { viewModel.submit(onSuccess = onSubmitted) },
         modifier = modifier,
     )
+}
+
+/** False when there is no camera app, or Android refuses the launch. */
+private fun launchCamera(
+    takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
+    uri: Uri,
+): Boolean = try {
+    takePhoto.launch(uri)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
+} catch (_: SecurityException) {
+    false
+}
+
+/**
+ * A cancelled capture deletes its file silently; an empty "success" also shows the notice. The
+ * limit is checked here too: a pick that started with the camera can take the last slot first.
+ */
+private fun attachCaptured(viewModel: ReportViewModel, path: String, success: Boolean) {
+    val file = File(path)
+    val hasPhoto = success && file.length() > 0
+    when {
+        hasPhoto && viewModel.uiState.value.remainingAttachments > 0 ->
+            viewModel.onPhotosAttached(listOf(path))
+        hasPhoto -> {
+            file.delete()
+            viewModel.onAttachmentLimitReached()
+        }
+        else -> {
+            file.delete()
+            if (success) viewModel.onCameraUnavailable()
+        }
+    }
 }
 
 /** Stateless half of the report form: draws [state]; previews target this. */
@@ -93,6 +189,9 @@ fun ReportContent(
     onSituationSelected: (Situation) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onScopeSelected: (Scope) -> Unit,
+    onAddFromGalleryClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onRemoveAttachment: (Attachment) -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -123,6 +222,9 @@ fun ReportContent(
                 state = state,
                 onDescriptionChange = onDescriptionChange,
                 onScopeSelected = onScopeSelected,
+                onAddFromGalleryClick = onAddFromGalleryClick,
+                onTakePhotoClick = onTakePhotoClick,
+                onRemoveAttachment = onRemoveAttachment,
                 onSubmitClick = onSubmitClick,
                 modifier = Modifier
                     .weight(1f)
@@ -149,6 +251,9 @@ fun ReportContent(
                 state = state,
                 onDescriptionChange = onDescriptionChange,
                 onScopeSelected = onScopeSelected,
+                onAddFromGalleryClick = onAddFromGalleryClick,
+                onTakePhotoClick = onTakePhotoClick,
+                onRemoveAttachment = onRemoveAttachment,
                 onSubmitClick = onSubmitClick,
             )
         }
@@ -185,12 +290,15 @@ private fun ChoicesPane(
     }
 }
 
-/** Description, media note, visibility, errors and Submit: the right pane in landscape. */
+/** Description, attachments, visibility, errors and Submit: the right pane in landscape. */
 @Composable
 private fun DetailsPane(
     state: ReportUiState,
     onDescriptionChange: (String) -> Unit,
     onScopeSelected: (Scope) -> Unit,
+    onAddFromGalleryClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onRemoveAttachment: (Attachment) -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -200,7 +308,12 @@ private fun DetailsPane(
             error = state.descriptionError,
             onValueChange = onDescriptionChange,
         )
-        MediaPendingSection()
+        AttachmentsSection(
+            state = state,
+            onAddFromGalleryClick = onAddFromGalleryClick,
+            onTakePhotoClick = onTakePhotoClick,
+            onRemoveAttachment = onRemoveAttachment,
+        )
         RadioGroupSection(
             title = stringResource(R.string.report_scope_title),
             options = Scope.entries,
@@ -217,7 +330,7 @@ private fun DetailsPane(
         }
         Button(
             onClick = onSubmitClick,
-            enabled = !state.submitted,
+            enabled = !state.submitted && !state.isCopyingAttachments,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.report_submit))
@@ -359,23 +472,53 @@ private fun DescriptionField(
     )
 }
 
-/**
- * Photos and videos (brief I.2.E): a note only, nothing to tap. F-007 replaces it with the
- * picker/camera row and previews, in the same place, and adds the "at least one" rule.
- */
+/** Photos and videos (brief I.2.E): thumbnails, the ways to add one, error and notice. */
 @Composable
-private fun MediaPendingSection(modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun AttachmentsSection(
+    state: ReportUiState,
+    onAddFromGalleryClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onRemoveAttachment: (Attachment) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.ticket_media_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() },
         )
         Text(
-            text = stringResource(R.string.report_media_pending),
+            text = stringResource(R.string.report_attachments_hint, MAX_REPORT_ATTACHMENTS),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (state.attachments.isNotEmpty()) {
+            AttachmentGallery(
+                attachments = state.attachments,
+                onRemove = onRemoveAttachment,
+                removeEnabled = !state.submitted,
+            )
+        }
+        OutlinedButton(
+            onClick = onAddFromGalleryClick,
+            enabled = state.canAddAttachment,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.report_attachments_gallery))
+        }
+        OutlinedButton(
+            onClick = onTakePhotoClick,
+            enabled = state.canAddAttachment,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.report_attachments_camera))
+        }
+        if (state.attachmentsError != null) {
+            ErrorText(state.attachmentsError)
+        }
+        if (state.attachmentsNotice != null) {
+            ErrorText(state.attachmentsNotice)
+        }
     }
 }
 
@@ -396,6 +539,12 @@ private val previewCategories = listOf(
     Category(id = "furniture", name = "Urban furniture"),
 )
 
+private val previewAttachments = listOf(
+    Attachment(id = "IMG_1.jpg", file = "IMG_1.jpg"),
+    Attachment(id = "VID_2.mp4", type = AttachmentType.VIDEO, file = "VID_2.mp4"),
+    Attachment(id = "IMG_3.jpg", file = "IMG_3.jpg"),
+)
+
 private val emptyState = ReportUiState(categories = previewCategories)
 
 private val filledState = emptyState.copy(
@@ -404,6 +553,7 @@ private val filledState = emptyState.copy(
     situation = Situation.BREAKDOWN,
     description = "The street lamp in front of number 12 is off every night.",
     scope = Scope.PUBLIC,
+    attachments = previewAttachments.take(1),
 )
 
 private val errorState = emptyState.copy(
@@ -411,6 +561,7 @@ private val errorState = emptyState.copy(
     situationError = R.string.report_error_situation,
     descriptionError = R.string.report_error_description,
     scopeError = R.string.report_error_scope,
+    attachmentsError = R.string.report_error_attachments,
     showErrorSummary = true,
 )
 
@@ -423,6 +574,14 @@ private val noCategoriesSubmittedState = noCategoriesState.copy(
 
 private val submitFailedState = filledState.copy(submitError = R.string.report_error_not_created)
 
+private val withAttachmentsState = filledState.copy(attachments = previewAttachments.take(2))
+
+private val fullAttachmentsState = filledState.copy(attachments = previewAttachments)
+
+private val attachmentsNoticeState = fullAttachmentsState.copy(
+    attachmentsNotice = R.string.report_attachments_limit,
+)
+
 @Composable
 private fun ReportPreview(state: ReportUiState) {
     CityFixTheme {
@@ -432,6 +591,9 @@ private fun ReportPreview(state: ReportUiState) {
             onSituationSelected = {},
             onDescriptionChange = {},
             onScopeSelected = {},
+            onAddFromGalleryClick = {},
+            onTakePhotoClick = {},
+            onRemoveAttachment = {},
             onSubmitClick = {},
         )
     }
@@ -482,4 +644,27 @@ private fun ReportNoCategoriesSubmittedPreview() {
 @Composable
 private fun ReportSubmitFailedPreview() {
     ReportPreview(submitFailedState)
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ReportWithAttachmentsPreview() {
+    ReportPreview(withAttachmentsState)
+}
+
+/** The narrow landscape spec gives the grid 2 columns, so the third item needs the grid's scroll. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=360dp,height=640dp,orientation=landscape")
+@Composable
+private fun ReportAttachmentsFullPreview() {
+    ReportPreview(fullAttachmentsState)
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ReportAttachmentsNoticePreview() {
+    ReportPreview(attachmentsNoticeState)
 }

@@ -12,8 +12,9 @@ const val ANONYMOUS_COORDINATE_DECIMALS = 2
  * entry holds the creator's id), every StatusHistory.justification (free text that may name
  * the author) and every Attachment.uploadedById, and rounds the location to
  * [ANONYMOUS_COORDINATE_DECIMALS]. Update this when Ticket gains a field with personal data.
- * Media files are passed through: EXIF location must be stripped at compression (utils/) and
- * Storage paths must not contain user ids (media-upload task).
+ * Media files are passed through: photo GPS EXIF tags are removed in
+ * LocalTicketsRepository.reportTicket (FileUtils.removeImageLocation, F-009) before the ticket
+ * is stored; video metadata and Storage paths without user ids are for the media-upload task.
  */
 fun Ticket.toAnonymousView(): Ticket = copy(
     location = location.coarse(),

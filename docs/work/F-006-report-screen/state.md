@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-01 | approve with should-fixes: 0 blocking, 2 should-fix (S1 no-categories message wins, S2 submit() gates on isValid), 8 nits; build + lint at baseline; see review.md |
 | Docs | done | 2026-11-01 | overview (Layers, ViewModel D-003, new "Report form (F-006)", Screens ReportScreen + D-006 contract, Shared components scopeLabelRes), ADR 0008, report notes; 0006 and docs/tasks/ not edited; I.2.E gap open until F-007; not committed |
 | Pushed | done | 2026-11-01 | decf36c to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -118,3 +118,4 @@ Append-only.
   - Not done, on purpose: decision 0006 not edited (Diogo's; ADR 0008 and the overview record the handover that its "no attachment" consequence stops holding after F-007); `docs/tasks/` untouched: no F-007 task file (the person writes it from 00-plan "F-007 follow-up"), no phase-1 index change, and the F-006 task file's "Files" line (lists only `ReportScreen.kt`) left for the person to decide.
   - Open for the person: write the F-007 task file; decide the F-006 task file's "Files" line; raise with Diogo the D-006 contract (`viewModel()` per route, `consumeWindowInsets`, `collectAsStateWithLifecycle`), the three new files in his folders (Q7a), the `reportTicket` attachments parameter (Q7f) and the 0006 update after F-007. Manual checks (previews, TalkBack, emulator after D-006) still pending.
 - 2026-11-01: pushed dev/Francisco to origin (f2714b5..decf36c) after verify passed (assembleDebug; lint 0 errors, 13-warning baseline). Manual checks (previews, TalkBack, emulator after D-006) still pending; F-007 task file and the Diogo handovers (D-006 contract, new files in viewmodel/ and data/, reportTicket attachments parameter, 0006 update after F-007) open for the person.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.

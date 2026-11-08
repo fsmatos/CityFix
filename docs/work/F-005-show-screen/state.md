@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-01 | approve with should-fixes: 0 blocking, 4 should-fix (S1 tile background, S2 scroll lost on rotation, S3 REGISTERED meaning, S4 UI-only privacy for description/history), 8 nits; build + lint at baseline |
 | Docs | done | 2026-11-01 | overview (Screens ShowScreen, Shared components, ViewModel S4), ADR 0007, report notes; 0006 and the task file not edited; not committed |
 | Pushed | done | 2026-11-01 | 8725c63 to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -102,3 +102,4 @@ Append-only.
   - Open for the person before `/push-task`: raise S4 (projection change + decision 0006 amendment) with Diogo as a task, together with the list/detail description inconsistency; N8 task-file wording.
 - 2026-11-01: N8 decided by the person: reworded the task file check "Status history shown in order with timestamps" to apply to REGISTERED/OPERATOR (previews in phase 1), with PUBLIC following I.1.C (ADR 0007). Checks stay unticked until the manual Android Studio checks.
 - 2026-11-01: pushed dev/Francisco to origin (ad7ca62..8725c63) after verify passed (assembleDebug; lint 0 errors, 13-warning baseline). Manual Android Studio checks (previews per audience, PT, landscape, accessibility) still pending; S4 projection change to be raised with Diogo.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.

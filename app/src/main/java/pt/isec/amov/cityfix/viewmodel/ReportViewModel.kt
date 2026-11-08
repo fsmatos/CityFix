@@ -1,28 +1,44 @@
 package pt.isec.amov.cityfix.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
-import pt.isec.amov.cityfix.data.SampleCategories
+import pt.isec.amov.cityfix.data.AttachmentStorage
+import pt.isec.amov.cityfix.data.TicketsRepository
+import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
+import pt.isec.amov.cityfix.utils.FileUtils
+import java.io.File
 
 /**
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
- * composable<ReportTicketRoute>): it survives rotation and is cleared when the user leaves.
- * Does not create tickets: the caller does it with TicketsViewModel.reportTicket (D-006).
+ * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
+ * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
+ * in Contacts_#3); categories come from it too, active ones only. Picked media are copied off the
+ * main thread by [attachmentStorage].
  */
-class ReportViewModel : ViewModel() {
+class ReportViewModel(
+    private val repository: TicketsRepository,
+    private val attachmentStorage: AttachmentStorage,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        ReportUiState(categories = SampleCategories.all.filter { it.active }),
+        ReportUiState(categories = repository.activeCategories()),
     )
 
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
+
+    /** Gallery copies still running; isCopyingAttachments is true while this is above 0. */
+    private var copiesInProgress = 0
 
     fun onCategorySelected(category: Category) {
         _uiState.update {
@@ -59,13 +75,89 @@ class ReportViewModel : ViewModel() {
     }
 
     /**
-     * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
-     * so isValid is the one rule that decides. Returns the data when valid and not yet submitted
-     * (then locks), else null.
+     * Gallery pick: copies what fits under the limit in viewModelScope (off the main thread), then
+     * attaches what copied. The add buttons and Submit stay disabled until every copy finishes.
+     * The limit is checked again when the copy returns, because a camera photo or another pick
+     * may have taken slots meanwhile: extra copies are deleted and the limit notice shown. If the
+     * form was submitted meanwhile, the copies are deleted. If the user leaves mid-copy,
+     * AttachmentStorage deletes them.
      */
-    fun submit(): ReportSubmission? {
+    fun onMediaPicked(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val accepted = uris.take(_uiState.value.remainingAttachments)
+        copiesInProgress++
+        _uiState.update { it.copy(isCopyingAttachments = true) }
+        viewModelScope.launch {
+            try {
+                val savedPaths = attachmentStorage.copyToInternalStorage(accepted)
+                if (_uiState.value.submitted) {
+                    savedPaths.forEach { File(it).delete() }
+                    return@launch
+                }
+                val fits = savedPaths.take(_uiState.value.remainingAttachments)
+                savedPaths.drop(fits.size).forEach { File(it).delete() }
+                onPhotosAttached(fits)
+                if (savedPaths.size < accepted.size) {
+                    onAttachmentCopyFailed()
+                } else if (fits.size < savedPaths.size || accepted.size < uris.size) {
+                    onAttachmentLimitReached()
+                }
+            } finally {
+                copiesInProgress--
+                _uiState.update { it.copy(isCopyingAttachments = copiesInProgress > 0) }
+            }
+        }
+    }
+
+    /** [paths] are local copies already in filesDir/images. Empty when every copy failed. */
+    fun onPhotosAttached(paths: List<String>) {
+        if (paths.isEmpty()) return
+        _uiState.update {
+            it.copy(
+                attachments = it.attachments + paths.map(::attachmentFor),
+                attachmentsError = null,
+                attachmentsNotice = null,
+                submitError = null,
+            ).withSummaryRefreshed()
+        }
+    }
+
+    fun onAttachmentCopyFailed() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_attachment_copy_failed) }
+    }
+
+    fun onAttachmentLimitReached() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_attachments_limit) }
+    }
+
+    fun onCameraUnavailable() {
+        _uiState.update { it.copy(attachmentsNotice = R.string.report_camera_failed) }
+    }
+
+    /** Deletes the local copy. Removing the last one sets the error, as deleting the description does. */
+    fun onRemoveAttachment(attachment: Attachment) {
+        File(attachment.file).delete()
+        _uiState.update {
+            val remaining = it.attachments - attachment
+            it.copy(
+                attachments = remaining,
+                attachmentsError = if (remaining.isEmpty()) R.string.report_error_attachments else null,
+                attachmentsNotice = null,
+                submitError = null,
+            ).withSummaryRefreshed()
+        }
+    }
+
+    /**
+     * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
+     * so isValid is the one rule that decides. When valid, locks the form (submitted) before the
+     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved ticket calls
+     * [onSuccess] (no id: a PRIVATE ticket must not be opened, D-006); a refused one unlocks the
+     * form and sets submitError = R.string.report_error_not_created.
+     */
+    fun submit(onSuccess: () -> Unit) {
         val state = _uiState.value
-        if (state.submitted) return null
+        if (state.submitted || state.isSaving || state.isCopyingAttachments) return
 
         // Locals so the null checks below smart-cast (no !!).
         val situation = state.situation
@@ -79,29 +171,57 @@ class ReportViewModel : ViewModel() {
             descriptionError =
                 if (state.description.isBlank()) R.string.report_error_description else null,
             scopeError = if (scope == null) R.string.report_error_scope else null,
+            attachmentsError =
+                if (state.attachments.isEmpty()) R.string.report_error_attachments else null,
         )
         if (!checked.isValid || situation == null || scope == null) {
             _uiState.value = checked.copy(showErrorSummary = true)
-            return null
+            return
         }
 
-        _uiState.value = checked.copy(submitted = true, showErrorSummary = false, submitError = null)
-        return ReportSubmission(
-            categoryId = checked.categoryId,
-            categoryName = checked.categoryName,
-            situation = situation,
-            description = checked.description.trim(),
-            scope = scope,
+        _uiState.value = checked.copy(
+            submitted = true,
+            isSaving = true,
+            showErrorSummary = false,
+            submitError = null,
         )
-    }
-
-    /** Result of reportTicket: false unlocks and sets submitError = R.string.report_error_not_created. */
-    fun onSubmitResult(created: Boolean) {
-        if (created) return
-        _uiState.update {
-            it.copy(submitted = false, submitError = R.string.report_error_not_created)
+        viewModelScope.launch {
+            val id = repository.reportTicket(
+                description = checked.description.trim(),
+                categoryId = checked.categoryId,
+                categoryName = checked.categoryName,
+                situation = situation,
+                scope = scope,
+                attachments = checked.attachments,
+            )
+            if (id != null) {
+                _uiState.update { it.copy(isSaving = false) }
+                onSuccess()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        submitted = false,
+                        isSaving = false,
+                        submitError = R.string.report_error_not_created,
+                    )
+                }
+            }
         }
     }
+
+    /** Leaving without submitting discards the draft: its files have no ticket to belong to. */
+    override fun onCleared() {
+        val state = _uiState.value
+        if (!state.submitted) {
+            state.attachments.forEach { File(it.file).delete() }
+        }
+    }
+
+    private fun attachmentFor(path: String): Attachment = Attachment(
+        id = File(path).name,
+        type = if (FileUtils.isVideoPath(path)) AttachmentType.VIDEO else AttachmentType.IMAGE,
+        file = path,
+    )
 
     /** The summary stays only while something is still missing. */
     private fun ReportUiState.withSummaryRefreshed(): ReportUiState =
