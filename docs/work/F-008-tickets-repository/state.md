@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-08 | re-review after b539da0: approve for the device checks; B1 and S1 resolved; S2 (emulator checks) open; nits N1-N6, N9 optional; build + lint pass (0 errors, 16 warnings) |
 | Docs | done | 2026-11-08 | decision 0009; 0006/0008 marked superseded in part; overview, report notes, phase-1 README; not committed |
 | Pushed | done | 2026-11-08 | 6b3055b to origin/dev/Francisco; not merged into main |
-| Merged | pending | | |
+| Merged | done | 2026-11-08 | 54472b7 in origin/main; origin/main merged back into dev/Francisco (071b8cc) |
 
 ## Log
 Append-only.
@@ -52,3 +52,4 @@ Append-only.
   - No code changed; nothing committed. S2 (emulator checks) still open.
 - 2026-11-08: Pushed dev/Francisco to origin at 6b3055b after verify (assembleDebug passes, lint 0 errors, 16 warnings). The person chose to push before the emulator checks (review S2), which are still open.
 - 2026-11-08: Merged dev/Francisco into local main as 54472b7 (`merge: dev/Francisco into main`, --no-ff, no conflicts; assembleDebug passes, lint 0 errors, 16 warnings). main not pushed yet; Merged row stays pending until it is in origin/main (/finish-task).
+- 2026-11-08: /finish-task: task commits confirmed in origin/main (merge 54472b7, pushed). Merged origin/main back into dev/Francisco (071b8cc, no conflicts, no file changes). Merged: done.
