@@ -51,3 +51,4 @@ Append-only.
   - Deviation from 03-docs-plan: the report notes list `modelClass.cast` as a difference from Contacts_#3; the code uses `@Suppress("UNCHECKED_CAST")` (Code deviation 1), so the notes say it matches Contacts_#3 instead.
   - No code changed; nothing committed. S2 (emulator checks) still open.
 - 2026-11-08: Pushed dev/Francisco to origin at 6b3055b after verify (assembleDebug passes, lint 0 errors, 16 warnings). The person chose to push before the emulator checks (review S2), which are still open.
+- 2026-11-08: Merged dev/Francisco into local main as 54472b7 (`merge: dev/Francisco into main`, --no-ff, no conflicts; assembleDebug passes, lint 0 errors, 16 warnings). main not pushed yet; Merged row stays pending until it is in origin/main (/finish-task).
