@@ -40,9 +40,13 @@ class LocalTicketsRepository(
         mutex.withLock { ticketsList.stats() }
     }
 
-    /** Reads the cache without the Mutex, like getContactById; publicActive() returns a copy. */
-    override fun getTicketById(id: String): Ticket? =
-        ticketsList.publicActive().firstOrNull { it.id == id }?.toAnonymousView()
+    /**
+     * Suspend and behind the Mutex like the loads (unlike getContactById in Contacts_#3):
+     * publicActive() iterates the cache, which a report may be adding to on another thread.
+     */
+    override suspend fun getTicketById(id: String): Ticket? = withContext(Dispatchers.IO) {
+        mutex.withLock { ticketsList.publicActive().firstOrNull { it.id == id }?.toAnonymousView() }
+    }
 
     /** No location yet, so no 10 m grouping. Attachments are stored as PENDING. */
     override suspend fun reportTicket(

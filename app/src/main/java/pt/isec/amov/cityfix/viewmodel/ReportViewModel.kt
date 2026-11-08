@@ -37,6 +37,9 @@ class ReportViewModel(
 
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
+    /** Gallery copies still running; isCopyingAttachments is true while this is above 0. */
+    private var copiesInProgress = 0
+
     fun onCategorySelected(category: Category) {
         _uiState.update {
             it.copy(
@@ -72,20 +75,37 @@ class ReportViewModel(
     }
 
     /**
-     * Gallery pick: keeps only what fits under the limit, copies it in viewModelScope (off the main
-     * thread) and attaches what copied. The add buttons and Submit stay disabled meanwhile. If the
-     * user leaves mid-copy, AttachmentStorage deletes the copies.
+     * Gallery pick: copies what fits under the limit in viewModelScope (off the main thread), then
+     * attaches what copied. The add buttons and Submit stay disabled until every copy finishes.
+     * The limit is checked again when the copy returns, because a camera photo or another pick
+     * may have taken slots meanwhile: extra copies are deleted and the limit notice shown. If the
+     * form was submitted meanwhile, the copies are deleted. If the user leaves mid-copy,
+     * AttachmentStorage deletes them.
      */
     fun onMediaPicked(uris: List<Uri>) {
         if (uris.isEmpty()) return
         val accepted = uris.take(_uiState.value.remainingAttachments)
+        copiesInProgress++
         _uiState.update { it.copy(isCopyingAttachments = true) }
         viewModelScope.launch {
-            val savedPaths = attachmentStorage.copyToInternalStorage(accepted)
-            onPhotosAttached(savedPaths)
-            if (savedPaths.size < accepted.size) onAttachmentCopyFailed()
-            else if (accepted.size < uris.size) onAttachmentLimitReached()
-            _uiState.update { it.copy(isCopyingAttachments = false) }
+            try {
+                val savedPaths = attachmentStorage.copyToInternalStorage(accepted)
+                if (_uiState.value.submitted) {
+                    savedPaths.forEach { File(it).delete() }
+                    return@launch
+                }
+                val fits = savedPaths.take(_uiState.value.remainingAttachments)
+                savedPaths.drop(fits.size).forEach { File(it).delete() }
+                onPhotosAttached(fits)
+                if (savedPaths.size < accepted.size) {
+                    onAttachmentCopyFailed()
+                } else if (fits.size < savedPaths.size || accepted.size < uris.size) {
+                    onAttachmentLimitReached()
+                }
+            } finally {
+                copiesInProgress--
+                _uiState.update { it.copy(isCopyingAttachments = copiesInProgress > 0) }
+            }
         }
     }
 

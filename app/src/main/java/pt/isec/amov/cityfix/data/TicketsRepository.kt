@@ -22,7 +22,7 @@ interface TicketsRepository {
     suspend fun loadStats(): DashboardStats
 
     /** The visible (projected) ticket with this id, or null: unknown, private, resolved or closed. */
-    fun getTicketById(id: String): Ticket?
+    suspend fun getTicketById(id: String): Ticket?
 
     /**
      * Opens a new ticket from the report form. Returns its id, or null when description,
