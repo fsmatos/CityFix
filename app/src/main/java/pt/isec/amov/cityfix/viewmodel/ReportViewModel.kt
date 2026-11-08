@@ -1,10 +1,12 @@
 package pt.isec.amov.cityfix.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Attachment
@@ -18,8 +20,8 @@ import java.io.File
 /**
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
  * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
- * when the user leaves. Does not create tickets: the caller does it with
- * TicketsViewModel.reportTicket (D-006). Categories come from [repository], active ones only.
+ * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
+ * in Contacts_#3); categories come from it too, active ones only.
  */
 class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
 
@@ -104,12 +106,14 @@ class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
 
     /**
      * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
-     * so isValid is the one rule that decides. Returns the data when valid and not yet submitted
-     * (then locks), else null.
+     * so isValid is the one rule that decides. When valid, locks the form (submitted) before the
+     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved ticket calls
+     * [onSuccess] (no id: a PRIVATE ticket must not be opened, D-006); a refused one unlocks the
+     * form and sets submitError = R.string.report_error_not_created.
      */
-    fun submit(): ReportSubmission? {
+    fun submit(onSuccess: () -> Unit) {
         val state = _uiState.value
-        if (state.submitted) return null
+        if (state.submitted || state.isSaving) return
 
         // Locals so the null checks below smart-cast (no !!).
         val situation = state.situation
@@ -128,25 +132,36 @@ class ReportViewModel(private val repository: TicketsRepository) : ViewModel() {
         )
         if (!checked.isValid || situation == null || scope == null) {
             _uiState.value = checked.copy(showErrorSummary = true)
-            return null
+            return
         }
 
-        _uiState.value = checked.copy(submitted = true, showErrorSummary = false, submitError = null)
-        return ReportSubmission(
-            categoryId = checked.categoryId,
-            categoryName = checked.categoryName,
-            situation = situation,
-            description = checked.description.trim(),
-            scope = scope,
-            attachments = checked.attachments,
+        _uiState.value = checked.copy(
+            submitted = true,
+            isSaving = true,
+            showErrorSummary = false,
+            submitError = null,
         )
-    }
-
-    /** Result of reportTicket: false unlocks and sets submitError = R.string.report_error_not_created. */
-    fun onSubmitResult(created: Boolean) {
-        if (created) return
-        _uiState.update {
-            it.copy(submitted = false, submitError = R.string.report_error_not_created)
+        viewModelScope.launch {
+            val id = repository.reportTicket(
+                description = checked.description.trim(),
+                categoryId = checked.categoryId,
+                categoryName = checked.categoryName,
+                situation = situation,
+                scope = scope,
+                attachments = checked.attachments,
+            )
+            if (id != null) {
+                _uiState.update { it.copy(isSaving = false) }
+                onSuccess()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        submitted = false,
+                        isSaving = false,
+                        submitError = R.string.report_error_not_created,
+                    )
+                }
+            }
         }
     }
 

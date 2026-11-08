@@ -69,7 +69,6 @@ import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.viewmodel.MAX_REPORT_ATTACHMENTS
-import pt.isec.amov.cityfix.viewmodel.ReportSubmission
 import pt.isec.amov.cityfix.viewmodel.ReportUiState
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import java.io.File
@@ -81,14 +80,14 @@ fun scopeLabelRes(scope: Scope): Int = when (scope) {
 }
 
 /**
- * Stateful half of the report form (brief I.2.E): collects [viewModel] and calls [onSubmit] with
- * valid data. [onSubmit] returns true if the ticket was created; false keeps the form open and
+ * Stateful half of the report form (brief I.2.E): collects [viewModel], which validates and saves
+ * the ticket. [onSubmitted] runs once the ticket is saved; a refused save keeps the form open and
  * shows an error.
  */
 @Composable
 fun ReportScreen(
     viewModel: ReportViewModel,
-    onSubmit: (ReportSubmission) -> Boolean,
+    onSubmitted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -144,7 +143,7 @@ fun ReportScreen(
             }
         },
         onRemoveAttachment = viewModel::onRemoveAttachment,
-        onSubmitClick = { viewModel.submit()?.let { viewModel.onSubmitResult(onSubmit(it)) } },
+        onSubmitClick = { viewModel.submit(onSuccess = onSubmitted) },
         modifier = modifier,
     )
 }

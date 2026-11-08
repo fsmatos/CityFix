@@ -48,6 +48,7 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
+import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,7 +76,8 @@ class MainActivity : ComponentActivity() {
  */
 @Composable
 private fun CityFixApp(app: CityFixApplication) {
-    val ticketsViewModel: TicketsViewModel = viewModel()
+    val ticketsViewModel: TicketsViewModel =
+        viewModel(factory = TicketsViewModelFactory(app.ticketsRepository))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
     val stats by ticketsViewModel.stats.collectAsStateWithLifecycle()
 
@@ -149,23 +151,15 @@ private fun CityFixApp(app: CityFixApplication) {
                     viewModel(factory = ReportViewModelFactory(app.ticketsRepository))
                 ReportScreen(
                     viewModel = reportViewModel,
-                    onSubmit = { submission ->
-                        val id = ticketsViewModel.reportTicket(
-                            description = submission.description,
-                            categoryId = submission.categoryId,
-                            categoryName = submission.categoryName,
-                            situation = submission.situation,
-                            scope = submission.scope,
-                            attachments = submission.attachments,
-                        )
-                        if (id != null) {
-                            // Never navigate to id: a PRIVATE ticket is not visible (decision 0006).
-                            snackbarScope.launch {
-                                snackbarHostState.showSnackbar(reportSubmittedMessage)
-                            }
-                            navController.navigateUp()
+                    // Like saveContact { refreshContacts(); popBackStack() } in Contacts_#3.
+                    // No id here: never navigate to the new ticket, a PRIVATE one is not
+                    // visible (decision 0006).
+                    onSubmitted = {
+                        ticketsViewModel.refresh()
+                        snackbarScope.launch {
+                            snackbarHostState.showSnackbar(reportSubmittedMessage)
                         }
-                        id != null
+                        navController.navigateUp()
                     },
                 )
             }

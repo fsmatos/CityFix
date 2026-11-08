@@ -32,10 +32,12 @@ data class ReportUiState(
     @StringRes val attachmentsNotice: Int? = null,
     /** Shown after a Submit with missing fields; TalkBack announces it. */
     val showErrorSummary: Boolean = false,
-    /** Set when the caller could not create the ticket. */
+    /** Set when the repository could not create the ticket. */
     @StringRes val submitError: Int? = null,
-    /** True after a valid submit; blocks a second one. */
+    /** True after a valid submit; blocks a second one. Cleared only when the save fails. */
     val submitted: Boolean = false,
+    /** True while the repository saves the ticket. */
+    val isSaving: Boolean = false,
 ) {
     val remainingAttachments: Int
         get() = (MAX_REPORT_ATTACHMENTS - attachments.size).coerceAtLeast(0)
@@ -50,13 +52,3 @@ data class ReportUiState(
             categoryError == null && situationError == null &&
             descriptionError == null && scopeError == null && attachmentsError == null
 }
-
-/** Validated values, ready for TicketsViewModel.reportTicket(...). Description is trimmed. */
-data class ReportSubmission(
-    val categoryId: String,
-    val categoryName: String,
-    val situation: Situation,
-    val description: String,
-    val scope: Scope,
-    val attachments: List<Attachment>,
-)
