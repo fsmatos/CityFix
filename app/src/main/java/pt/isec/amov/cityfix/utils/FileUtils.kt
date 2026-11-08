@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
 import java.io.File
 import java.util.UUID
 
@@ -20,6 +21,19 @@ object FileUtils {
     private const val CAPTURE_PREFIX = "CAPTURE_"
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
+
+    private val GPS_LOCATION_TAGS = listOf(
+        ExifInterface.TAG_GPS_LATITUDE,
+        ExifInterface.TAG_GPS_LATITUDE_REF,
+        ExifInterface.TAG_GPS_LONGITUDE,
+        ExifInterface.TAG_GPS_LONGITUDE_REF,
+        ExifInterface.TAG_GPS_ALTITUDE,
+        ExifInterface.TAG_GPS_ALTITUDE_REF,
+        ExifInterface.TAG_GPS_TIMESTAMP,
+        ExifInterface.TAG_GPS_DATESTAMP,
+        ExifInterface.TAG_GPS_PROCESSING_METHOD,
+        ExifInterface.TAG_GPS_AREA_INFORMATION,
+    )
 
     /**
      * Blocking: call off the main thread (AttachmentStorage does). Null on any failure, including
@@ -48,6 +62,20 @@ object FileUtils {
     }
 
     fun isVideoPath(path: String): Boolean = File(path).name.startsWith(VIDEO_PREFIX)
+
+    /**
+     * Blocking. Clears the GPS EXIF tags of the image at [path] in place, so the file does not
+     * carry the exact place it was taken; make, model and capture time stay. False when the
+     * format cannot be written (e.g. HEIC) or IO fails.
+     */
+    fun removeImageLocation(path: String): Boolean = try {
+        val exif = ExifInterface(path)
+        GPS_LOCATION_TAGS.forEach { exif.setAttribute(it, null) }
+        exif.saveAttributes()
+        true
+    } catch (_: Exception) {
+        false
+    }
 
     private fun mediaFolder(context: Context): File =
         File(context.filesDir, MEDIA_FOLDER).apply { mkdirs() }

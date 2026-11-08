@@ -5,6 +5,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.DashboardStats
 import pt.isec.amov.cityfix.model.Scope
@@ -15,6 +16,7 @@ import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
 import pt.isec.amov.cityfix.model.toAnonymousView
+import pt.isec.amov.cityfix.utils.FileUtils
 import java.util.UUID
 
 /**
@@ -23,6 +25,8 @@ import java.util.UUID
  * from the samples. Create one per app (CityFixApplication).
  * The suspend functions run on Dispatchers.IO behind a Mutex: the IO pool can run a load and a
  * report at the same time, and TicketsList is not thread-safe.
+ * Reported photos lose their GPS EXIF tags here, below the UI, before the ticket is stored.
+ * Video metadata is not stripped yet (media task).
  */
 class LocalTicketsRepository(
     initialTickets: List<Ticket> = SampleTickets.all,
@@ -65,6 +69,11 @@ class LocalTicketsRepository(
         ) {
             return@withContext null
         }
+
+        // Result ignored on purpose (F-009 Q2): if a format cannot be written, e.g. HEIC, the
+        // attachment and the report are kept and the file keeps its tags.
+        attachments.filter { it.type == AttachmentType.IMAGE }
+            .forEach { FileUtils.removeImageLocation(it.file) }
 
         val now = System.currentTimeMillis()
         val ticket = Ticket(
