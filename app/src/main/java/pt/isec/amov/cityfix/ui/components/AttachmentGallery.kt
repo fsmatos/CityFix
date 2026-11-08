@@ -1,6 +1,5 @@
 package pt.isec.amov.cityfix.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -10,26 +9,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.video.VideoFrameDecoder
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
@@ -75,19 +65,6 @@ private fun AttachmentTile(
     modifier: Modifier = Modifier,
 ) {
     val isVideo = attachment.type == AttachmentType.VIDEO
-    val context = LocalContext.current
-    val placeholder = painterResource(R.drawable.ic_image_placeholder)
-    // Coil decodes images from the path alone; a video needs the frame decoder for this request.
-    val model: Any = remember(attachment.file, isVideo) {
-        if (isVideo) {
-            ImageRequest.Builder(context)
-                .data(attachment.file)
-                .decoderFactory(VideoFrameDecoder.Factory())
-                .build()
-        } else {
-            attachment.file
-        }
-    }
     val description = stringResource(
         if (isVideo) R.string.cd_attachment_video else R.string.cd_attachment_photo,
         position,
@@ -98,27 +75,13 @@ private fun AttachmentTile(
     )
 
     Box(modifier = modifier) {
-        AsyncImage(
-            model = model,
+        AttachmentImage(
+            attachment = attachment,
             contentDescription = description,
-            placeholder = placeholder,
-            error = placeholder,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f),
         )
-        if (isVideo) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.surface, CircleShape),
-            )
-        }
         IconButton(
             onClick = onRemove,
             enabled = removeEnabled,
