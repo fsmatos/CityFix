@@ -7,3 +7,7 @@ Start one with `/feature-dev <file-name>`.
 ## Phase 1 (model + base UI)
 
 The 15 phase 1 tasks (D-001..D-007 for Diogo, F-001..F-008 for Francisco) are in [`phase-1/`](phase-1/README.md), with dependencies and a suggested order. Start one with `/feature-dev phase-1/F-001-theme-and-strings`.
+
+## Phase 2 (Firebase, roles and delivery)
+
+The 16 phase 2 tasks (D-008..D-015 for Diogo, F-010..F-017 for Francisco) are in [`phase-2/`](phase-2/README.md), with dependencies, target dates and file ownership. D-007 from phase 1 is still open and comes first. Start one with `/feature-dev phase-2/F-010-firebase-setup`.
