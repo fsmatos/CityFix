@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-01 | approve with 1 should-fix (S1 PT landscape preview), 5 nits; 0 blocking; build pass, lint 0 errors, 13 warnings (baseline) |
 | Docs | done | 2026-11-01 | overview "Screens" + Strings/plurals note; report notes F-004; no ADR; acceptance checks left unticked (manual checks pending) |
 | Pushed | done | 2026-11-01 | 72a43a9 to origin/dev/Francisco |
-| Merged | | | |
+| Merged | done | 2026-11-01 | c9f815f merge: dev/Francisco into main (pushed to origin/main) |
 
 ## Log
 Append-only.
@@ -71,3 +71,4 @@ Append-only.
   - Q5 handover to Diogo (D-006): wire `onSeeTicketsClick` to `navigate(TicketListRoute)` and pass `innerPadding`; recorded in the overview contract.
 - 2026-11-01: pushed dev/Francisco to origin (693b05d..72a43a9) after verify (assembleDebug + lint) passed; includes the origin/main merge (D-005). Manual Android Studio checks (previews, PT landscape, TalkBack) still not run.
 - 2026-11-01: manual Android Studio checks done by the person (preview texts EN/PT against the coding-plan table, landscape row, interactive button, UI Check/TalkBack); all acceptance checks in `docs/tasks/phase-1/F-004-dashboard-screen.md` ticked.
+- 2026-11-01: dev/Francisco merged into main (`c9f815f`, --no-ff, no conflicts; verify on the merged tree: assembleDebug passes, lint 0 errors / 13-warning baseline); the person pushed main to origin. origin/main merged back into dev/Francisco.

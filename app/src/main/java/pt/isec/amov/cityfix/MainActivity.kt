@@ -46,7 +46,9 @@ import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
+import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
+import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,9 +59,11 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         )
+        // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
+        val app = application as CityFixApplication
         setContent {
             CityFixTheme {
-                CityFixApp()
+                CityFixApp(app)
             }
         }
     }
@@ -68,10 +72,12 @@ class MainActivity : ComponentActivity() {
 /**
  * The app's navigation and shared state. The screens are stateless; this is their stateful half.
  * TicketsViewModel is created here, above the NavHost, so every destination shares one instance.
+ * [app] holds the repository the ViewModel factories receive.
  */
 @Composable
-private fun CityFixApp() {
-    val ticketsViewModel: TicketsViewModel = viewModel()
+private fun CityFixApp(app: CityFixApplication) {
+    val ticketsViewModel: TicketsViewModel =
+        viewModel(factory = TicketsViewModelFactory(app.ticketsRepository))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
     val stats by ticketsViewModel.stats.collectAsStateWithLifecycle()
 
@@ -141,25 +147,21 @@ private fun CityFixApp() {
             }
             composable<ReportTicketRoute> {
                 // Inside the destination: scoped to this entry, so a finished form is cleared.
-                val reportViewModel: ReportViewModel = viewModel()
+                val reportViewModel: ReportViewModel =
+                    viewModel(
+                        factory = ReportViewModelFactory(app.ticketsRepository, app.attachmentStorage),
+                    )
                 ReportScreen(
                     viewModel = reportViewModel,
-                    onSubmit = { submission ->
-                        val id = ticketsViewModel.reportTicket(
-                            description = submission.description,
-                            categoryId = submission.categoryId,
-                            categoryName = submission.categoryName,
-                            situation = submission.situation,
-                            scope = submission.scope,
-                        )
-                        if (id != null) {
-                            // Never navigate to id: a PRIVATE ticket is not visible (decision 0006).
-                            snackbarScope.launch {
-                                snackbarHostState.showSnackbar(reportSubmittedMessage)
-                            }
-                            navController.navigateUp()
+                    // Like saveContact { refreshContacts(); popBackStack() } in Contacts_#3.
+                    // No id here: never navigate to the new ticket, a PRIVATE one is not
+                    // visible (decision 0006).
+                    onSubmitted = {
+                        ticketsViewModel.refresh()
+                        snackbarScope.launch {
+                            snackbarHostState.showSnackbar(reportSubmittedMessage)
                         }
-                        id != null
+                        navController.navigateUp()
                     },
                 )
             }
