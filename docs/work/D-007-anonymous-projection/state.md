@@ -8,7 +8,7 @@ Remote: origin/dev/Diogo
 | Plan | done | 2026-11-10 | 00-plan, 01-coding-plan, 03-docs-plan; 2 slices, no tests; Q1-Q7 for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-10 | Approved by Diogo: Q1 option A (hide toggle), Q2-Q7 as recommended |
 | Code | done | 2026-11-10 | 2 slices: 21af837, be24b9c; verify passes (0 errors, 16 warnings); no deviations |
-| Review | pending | | |
+| Review | done | 2026-11-10 | review.md: 0 blocking, 1 should-fix (run device/preview checks), 3 nits; build and lint re-run: 0 errors, 16 warnings |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -23,3 +23,4 @@ Append-only.
 - 2026-11-10 Code slice 1: 21af837 `feat(D-007): drop description and history from the anonymous projection`. `toAnonymousView()` blanks `description` and empties `statusHistory`; KDoc is the projection contract. `toAnonymousView` still called only in `LocalTicketsRepository` (2 calls); `loadStats()` still runs `stats()` on the raw list. Verify: assembleDebug pass; lint pass, 0 errors, 16 warnings (baseline).
 - 2026-11-10 Code slice 2: be24b9c `feat(D-007): hide the expand toggle for anonymous users`. `MainTopAppBar` has a required `showExpandToggle`; `BarPreview` defaults it to true and `ListAnonymousBarPreview` was added; `CityFixApp` uses a local `val canExpandCards = false` (no compiler or lint warning about the constant condition, so the `const val` fallback was not needed). Verify: assembleDebug pass, no Kotlin warnings; lint pass, 0 errors, 16 warnings (baseline).
 - 2026-11-10 Code: no deviations from the coding plan. Not checked by the implementer: emulator checks and Android Studio previews listed in the plan.
+- 2026-11-10 Review: reviewer read `git diff 14300c8..HEAD` against the plans, the task file, decisions 0006/0007 and brief I.1.B/I.1.C. Code matches the coding plan with no deviations. Grepped every read of `description`, `statusHistory` and `createdAt`: the anonymous UI never shows them (TicketCard is always collapsed, ShowScreen is PUBLIC), nothing reads the history of a projected ticket, and stats run on the raw list. Re-ran assembleDebug and lint: pass, 0 errors, 16 warnings (baseline), none in the changed files. Findings: 0 blocking. S1: the emulator and preview acceptance checks are not run yet, so run them before the task file is ticked. N1: give the Auth task id (D-009) in the `canExpandCards` comment. N2: the `Ticket.currentStatus` KDoc does not mention the projection (later, Ticket.kt is out of scope). N3: a defence note on why `&&` is kept. No fixes applied (reviewer edits only review.md and state.md).
