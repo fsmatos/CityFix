@@ -1,0 +1,196 @@
+rules_version = '2';
+
+// CityFix Firestore rules: DRAFT (F-010, decision 0010). Not deployed.
+// Deploying needs the person's OK (CLAUDE.md). Check the syntax in the
+// console Rules Playground without publishing.
+//
+// Anything not matched below is denied. Anonymous users (no sign-in) can
+// read only publicTickets, categories and municipality.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function userDoc() {
+      return get(userPath(request.auth.uid));
+    }
+
+    function hasUserDoc() {
+      return isSignedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function isOperator() {
+      return hasUserDoc() && userDoc().data.role == 'OPERATOR';
+    }
+
+    function isActiveCitizen() {
+      return hasUserDoc()
+        && userDoc().data.role == 'CITIZEN'
+        && userDoc().data.registrationStatus == 'ACTIVE';
+    }
+
+    // ticket: the data map of a tickets/{id} document.
+    function isParticipant(ticket) {
+      return isSignedIn() && request.auth.uid in ticket.participantIds;
+    }
+
+    function ticketPath(ticketId) {
+      return /databases/$(database)/documents/tickets/$(ticketId);
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function municipality() {
+      return get(/databases/$(database)/documents/municipality/main).data;
+    }
+
+    // ---------- Users and NIF uniqueness ----------
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isOperator());
+
+      // Registration: one transaction writes users/{uid} and nifs/{ROLE}_{nif}.
+      // getAfter checks that the NIF document is written in the same transaction.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && getAfter(/databases/$(database)/documents/nifs/$(request.resource.data.role + '_' + request.resource.data.nif)).data.uid == uid
+        && (
+          (request.resource.data.role == 'CITIZEN'
+            && request.resource.data.registrationStatus == 'PENDING'
+            && !('validatedBy' in request.resource.data)
+            && !('validatedAt' in request.resource.data))
+          ||
+          (request.resource.data.role == 'OPERATOR'
+            && request.auth.token.email.lower().split('@')[1] == municipality().emailDomain)
+        );
+
+      // The owner edits their own profile, but never the identity or validation fields.
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && !changedKeys().hasAny(['role', 'nif', 'email', 'createdAt', 'georeferencing',
+                                  'registrationStatus', 'validatedBy', 'validatedAt']);
+
+      // An operator validates a pending citizen and nothing else.
+      allow update: if isOperator()
+        && resource.data.role == 'CITIZEN'
+        && changedKeys().hasOnly(['registrationStatus', 'validatedBy', 'validatedAt'])
+        && request.resource.data.validatedBy == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // Document id: {ROLE}_{nif}, for example CITIZEN_123456789. Create-only.
+    match /nifs/{nifId} {
+      allow get: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow list, update, delete: if false;
+    }
+
+    // ---------- Reference data ----------
+
+    // Single document municipality/main, edited in the console only.
+    match /municipality/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isOperator();
+    }
+
+    // ---------- Tickets ----------
+
+    match /tickets/{ticketId} {
+      // Citizens query with whereArrayContains("participantIds", uid).
+      allow read: if isOperator() || isParticipant(resource.data);
+
+      // Report: one batch writes tickets/{id}, ticketLocations/{id} and, for
+      // PUBLIC tickets only, publicTickets/{id}.
+      allow create: if isActiveCitizen()
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.participantIds == [request.auth.uid]
+        && request.resource.data.followerIds == []
+        && request.resource.data.currentStatus == 'OPEN'
+        && request.resource.data.statusHistory.size() == 1
+        && request.resource.data.statusHistory[0].status == 'OPEN'
+        && request.resource.data.statusHistory[0].responsibleId == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/ticketLocations/$(ticketId))
+        && (request.resource.data.scope == 'PUBLIC')
+            == existsAfter(/databases/$(database)/documents/publicTickets/$(ticketId));
+
+      // Follow (Option A, decision 0002): an active citizen adds only their own
+      // uid to followerIds and participantIds (FieldValue.arrayUnion appends).
+      allow update: if isActiveCitizen()
+        && !(request.auth.uid in resource.data.participantIds)
+        && changedKeys().hasOnly(['followerIds', 'participantIds'])
+        && request.resource.data.followerIds == resource.data.followerIds.concat([request.auth.uid])
+        && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid]);
+
+      // Lifecycle: operators (status changes, resolution media) and participants
+      // (reopen, 5-day close on read, upload state). currentStatus and the history
+      // change together (decision 0004); the history never shrinks.
+      // Draft: D-008, D-013 and F-013 tighten who may write which transition.
+      allow update: if (isOperator() || isParticipant(resource.data))
+        && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments'])
+        && request.resource.data.statusHistory.size() >= resource.data.statusHistory.size();
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isOperator() || isParticipant(get(ticketPath(ticketId)).data);
+        allow create: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+          && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // Anonymous projection, built only by toAnonymousView(). Only these fields
+    // are allowed, so no author data or exact coordinates can be stored here.
+    match /publicTickets/{ticketId} {
+      allow read: if true;
+
+      allow create: if isActiveCitizen()
+        && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
+        && getAfter(ticketPath(ticketId)).data.scope == 'PUBLIC'
+        && request.resource.data.keys().hasOnly(['categoryId', 'categoryName', 'situation',
+            'currentStatus', 'coarseLocation', 'thumbnails', 'createdAt', 'resolvedAt']);
+
+      allow update: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+        && changedKeys().hasOnly(['currentStatus', 'thumbnails', 'resolvedAt']);
+
+      allow delete: if false;
+    }
+
+    // Exact locations for the 10 m grouping (Q8). Never readable by anonymous users.
+    match /ticketLocations/{ticketId} {
+      allow read: if isActiveCitizen() || isOperator();
+
+      allow create: if isActiveCitizen()
+        && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location', 'active']);
+
+      allow update: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+        && changedKeys().hasOnly(['active']);
+
+      allow delete: if false;
+    }
+
+    // stats/summary is reserved for the dashboard counters (Q11). F-011 decides
+    // and adds its rules; until then it is denied like every other path.
+  }
+}

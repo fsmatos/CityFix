@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// CityFix Storage rules: DRAFT (F-010, decision 0010). Not deployed.
+// Deploying needs the person's OK (CLAUDE.md).
+//
+// Paths have no user ids. Cross-service rules read Firestore to decide who
+// may see a ticket's media.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOperator() {
+      return isSignedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'OPERATOR';
+    }
+
+    function isParticipant(ticketId) {
+      return isSignedIn()
+        && request.auth.uid in firestore.get(/databases/(default)/documents/tickets/$(ticketId)).data.participantIds;
+    }
+
+    function isPublicTicket(ticketId) {
+      return firestore.exists(/databases/(default)/documents/publicTickets/$(ticketId));
+    }
+
+    // {attachmentId}.jpg, {attachmentId}.mp4 and {attachmentId}_thumb.jpg.
+    // Uploaded by the WorkManager worker (F-013); files are never replaced.
+    match /tickets/{ticketId}/{fileName} {
+      allow read: if isPublicTicket(ticketId) || isOperator() || isParticipant(ticketId);
+      allow create: if (isOperator() || isParticipant(ticketId))
+        && request.resource.contentType.matches('image/.*|video/.*');
+      allow update, delete: if false;
+    }
+
+    match /users/{uid}/photo.jpg {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isOperator());
+      allow create, update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+  }
+}
