@@ -4,7 +4,9 @@ rules_version = '2';
 // Deploying needs the person's OK (CLAUDE.md).
 //
 // Paths have no user ids. Cross-service rules read Firestore to decide who
-// may see a ticket's media.
+// may see a ticket's media. At most two Firestore documents may be accessed
+// per rules evaluation (Firebase docs, storage/security/rules-conditions), so
+// every rule reads at most the ticket and the caller's users/{uid}.
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -23,13 +25,26 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'OPERATOR';
     }
 
-    function isParticipant(ticketId) {
-      return isSignedIn()
-        && request.auth.uid in firestore.get(/databases/(default)/documents/tickets/$(ticketId)).data.participantIds;
+    // The ticket document, read once per rule and passed to the checks below.
+    function ticketDoc(ticketId) {
+      return firestore.get(/databases/(default)/documents/tickets/$(ticketId)).data;
     }
 
-    function isPublicTicket(ticketId) {
-      return firestore.exists(/databases/(default)/documents/publicTickets/$(ticketId));
+    function isParticipant(ticket) {
+      return isSignedIn() && request.auth.uid in ticket.participantIds;
+    }
+
+    // scope == 'PUBLIC' exactly when publicTickets/{id} exists (written in the
+    // same batch at creation; scope never changes). Reading the ticket instead
+    // of publicTickets keeps the rule within the two-document limit.
+    function canReadMedia(ticket) {
+      return ticket.scope == 'PUBLIC' || isOperator() || isParticipant(ticket);
+    }
+
+    // No uploads to a CLOSED ticket (brief II.5): its attachments are locked.
+    function canUploadMedia(ticket) {
+      return ticket.currentStatus != 'CLOSED'
+        && (isOperator() || isParticipant(ticket));
     }
 
     // Images and thumbnails up to 10 MB, videos up to 100 MB.
@@ -48,8 +63,8 @@ service firebase.storage {
     // Photos have their GPS EXIF removed and videos their location metadata
     // removed before upload, because public media are readable by anonymous users.
     match /tickets/{ticketId}/{fileName} {
-      allow read: if isPublicTicket(ticketId) || isOperator() || isParticipant(ticketId);
-      allow create: if (isOperator() || isParticipant(ticketId))
+      allow read: if canReadMedia(ticketDoc(ticketId));
+      allow create: if canUploadMedia(ticketDoc(ticketId))
         && (isImageUpTo10Mb() || isVideoUpTo100Mb());
       allow update, delete: if false;
     }

@@ -64,41 +64,49 @@ service cloud.firestore {
 
     // ---------- Ticket lifecycle helpers (brief II) ----------
 
-    // 5 days in milliseconds (history times are Long epoch ms, decision 0003).
-    function fiveDaysMillis() {
-      return 5 * 24 * 60 * 60 * 1000;
+    // The five TicketStatus names in model/ (stored by name, decision 0003).
+    function isTicketStatus(status) {
+      return status in ['OPEN', 'INFO_REQUESTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
     }
 
     // History is append-only: exactly one new entry, written by the caller,
-    // with the same status as the new currentStatus (decision 0004).
+    // with the same status as the new currentStatus (decision 0004). Its
+    // dateTime (Long epoch ms) is not earlier than the previous entry and at
+    // most 5 minutes after the server time (clock skew).
     function historyAppendedBySelf() {
       let old = resource.data.statusHistory;
       let neu = request.resource.data.statusHistory;
+      let t = neu[old.size()].dateTime;
       return neu.size() == old.size() + 1
         && neu[0:old.size()] == old
         && neu[old.size()].responsibleId == request.auth.uid
-        && neu[old.size()].status == request.resource.data.currentStatus;
+        && neu[old.size()].status == request.resource.data.currentStatus
+        && t is int
+        && t >= old[old.size() - 1].dateTime
+        && t <= request.time.toMillis() + 300000;
     }
 
-    // Time of the RESOLVED entry. Only valid while currentStatus is RESOLVED:
-    // every status change appends an entry, so the last one is the RESOLVED one.
-    function resolvedAtMillis() {
-      let history = resource.data.statusHistory;
-      return history[history.size() - 1].dateTime;
+    // resolvedAt is a server timestamp: the server time of the write
+    // (FieldValue.serverTimestamp()) whenever the status becomes RESOLVED,
+    // and unchanged by every other write.
+    function resolvedAtIsServerTime() {
+      return request.resource.data.currentStatus == 'RESOLVED'
+        ? request.resource.data.resolvedAt == request.time
+        : !changedKeys().hasAny(['resolvedAt']);
     }
 
     // RESOLVED -> CLOSED only after 5 days (brief II.5), for everyone.
     function closesOnlyAfterFiveDays() {
       return request.resource.data.currentStatus != 'CLOSED'
         || (resource.data.currentStatus == 'RESOLVED'
-            && request.time.toMillis() > resolvedAtMillis() + fiveDaysMillis());
+            && request.time > resource.data.resolvedAt + duration.value(5, 'd'));
     }
 
     // RESOLVED -> OPEN by a citizen: within 5 days, with a justification (brief II.4).
     function isJustifiedReopen() {
       let entry = request.resource.data.statusHistory[resource.data.statusHistory.size()];
       return request.resource.data.currentStatus == 'OPEN'
-        && request.time.toMillis() <= resolvedAtMillis() + fiveDaysMillis()
+        && request.time <= resource.data.resolvedAt + duration.value(5, 'd')
         && 'justification' in entry
         && entry.justification is string
         && entry.justification.size() > 0;
@@ -197,6 +205,7 @@ service cloud.firestore {
         && request.resource.data.participantIds == [request.auth.uid]
         && request.resource.data.followerIds == []
         && request.resource.data.currentStatus == 'OPEN'
+        && !('resolvedAt' in request.resource.data)
         && request.resource.data.statusHistory.size() == 1
         && request.resource.data.statusHistory[0].status == 'OPEN'
         && request.resource.data.statusHistory[0].responsibleId == request.auth.uid
@@ -220,13 +229,18 @@ service cloud.firestore {
       // may add resolution media. A participant may only reopen a RESOLVED ticket
       // within 5 days with a justification, or write the automatic RESOLVED ->
       // CLOSED after 5 days (decision 0011, Q4). currentStatus and one appended
-      // history entry change together. CLOSED is locked (brief II.5).
+      // history entry change together; the status must be one of the five and
+      // must actually change. Only the operator can resolve, and resolvedAt is
+      // then the server time. CLOSED is locked (brief II.5).
       allow update: if resource.data.currentStatus != 'CLOSED'
+        && isTicketStatus(request.resource.data.currentStatus)
+        && request.resource.data.currentStatus != resource.data.currentStatus
         && historyAppendedBySelf()
+        && resolvedAtIsServerTime()
         && closesOnlyAfterFiveDays()
         && (
           (isOperator()
-            && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments']))
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments', 'resolvedAt']))
           ||
           (isParticipant(resource.data)
             && changedKeys().hasOnly(['currentStatus', 'statusHistory'])
@@ -275,14 +289,18 @@ service cloud.firestore {
       allow create: if isActiveCitizen()
         && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
         && getAfter(ticketPath(ticketId)).data.scope == 'PUBLIC'
+        && request.resource.data.currentStatus == 'OPEN'
         && request.resource.data.keys().hasOnly(['categoryId', 'categoryName', 'situation',
             'currentStatus', 'coarseLocation', 'thumbnails', 'createdAt', 'resolvedAt']);
 
       // Status mirror, in the same batch as the tickets/{id} transition (whose
-      // own rule decides who may make it). CLOSED is locked.
+      // own rule decides who may make it): status and resolvedAt equal the
+      // ticket's new values. CLOSED is locked.
       allow update: if resource.data.currentStatus != 'CLOSED'
         && changedKeys().hasOnly(['currentStatus', 'resolvedAt'])
         && request.resource.data.currentStatus == getAfter(ticketPath(ticketId)).data.currentStatus
+        && request.resource.data.get('resolvedAt', null)
+             == getAfter(ticketPath(ticketId)).data.get('resolvedAt', null)
         && (isOperator()
             || (isParticipant(get(ticketPath(ticketId)).data)
                 && resource.data.currentStatus == 'RESOLVED'
@@ -303,12 +321,17 @@ service cloud.firestore {
 
       allow create: if isActiveCitizen()
         && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
-        && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location', 'active']);
+        && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location', 'active'])
+        && request.resource.data.active == true;
 
-      // `active` changes with the ticket's lifecycle; locked once the ticket is CLOSED.
+      // active == (ticket not CLOSED). It changes only in the batch that changes
+      // the ticket's status and must match the new status, so in practice it
+      // becomes false once, in the closing batch. Locked once CLOSED.
       allow update: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
         && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
-        && changedKeys().hasOnly(['active']);
+        && changedKeys().hasOnly(['active'])
+        && getAfter(ticketPath(ticketId)).data.currentStatus != get(ticketPath(ticketId)).data.currentStatus
+        && request.resource.data.active == (getAfter(ticketPath(ticketId)).data.currentStatus != 'CLOSED');
 
       allow delete: if false;
     }
