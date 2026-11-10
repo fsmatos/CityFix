@@ -209,6 +209,8 @@ service cloud.firestore {
         && request.resource.data.statusHistory.size() == 1
         && request.resource.data.statusHistory[0].status == 'OPEN'
         && request.resource.data.statusHistory[0].responsibleId == request.auth.uid
+        && request.resource.data.statusHistory[0].dateTime is int
+        && request.resource.data.statusHistory[0].dateTime <= request.time.toMillis() + 300000
         && existsAfter(/databases/$(database)/documents/ticketLocations/$(ticketId))
         && (request.resource.data.scope == 'PUBLIC')
             == existsAfter(/databases/$(database)/documents/publicTickets/$(ticketId));
@@ -238,6 +240,8 @@ service cloud.firestore {
         && historyAppendedBySelf()
         && resolvedAtIsServerTime()
         && closesOnlyAfterFiveDays()
+        && (request.resource.data.currentStatus != 'CLOSED'
+            || getAfter(/databases/$(database)/documents/ticketLocations/$(ticketId)).data.active == false)
         && (
           (isOperator()
             && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments', 'resolvedAt']))
@@ -291,7 +295,7 @@ service cloud.firestore {
         && getAfter(ticketPath(ticketId)).data.scope == 'PUBLIC'
         && request.resource.data.currentStatus == 'OPEN'
         && request.resource.data.keys().hasOnly(['categoryId', 'categoryName', 'situation',
-            'currentStatus', 'coarseLocation', 'thumbnails', 'createdAt', 'resolvedAt']);
+            'currentStatus', 'coarseLocation', 'thumbnails', 'createdAt']);
 
       // Status mirror, in the same batch as the tickets/{id} transition (whose
       // own rule decides who may make it): status and resolvedAt equal the
