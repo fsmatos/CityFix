@@ -23,7 +23,8 @@ enum class TopBarScreen { DASHBOARD, LIST, DETAIL, REPORT }
 
 /**
  * App top bar. Stateless: the caller says which screen is showing and receives the clicks.
- * The toggle appears on the list only; the add button everywhere except the report form.
+ * The toggle appears on the list only, and only when [showExpandToggle]; anonymous users never
+ * get it (brief I.1.B, D-007). The add button everywhere except the report form.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +32,7 @@ fun MainTopAppBar(
     screen: TopBarScreen,
     canNavigateBack: Boolean,
     isExpanded: Boolean,
+    showExpandToggle: Boolean,
     onBackClick: () -> Unit,
     onToggleExpandedClick: () -> Unit,
     onAddClick: () -> Unit,
@@ -63,7 +65,7 @@ fun MainTopAppBar(
             }
         },
         actions = {
-            if (screen == TopBarScreen.LIST) {
+            if (screen == TopBarScreen.LIST && showExpandToggle) {
                 IconButton(onClick = onToggleExpandedClick) {
                     Icon(
                         imageVector = if (isExpanded) {
@@ -101,12 +103,14 @@ private fun BarPreview(
     screen: TopBarScreen,
     canNavigateBack: Boolean,
     isExpanded: Boolean = false,
+    showExpandToggle: Boolean = true,
 ) {
     CityFixTheme {
         MainTopAppBar(
             screen = screen,
             canNavigateBack = canNavigateBack,
             isExpanded = isExpanded,
+            showExpandToggle = showExpandToggle,
             onBackClick = {},
             onToggleExpandedClick = {},
             onAddClick = {},
@@ -130,6 +134,12 @@ private fun ListCollapsedBarPreview() {
 @Composable
 private fun ListExpandedBarPreview() {
     BarPreview(TopBarScreen.LIST, canNavigateBack = true, isExpanded = true)
+}
+
+@OrientationPreviews
+@Composable
+private fun ListAnonymousBarPreview() {
+    BarPreview(TopBarScreen.LIST, canNavigateBack = true, showExpandToggle = false)
 }
 
 @OrientationPreviews

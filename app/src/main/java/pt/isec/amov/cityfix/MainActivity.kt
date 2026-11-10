@@ -81,6 +81,9 @@ private fun CityFixApp(app: CityFixApplication) {
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
     val stats by ticketsViewModel.stats.collectAsStateWithLifecycle()
 
+    // Phase 1 has no login, so every user is anonymous: brief I.1.B lists only category,
+    // situation and thumbnail, so no expanded cards (D-007). The Auth task sets this by role.
+    val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Above the NavHost: the report destination is popped while the snackbar is showing.
@@ -103,6 +106,7 @@ private fun CityFixApp(app: CityFixApplication) {
                 screen = screen,
                 canNavigateBack = canNavigateBack,
                 isExpanded = isExpanded,
+                showExpandToggle = canExpandCards,
                 onBackClick = { navController.navigateUp() },
                 onToggleExpandedClick = { isExpanded = !isExpanded },
                 onAddClick = {
@@ -131,7 +135,7 @@ private fun CityFixApp(app: CityFixApplication) {
             composable<TicketListRoute> {
                 ListScreen(
                     tickets = tickets,
-                    isExpanded = isExpanded,
+                    isExpanded = canExpandCards && isExpanded,
                     onTicketClick = { id ->
                         navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                     },
