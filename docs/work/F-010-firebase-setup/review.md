@@ -160,3 +160,96 @@ None.
 2. **`ticketLocations.active` is free for any participant** (line 309-311). A participant can set `active: false` on an OPEN ticket. If F-012's query filters on `active`, later reporters then miss it and open duplicates. Any value type is accepted, too. **Fix:** tie the value to the ticket written in the same batch, for example `&& request.resource.data.active == (getAfter(ticketPath(ticketId)).data.currentStatus != 'CLOSED')`, using whatever "active" means in 0010. Also add `&& request.resource.data.active is bool` to the create.
 3. **Storage still accepts uploads to a CLOSED ticket** (`storage.rules` line 52-53). The file can never be attached (attachments are locked), so it is an orphan that costs storage on Blaze, and an exception to the "CLOSED is locked for everyone" claim in 0010. **Fix:** add `&& firestore.get(/databases/(default)/documents/tickets/$(ticketId)).data.currentStatus != 'CLOSED'` to `create`. While at it, check the documented per-request limit on cross-service `firestore.get/exists` calls in Storage rules: `read` already makes up to three (publicTickets, users, tickets). If the limit is lower, reorder or merge the checks. I could not confirm the number without the docs or the emulator.
 4. **0010 should say plainly what self-declared grouping implies** (Consequences, "In grouping, the rules trust the location the client puts in the report"). In plain words: an active citizen can read the category, situation and exact location of every ticket in `ticketLocations`. By copying them into a report, they can join any ticket, PRIVATE included. After that they read its description, the creator's media and the messages. This follows the brief's grouping rule (scope does not matter), so it is not a request to change the rules. It is a sentence both authors should be able to say in the defence. **Fix:** add that sentence, plus "the client (F-012) uses the device's GPS fix, not a typed location", to the Consequences bullet.
+
+## Round 3
+Reviewed: 29fa5e7 `fix(F-010): close 5-day window and status gaps in rules` (`firestore.rules`, `storage.rules`, decisions 0010 and 0011, state.md). Checked against the round-2 findings, the person's approval (R2-S1 through a server-set `resolvedAt`, plus R2-N1..N4), the round-1/2 resolutions and CLAUDE.md. Date: 2026-11-10.
+
+**Verdict: approved with one should-fix (no blocker).**
+- R2-S1 and R2-N1..N4 are resolved as approved. Nothing from rounds 1-2 regressed.
+- The new rule that history times must never go backwards opened one small gap. Ticket create still does not check the first history entry, so a citizen can create a ticket that nobody can ever move to another status (R3-S1). The fix is one line.
+- Anonymous users still reach only `publicTickets`, `categories`, `municipality` and the media of PUBLIC tickets. They see no author data and no exact coordinates.
+
+### Checks run
+- `./gradlew assembleDebug lint`: BUILD SUCCESSFUL. Lint: 0 errors, 17 warnings, unchanged. 29fa5e7 has no Kotlin or Gradle change.
+- The working tree is clean apart from the untracked `.idea/` files. `google-services.json` is not in 29fa5e7.
+- **Rules syntax, checked by reading only** (no Playground, no emulator):
+  - The ternary `c ? a : b` in `resolvedAtIsServerTime` is valid rules syntax, and both branches are bool.
+  - `duration.value(5, 'd')` is valid ('d' is an accepted unit). `timestamp + duration` gives a timestamp, and comparing `request.time` with it using `>` or `<=` is valid.
+  - `request.resource.data.resolvedAt == request.time` is the documented pattern for `FieldValue.serverTimestamp()`. `getAfter` sees the resolved server time, so in the same batch the mirror's `resolvedAt` equals the ticket's.
+  - `Map.get('resolvedAt', null)` is valid on `request.resource.data` and on `getAfter(...).data`. Before the first RESOLVED, both sides are null, so `null == null` holds.
+  - `t is int`, `request.time.toMillis()` (an int) and the int comparisons are valid. An out-of-range `neu[old.size()]` is an error, and an error denies. The size check would fail anyway.
+  - Storage: `ticketDoc()` returns `firestore.get(...).data` and is called once per rule. Functions declared inside `match /b/{bucket}/o` are valid.
+
+### Round-2 findings
+- **R2-S1, resolved.**
+  - `resolvedAt` can change only through the lifecycle rule. The grouping and attachments-only rules use `hasOnly` lists without it.
+  - In the lifecycle rule, `resolvedAtIsServerTime()` requires `resolvedAt == request.time` when the new status is RESOLVED, and no change otherwise.
+  - Participants cannot write RESOLVED. Their branch needs the old status to be RESOLVED and the status to change, and their `hasOnly` list excludes `resolvedAt`.
+  - Create forbids the field, so every RESOLVED ticket has a server-set `resolvedAt`. `closesOnlyAfterFiveDays()` and `isJustifiedReopen()` read it from `resource.data`.
+  - The appended entry's `dateTime` is bounded: it must be an int, no earlier than the previous entry, and at most 5 minutes after the server time.
+  - The 0010 sentence is corrected, and 0010 records that an offline RESOLVED gets the sync time.
+  - So in the defence, the answer to "can the operator skip the 5 days?" is now "no".
+- **R2-N1, resolved.** The status must be one of the five `TicketStatus` names and must differ from the old one, so RESOLVED -> RESOLVED can no longer restart the window. `publicTickets` create requires `OPEN`.
+- **R2-N2, resolved.**
+  - Create requires `active == true`, which also makes it a bool.
+  - An update is allowed only in a batch that changes the ticket's status, and the value must equal "new status != CLOSED". In practice it changes once, to false, in the closing batch.
+  - R3-N1 covers a closing batch that forgets this update.
+- **R2-N3, resolved.** Storage `create` denies uploads to CLOSED tickets. **The two-document limit holds:**
+  - reading ticket media touches `tickets/{id}`, plus `users/{uid}` only when the ticket is not PUBLIC;
+  - `create` touches `tickets/{id}` and `users/{uid}`;
+  - `users/{uid}/photo.jpg` touches only `users/{uid}`.
+
+  The 0010 Consequences bullet cites the docs page.
+- **R2-N4, resolved.** 0010 Consequences now says plainly that any active citizen can join any ticket, PRIVATE included, by copying `ticketLocations` data (per brief I.2 obs.). It also says that F-012 uses the GPS fix.
+- **Checking `scope == 'PUBLIC'` instead of `exists(publicTickets)` is sound.**
+  - `scope` cannot change: the three ticket update rules use `hasOnly` lists without it, and there is no other update path.
+  - At create, `(scope == 'PUBLIC') == existsAfter(publicTickets/{id})`.
+  - `publicTickets` create also needs `getAfter(ticket).scope == 'PUBLIC'`, and `publicTickets` documents are never deleted.
+  - So the mirror exists exactly when scope is `'PUBLIC'`.
+  - The rules do not whitelist scope values. Any other scope string counts as private on both sides, which errs towards privacy.
+  - Storage's `firestore.get` runs as the service, so reading the ticket does not expose ticket fields to anonymous callers.
+
+### Rounds 1-2, no regression
+- **B1:** `isOperator()` (both files) and the OPERATOR create still need `email_verified == true`.
+- **S1:**
+  - operators still own the transitions;
+  - participants can only reopen (within 5 days, with a justification) or close (after 5 days);
+  - history is append-only;
+  - CLOSED is locked on every Firestore write path, and now on Storage uploads too.
+- **S2 (per brief I.2 obs.):** grouping still needs a matching `reports/{uid}` in the same batch, inside the box. It applies to PUBLIC and PRIVATE tickets alike, and there is no free follow.
+- **S3, S4, S5:**
+  - `nifs` documents are tied to the caller's new `users/{uid}`;
+  - `name`, `nif` and `georeferencing` are locked;
+  - anonymous-auth tokens count as signed out;
+  - the Storage size and type limits are unchanged.
+- **Anonymous data:**
+  - the `publicTickets` keys are still whitelisted (the added `resolvedAt` is a timestamp, not personal data);
+  - `ticketLocations` and `reports` are still unreadable to anonymous users.
+- **S6 is still open (known, not blocking here).** Nobody has run the smoke and offline acceptance checks. Before `/push-task`, run them on an AVD, or mark them "deferred to F-011" in state.md and in F-011's task file.
+- Round-1 nits N1-N3 and N5-N7 are unchanged and still optional.
+
+### Blocking
+None.
+
+### Should-fix
+1. **An unchecked first history `dateTime` can freeze a ticket** (`firestore.rules` lines 203-214, with lines 85-86).
+   - **Problem.** `historyAppendedBySelf()` now requires each new entry to be no earlier than the previous `dateTime` and at most 5 minutes after `request.time`. Ticket create does not check `statusHistory[0].dateTime`.
+   - **Effect.** A citizen can create a ticket whose first `dateTime` is far in the future (for example the year 3000), and so can a device whose clock is far ahead. After that, no later entry can pass the check, so no operator can ever move the ticket to IN_PROGRESS, RESOLVED or CLOSED. A non-int value, such as a string, has the same effect, because the comparison errors.
+   - **Cause.** The gap came in with the R2-S1 time bound. 0010 still says the first entry "feeds only lists and the repair time", which is no longer true.
+   - **Fix:** add these lines to the `tickets` create rule:
+     ```
+     && request.resource.data.statusHistory[0].dateTime is int
+     && request.resource.data.statusHistory[0].dateTime <= request.time.toMillis() + 300000
+     ```
+     An offline create that syncs later has a past time, so it still passes. Also change the 0010 Consequences bullet to: "`createdAt` is a client time and is not checked; the first history entry's `dateTime` is an int at most 5 minutes after the server time, because later entries must not be earlier than it."
+
+### Nit
+1. **If a closing batch skips `ticketLocations`, its `active` stays `true` forever** (`firestore.rules` lines 235-249 and 330-334).
+   - The ticket rule does not require the location update in the closing batch, and the `ticketLocations` update is locked once the ticket is CLOSED.
+   - F-012 would then keep matching the closed ticket, and the citizen's grouping write would be denied.
+   - **Fix:** add this to the lifecycle rule: `&& (request.resource.data.currentStatus != 'CLOSED' || getAfter(/databases/$(database)/documents/ticketLocations/$(ticketId)).data.active == false)`. The `publicTickets` mirror can still be repaired later, so it does not need this.
+2. **`publicTickets` create still whitelists `resolvedAt`** (lines 293-294).
+   - Ticket create forbids the field, but a creator can still put a made-up `resolvedAt` on the mirror.
+   - Anonymous users would see it. The first status mirror update would also fail its equality check unless the client deletes the field.
+   - **Fix:** remove `'resolvedAt'` from the create `hasOnly` list, or add `&& !('resolvedAt' in request.resource.data)`. The mirror update rule already allows adding it later.
+3. **An entry written by a clock up to 5 minutes fast can block the next transition for up to 5 minutes.** The next entry must not be earlier than it, and a correct clock is still behind. It is rare and clears by itself. **Fix:** add one clause to the 0010 "device clock" bullet: "a following transition within those minutes from a correct clock is denied until the time passes".

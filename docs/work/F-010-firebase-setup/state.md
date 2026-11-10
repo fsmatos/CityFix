@@ -8,7 +8,7 @@ Remote: origin/dev/Francisco
 | Plan | done | 2026-11-10 | 00-plan, 01-coding-plan, 03-docs-plan; 3 slices; 12 open questions; schema to agree with Diogo before Gate 1 |
 | Gate 1: plan approved | done | 2026-11-10 | approved with all recommended defaults Q1-Q12; person confirmed Diogo agreed the schema |
 | Code | done | 2026-11-10 | slices 3 (8b47917), 1 (48abada), 2 (fac91e4); BoM 34.19.0 (R2 fallback); smoke test not run (no device) |
-| Review | done | 2026-11-10 | round 1: changes required (1 blocking, 6 should-fix, 7 nits); round 2 after c84ef32: approved with 1 should-fix (client-written RESOLVED time), 4 nits; S6 still open (review.md) |
+| Review | done | 2026-11-10 | round 1: changes required (1 blocking, 6 should-fix, 7 nits); round 2 after c84ef32: approved with 1 should-fix (client-written RESOLVED time), 4 nits; S6 still open; round 3 after 29fa5e7: approved with 1 should-fix (unchecked first history dateTime can freeze a ticket), 3 nits; S6 still open (review.md) |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -66,3 +66,14 @@ Append-only.
   - **Not enforceable / accepted (in 0010):** `createdAt` and the first history `dateTime` on create stay unchecked client times; an operator who resolves offline gets the sync time as `resolvedAt`; a device clock more than 5 min fast cannot write status changes. Rules syntax checked by reading only, against the Firebase rules reference (ternary, `duration.value`, `Map.get`); Playground/emulator still not run.
   - **Handover:** D-008 writes `resolvedAt` with `FieldValue.serverTimestamp()` in the RESOLVED batch (ticket and `publicTickets` mirror) and computes the 5-day window from it; F-012 writes `active: true` on create and `active: false` only in the closing batch. S6 (smoke/offline test) is still open.
   - Verify: `./gradlew assembleDebug lint` BUILD SUCCESSFUL, 0 errors / 17 warnings (unchanged).
+- 2026-11-10 (Review round 3, reviewer agent): re-reviewed 29fa5e7 against the round-2 findings and the person's approval. Verdict: **approved with 1 should-fix**, 0 blocking, 3 nits (review.md "Round 3").
+  - **Resolved:** R2-S1 (server-set `resolvedAt` == `request.time`, written only on RESOLVED and never changed otherwise; the 5-day window reads `resource.data.resolvedAt`) and R2-N1..N4.
+  - **No regression:** B1 and S1-S5 still hold. S2 is still grouping through a matching report on any scope, per the brief.
+  - **`scope == 'PUBLIC'` is sound:** scope never changes (every ticket update uses `hasOnly` without it), and the mirror exists exactly when scope is PUBLIC.
+  - **Storage:** each evaluation reads at most `tickets/{id}` and `users/{uid}`, within the documented two-document limit.
+  - **Anonymous users:** no exposure of author data or exact coordinates.
+  - **Syntax:** checked by reading only (ternary, `duration.value(5, 'd')`, timestamp + duration, `Map.get(key, default)`, `toMillis()`).
+  - **Should-fix R3-S1:** ticket create does not check `statusHistory[0].dateTime`. A far-future or non-int value makes every later append fail the new rule that an entry is not earlier than the previous one. Fix: add `is int` and `<= request.time.toMillis() + 300000` on create, and correct the 0010 sentence.
+  - **Nits:** require `ticketLocations.active == false` in the closing batch; drop `resolvedAt` from the `publicTickets` create whitelist; document how the 5-minute clock allowance can briefly block the next transition.
+  - **Open:** S6 (smoke/offline test).
+  - **Verify:** `./gradlew assembleDebug lint` BUILD SUCCESSFUL, 0 errors / 17 warnings (unchanged). No code changed, nothing committed.
