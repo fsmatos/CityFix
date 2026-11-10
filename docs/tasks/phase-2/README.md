@@ -56,7 +56,7 @@ Merge `origin/main` into your dev branch at least once a day in this phase, and 
 3. **5-day close computed on read** from the server-set `resolvedAt` (D-008's pure rule); the first client that sees it writes CLOSED. The rules allow CLOSED only after 5 days of server time and lock the ticket. The 24 h warning is a local notification (F-016).
 4. **osmdroid**, no key, so the ZIP builds and the map renders for the grader.
 
-Also decided at that Gate (decision 0011): Firestore in test mode until 2026-11-21, rules deployed with the person's OK once D-009 login works; SMS MFA with console test numbers; `app/google-services.json` stays out of git and is shared privately. Data layout: [decision 0010](../../decisions/0010-firestore-schema.md). Items D-008, D-009/D-010, F-012 and F-013 must follow: "Handover (F-010)" in `docs/architecture/overview.md`.
+Also decided at that Gate (decision 0011): Firestore in test mode until 2026-12-10, rules deployed with the person's OK once D-009 login works; SMS MFA with console test numbers; `app/google-services.json` stays out of git and is shared privately. Data layout: [decision 0010](../../decisions/0010-firestore-schema.md). Items D-008, D-009/D-010, F-012 and F-013 must follow: "Handover (F-010)" in `docs/architecture/overview.md`.
 
 ## Risks carried from phase 1 (see phase 1 README)
 Attachment phase (report vs resolution proof), FCM token on `User`, `role` field in Firestore, public collection for anonymous users, NIF uniqueness by transaction, one municipality document, reopening computed from the RESOLVED history entry. All six are closed in [decision 0010](../../decisions/0010-firestore-schema.md) ("Phase 1 risks"); the reopen window now uses the server-set `resolvedAt` instead of the history entry.

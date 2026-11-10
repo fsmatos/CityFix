@@ -614,7 +614,7 @@ Decision: no new record; [0006](../decisions/0006-anonymous-projection-phase-1.m
 ## F-010: Firebase setup and Firestore schema
 Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules design), [0011](../decisions/0011-firebase-plan-notifications-close-maps.md) (plan, notifications, 5-day close, maps), [0009](../decisions/0009-tickets-repository.md) amended. Code: `CityFixApplication.kt`, `firestore.rules`, `storage.rules`, `firebase.json`, version catalog, both Gradle files. Overview: "Firebase (F-010)", "Setup", "Handover (F-010)".
 
-**The rules are drafts, checked by reading only** (three review rounds; no Rules Playground, no emulator), and not deployed. The smoke test and the offline check have not run on a device (review S6).
+**The rules are drafts, checked by reading only** (three review rounds; no Rules Playground, no emulator), and not deployed. The smoke test and the offline check ran on the emulator on 2026-11-10 and passed (online write/read, cache read after restart, offline write synced on reconnect).
 
 ### Technical solutions
 - **One Firebase container in `Application`.** `CityFixApplication` holds `auth`, `firestore`, `storage` and `messaging` `by lazy`, next to the repositories: manual DI as `ContactsApp` in Contacts_#3 (decision 0009). No Hilt/Koin: four properties are easier to explain than a DI framework.
@@ -656,8 +656,8 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - **An offline RESOLVED gets the sync time as `resolvedAt`**, not the tap time; the history entry keeps the device time, so the two can differ. A device clock more than 5 minutes fast cannot write status changes.
 - **Signed-in active citizens can read exact locations, category and situation of every ticket** through `ticketLocations` (no author, description or media). Accepted for Option A.
 - **`google-services.json` is handled outside git** and copied into the ZIP by hand.
-- **The rules were drafted on 2026-11-10 and deployed on <date> (fill in later).** They were checked by reading only; they have not been run in the Rules Playground or the emulator yet. Until the deploy, the test-mode database is open to anyone with the project config (expires 2026-11-21).
-- **The smoke test and offline check (review S6) have not run**: no device was attached; to be done by hand, at the latest in F-011.
+- **The rules were drafted on 2026-11-10 and deployed on <date> (fill in later).** They were checked by reading only; they have not been run in the Rules Playground or the emulator yet. Until the deploy, the test-mode database is open to anyone with the project config (expires 2026-12-10).
+- **Smoke test only:** the offline check proved the cache with one test document; real offline flows (reporting with no network, the upload worker) are tested in F-011/F-013.
 
 ### Verification
 - `./gradlew assembleDebug lint` after every slice and every review round: BUILD SUCCESSFUL, 0 errors, 17 warnings (16 before plus `GradleDependency` for `firebase-bom`).
