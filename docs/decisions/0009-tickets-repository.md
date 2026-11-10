@@ -2,6 +2,8 @@
 
 Status: accepted (F-008, Gate 1 on 2026-11-08, plan revision 2; review fixes on 2026-11-08). Supersedes in part [decision 0006](0006-anonymous-projection-phase-1.md) (Q6, Q11: "no repository yet"; the ViewModel as the place of the projection) and [decision 0008](0008-report-form-state.md) (no factory, no coroutines, the caller creates the ticket). Diogo agreed to the changes to his files and to 0006.
 
+Amended by F-010 (2026-11-10): `CityFixApplication` now also holds the Firebase instances (`auth`, `firestore` with the persistent cache, `storage`, `messaging`), each `by lazy`. The manual-DI decision itself is unchanged. See [decision 0010](0010-firestore-schema.md) and the overview, "Firebase (F-010)".
+
 ## Context
 - The ViewModels owned the data: `TicketsViewModel` held `TicketsList(SampleTickets.all)`, built tickets and called `toAnonymousView()`; `ReportViewModel` read `SampleCategories`. `.claude/rules/kotlin.md` wants the anonymous filter in the repository layer, and `kotlin-conventions` wants ViewModels on repository interfaces. 0006 and 0008 put the repository off until Firebase.
 - F-007 copied gallery picks on the main thread (F-007 Gate 1 Q13, an accepted exception to `.claude/rules/kotlin.md`).
