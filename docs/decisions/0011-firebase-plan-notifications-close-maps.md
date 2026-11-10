@@ -11,7 +11,8 @@ Status: accepted (F-010, Gate 1 on 2026-11-10, both authors). These are the four
 ## Decision
 1. **Plan: Blaze with a budget alert** (for example 5 EUR), staying inside the no-cost quotas (Q1). Storage is not possible on Spark. Blaze also allows Identity Platform MFA.
 2. **Notifications without a server: no Cloud Functions** (Q3). Each device listens to Firestore for the tickets it takes part in (`participantIds`) and shows local notifications, plus a WorkManager periodic check when the app is closed. FCM tokens are stored in `users/{uid}.fcmTokens`; remote reception is shown with a console test message. One small Cloud Function (status change -> FCM) stays an F-016 Gate option if time remains.
-3. **5-day close: computed on read** (Q4). A RESOLVED ticket whose RESOLVED history entry is more than 5 days old counts as CLOSED and is locked (a pure rule in `model/`, D-008). The first client that sees it (operator panel, citizen list or the F-016 worker) writes the CLOSED transition in a batch.
+3. **5-day close: computed on read** (Q4). A RESOLVED ticket whose RESOLVED history entry is more than 5 days old counts as CLOSED and is locked (a pure rule in `model/`, D-008). The first client that sees it (operator panel, citizen list or the F-016 worker) writes the CLOSED transition in a batch. The rules allow CLOSED only after the 5 days (server time) and lock the ticket afterwards ([decision 0010](0010-firestore-schema.md)).
+   - **24 h warning (brief III):** the citizens of a RESOLVED ticket (`participantIds`) get a notification when 24 hours remain before it closes, that is 4 days after the RESOLVED entry. Without a server it is a local notification, scheduled by the device from the RESOLVED entry time (the Firestore listener and the F-016 periodic worker); it is skipped if the ticket was reopened meanwhile.
 4. **Maps: osmdroid** (Q6). No key, so the ZIP builds and the map renders for the grader. Requirements: `INTERNET`, a User-Agent, OSM attribution, coarse zoom with gestures off for anonymous users.
 5. **Firestore start mode: test mode with an expiry of 2026-11-21** (Q5) for development. The drafted rules are deployed, with the person's OK, once D-009 login works (target 2026-11-14) and at the latest before the ZIP.
 6. **MFA: Identity Platform with SMS** (Q7), using console test phone numbers with fixed codes for development and the defence (no SMS cost). Diogo confirms at D-009's Gate.
@@ -27,7 +28,7 @@ Status: accepted (F-010, Gate 1 on 2026-11-10, both authors). These are the four
 
 ## Consequences
 - A billing account is needed; the budget alert is the cost guard.
-- **F-016:** notifications arrive only while some client runs (the app or its worker). The report states this limit.
+- **F-016:** notifications arrive only while some client runs (the app or its worker). The report states this limit. F-016 also owns the 24 h warning before the close (point 3).
 - **D-008:** owns the pure "counts as CLOSED" rule; every list and detail uses it, so a stale RESOLVED ticket never looks open.
 - **F-012 and D-014:** use osmdroid. The osmdroid repository was archived in Nov 2024; it still works (a report note).
 - **D-009:** SMS MFA needs the debug SHA-1 in the console and test numbers.

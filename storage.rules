@@ -9,12 +9,17 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Anonymous users do not sign in (brief I.1); an anonymous-auth token
+    // counts as not signed in.
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
+    // Same as firestore.rules: the operator role needs a verified e-mail.
     function isOperator() {
       return isSignedIn()
+        && request.auth.token.email_verified == true
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'OPERATOR';
     }
 
@@ -27,12 +32,25 @@ service firebase.storage {
       return firestore.exists(/databases/(default)/documents/publicTickets/$(ticketId));
     }
 
+    // Images and thumbnails up to 10 MB, videos up to 100 MB.
+    function isImageUpTo10Mb() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    function isVideoUpTo100Mb() {
+      return request.resource.contentType.matches('video/.*')
+        && request.resource.size < 100 * 1024 * 1024;
+    }
+
     // {attachmentId}.jpg, {attachmentId}.mp4 and {attachmentId}_thumb.jpg.
     // Uploaded by the WorkManager worker (F-013); files are never replaced.
+    // Photos have their GPS EXIF removed and videos their location metadata
+    // removed before upload, because public media are readable by anonymous users.
     match /tickets/{ticketId}/{fileName} {
       allow read: if isPublicTicket(ticketId) || isOperator() || isParticipant(ticketId);
       allow create: if (isOperator() || isParticipant(ticketId))
-        && request.resource.contentType.matches('image/.*|video/.*');
+        && (isImageUpTo10Mb() || isVideoUpTo100Mb());
       allow update, delete: if false;
     }
 
@@ -40,7 +58,7 @@ service firebase.storage {
       allow read: if isSignedIn() && (request.auth.uid == uid || isOperator());
       allow create, update: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.contentType.matches('image/.*');
+        && isImageUpTo10Mb();
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
   }
