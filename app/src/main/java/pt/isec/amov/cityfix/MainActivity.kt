@@ -81,8 +81,8 @@ private fun CityFixApp(app: CityFixApplication) {
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
     val stats by ticketsViewModel.stats.collectAsStateWithLifecycle()
 
-    // Phase 1 has no login, so every user is anonymous: brief I.1.B lists only category,
-    // situation and thumbnail, so no expanded cards (D-007). The Auth task sets this by role.
+    // Phase 1 has no login: every user is anonymous, and brief I.1.B lists only category,
+    // situation and thumbnail, hence no expanded cards (D-007). D-009 sets this by role.
     val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
 
