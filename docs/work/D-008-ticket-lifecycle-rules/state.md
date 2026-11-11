@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-11 | review.md: 0 blocking, 2 should-fix (S1 canReopen vs allowedTransitions KDoc, S2 closingWarningAt may be past), 4 nits; build pass, lint 0 errors / 16 warnings |
 | Docs | done | 2026-11-11 | overview, new decision 0011, 0003 (deviation, N3), 0004, 0006, phase-1 README, report notes, task file checks; not committed (docs-writer cannot commit) |
 | Pushed | done | 2026-11-11 | f655d74 to origin/dev/Diogo |
-| Merged | done | 2026-11-11 | main at b4b9d8d; push of main by Diogo |
+| Merged | done | 2026-11-11 | main at b4b9d8d, pushed by Diogo |
 
 ## Log
 Append-only.
@@ -39,3 +39,4 @@ Append-only.
   - Deviations: decision 0003 amended (outside the docs plan, review N3); 0006's D-007 N2 note updated and the task file's acceptance checks ticked (both outside the plan's list); the plan's F-014 bullet "(or `canReopen`)" replaced per review S1. Not committed (docs-writer has no commit permission); `00-plan.md` acceptance boxes left unticked.
 - 2026-11-11 Push: approved by Diogo; verify (assembleDebug + lint, 0 errors, 16 warnings) last run on 8803379, only docs changed since; `git push origin dev/Diogo` at f655d74. Not merged into main.
 - 2026-11-11 Merge: dev/Diogo into main (asked by Diogo) as b4b9d8d; main was equal to origin/main (8b52e5b). No conflicts; assembleDebug and lint pass on main, 0 errors, 16 warnings. main merged back into dev/Diogo. Pushing main was refused by this session's permissions; Diogo pushes it.
+- 2026-11-11 Push of main: Diogo ran `git push origin main`; origin/main at b4b9d8d. D-008 is on origin/main.
