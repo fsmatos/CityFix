@@ -13,8 +13,12 @@ import com.google.firebase.messaging.messaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
+import pt.isec.amov.cityfix.data.AuthRepository
+import pt.isec.amov.cityfix.data.FirebaseAuthRepository
+import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocalTicketsRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
+import pt.isec.amov.cityfix.data.UsersRepository
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -44,4 +48,10 @@ class CityFixApplication : Application() {
     val storage: FirebaseStorage by lazy { Firebase.storage }
 
     val messaging: FirebaseMessaging by lazy { Firebase.messaging }
+
+    /** Sign-in, MFA and password reset (D-009), built from [auth]. */
+    val authRepository: AuthRepository by lazy { FirebaseAuthRepository(auth) }
+
+    /** `users/{uid}` profiles (D-009 reads them), built from [firestore] so the cache settings apply. */
+    val usersRepository: UsersRepository by lazy { FirestoreUsersRepository(firestore) }
 }
