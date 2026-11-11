@@ -134,4 +134,26 @@
     <string name="auth_error_code_not_sent">Não foi possível enviar o código. Tente novamente.</string>
     <string name="auth_error_recent_login">Inicie sessão novamente.</string>
     <string name="auth_error_unknown">Ocorreu um erro. Tente novamente.</string>
+
+    <!-- Role navigation (D-009) -->
+    <string name="top_bar_title_pending">Registo pendente</string>
+    <string name="top_bar_title_operator_panel">Painel de gestão</string>
+    <string name="top_bar_title_my_tickets">As minhas ocorrências</string>
+    <string name="top_bar_title_profile">Perfil</string>
+    <string name="top_bar_title_approvals">Validação de registos</string>
+    <string name="top_bar_title_categories">Categorias</string>
+    <string name="top_bar_title_account_problem">Conta</string>
+    <string name="cd_more_options">Mais opções</string>
+    <string name="menu_my_tickets">As minhas ocorrências</string>
+    <string name="menu_profile">Perfil</string>
+    <string name="menu_approvals">Validação de registos</string>
+    <string name="menu_categories">Categorias</string>
+    <string name="menu_log_out">Terminar sessão</string>
+    <string name="placeholder_message">Brevemente.</string>
+    <string name="pending_title">O seu registo aguarda validação</string>
+    <string name="pending_message">A autarquia tem de validar o seu registo antes de poder reportar ocorrências. Entretanto, pode consultar as ocorrências públicas.</string>
+    <string name="pending_browse">Ver ocorrências públicas</string>
+    <string name="account_problem_missing">A sua conta ainda não está configurada.</string>
+    <string name="account_problem_unavailable">Não foi possível carregar o seu perfil. Verifique a ligação.</string>
+    <string name="account_problem_retry">Tentar novamente</string>
 </resources>

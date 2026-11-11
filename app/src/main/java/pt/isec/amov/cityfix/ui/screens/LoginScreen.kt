@@ -74,7 +74,7 @@ fun LoginContent(
     onForgotPassword: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AuthFormLayout(modifier = modifier) {
+    FormColumn(modifier = modifier) {
         EmailField(
             value = state.email,
             errorRes = state.emailError,
@@ -141,12 +141,12 @@ fun LoginContent(
 }
 
 /**
- * The column every auth form uses: it scrolls in portrait and landscape, imePadding() comes
- * before verticalScroll so the keyboard never hides the focused field (report form lesson),
- * and the form is at most 480dp wide, centred, so it does not stretch in landscape.
+ * The column every D-009 form and message screen uses: it scrolls in portrait and landscape,
+ * imePadding() comes before verticalScroll so the keyboard never hides the focused field (report
+ * form lesson), and the content is at most 480dp wide, centred, so it does not stretch in landscape.
  */
 @Composable
-internal fun AuthFormLayout(
+internal fun FormColumn(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {

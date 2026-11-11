@@ -39,7 +39,7 @@ fun ForgotPasswordContent(
     onSend: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AuthFormLayout(modifier = modifier) {
+    FormColumn(modifier = modifier) {
         Text(
             text = stringResource(R.string.forgot_intro),
             style = MaterialTheme.typography.bodyLarge,

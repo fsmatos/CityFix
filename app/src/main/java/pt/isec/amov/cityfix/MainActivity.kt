@@ -40,21 +40,32 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
+import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
+import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
+import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.LoginRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
+import pt.isec.amov.cityfix.ui.navigation.MyTicketsRoute
+import pt.isec.amov.cityfix.ui.navigation.OperatorPanelRoute
+import pt.isec.amov.cityfix.ui.navigation.PendingValidationRoute
+import pt.isec.amov.cityfix.ui.navigation.ProfileRoute
 import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
 import pt.isec.amov.cityfix.ui.navigation.RequireAccess
 import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketListRoute
 import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
 import pt.isec.amov.cityfix.ui.navigation.homeFor
+import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
+import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
+import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
+import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
@@ -134,15 +145,17 @@ private fun CityFixApp(app: CityFixApplication) {
     // Redirect on a real role change only (login, logout, activation): go to the role's home and
     // clear the back stack. The first value after a (re)start is only recorded, and the last
     // handled role is saveable, so rotation or process recreation keeps the restored back stack.
+    // Used by every destination guard: the role's home, with the back stack cleared.
+    val goHome = {
+        navController.navigate(homeFor(role)) {
+            popUpTo(navController.graph.id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
     var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
     LaunchedEffect(role) {
         if (role != AccessRole.LOADING && role != handledRole) {
-            if (handledRole != null) {
-                navController.navigate(homeFor(role)) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                    launchSingleTop = true
-                }
-            }
+            if (handledRole != null) goHome()
             handledRole = role
         }
     }
@@ -165,10 +178,15 @@ private fun CityFixApp(app: CityFixApplication) {
                 showExpandToggle = canExpandCards,
                 showAddAction = session.canReport && screen != TopBarScreen.REPORT,
                 accountAction = accountAction,
+                // The auth screens show neither the add button nor the menu.
+                menuItems = if (onAuthScreen) emptyList() else menuItemsFor(role),
                 onBackClick = { navController.navigateUp() },
                 onToggleExpandedClick = { isExpanded = !isExpanded },
                 onAddClick = {
                     navController.navigate(ReportTicketRoute) { launchSingleTop = true }
+                },
+                onMenuItemClick = { item ->
+                    navController.navigate(item.route) { launchSingleTop = true }
                 },
                 onAccountClick = {
                     if (accountAction == AccountAction.LOG_OUT) {
@@ -247,16 +265,8 @@ private fun CityFixApp(app: CityFixApplication) {
                 ForgotPasswordScreen(viewModel = forgotViewModel)
             }
             composable<ReportTicketRoute> {
-                // Active citizens only (brief I.2.E); anyone else is sent back to the dashboard.
-                RequireAccess(
-                    role = role,
-                    allowed = setOf(AccessRole.CITIZEN),
-                    onDenied = {
-                        navController.navigate(DashboardRoute) {
-                            popUpTo<DashboardRoute> { inclusive = true }
-                        }
-                    },
-                ) {
+                // Active citizens only (brief I.2.E); anyone else is sent to their home.
+                RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
                     // Inside the destination: scoped to this entry, so a finished form is cleared.
                     val reportViewModel: ReportViewModel =
                         viewModel(
@@ -277,6 +287,54 @@ private fun CityFixApp(app: CityFixApplication) {
                     )
                 }
             }
+            composable<PendingValidationRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.PENDING_CITIZEN), onDenied = goHome) {
+                    PendingValidationScreen(
+                        onBrowseClick = {
+                            navController.navigate(DashboardRoute) { launchSingleTop = true }
+                        },
+                    )
+                }
+            }
+            composable<AccountProblemRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.ACCOUNT_PROBLEM), onDenied = goHome) {
+                    AccountProblemScreen(
+                        canRetry = session == Session.ProfileUnavailable,
+                        onRetry = sessionViewModel::retry,
+                        onLogOut = sessionViewModel::signOut,
+                    )
+                }
+            }
+            // Placeholders: the later tasks replace the content of these destinations.
+            composable<MyTicketsRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
+                    PlaceholderScreen(titleRes = R.string.top_bar_title_my_tickets)
+                }
+            }
+            composable<ProfileRoute> {
+                RequireAccess(
+                    role = role,
+                    allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                    onDenied = goHome,
+                ) {
+                    PlaceholderScreen(titleRes = R.string.top_bar_title_profile)
+                }
+            }
+            composable<OperatorPanelRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
+                    PlaceholderScreen(titleRes = R.string.top_bar_title_operator_panel)
+                }
+            }
+            composable<ApprovalsRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
+                    PlaceholderScreen(titleRes = R.string.top_bar_title_approvals)
+                }
+            }
+            composable<CategoriesRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
+                    PlaceholderScreen(titleRes = R.string.top_bar_title_categories)
+                }
+            }
         }
     }
 }
@@ -289,5 +347,12 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<ReportTicketRoute>() -> TopBarScreen.REPORT
     hasRoute<LoginRoute>() -> TopBarScreen.LOGIN
     hasRoute<ForgotPasswordRoute>() -> TopBarScreen.FORGOT_PASSWORD
+    hasRoute<PendingValidationRoute>() -> TopBarScreen.PENDING_VALIDATION
+    hasRoute<OperatorPanelRoute>() -> TopBarScreen.OPERATOR_PANEL
+    hasRoute<MyTicketsRoute>() -> TopBarScreen.MY_TICKETS
+    hasRoute<ProfileRoute>() -> TopBarScreen.PROFILE
+    hasRoute<ApprovalsRoute>() -> TopBarScreen.APPROVALS
+    hasRoute<CategoriesRoute>() -> TopBarScreen.CATEGORIES
+    hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM
     else -> TopBarScreen.DASHBOARD
 }

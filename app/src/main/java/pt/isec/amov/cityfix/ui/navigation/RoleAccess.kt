@@ -1,7 +1,9 @@
 package pt.isec.amov.cityfix.ui.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 
 /**
@@ -11,11 +13,35 @@ import pt.isec.amov.cityfix.viewmodel.AccessRole
 fun homeFor(role: AccessRole): Any = when (role) {
     AccessRole.LOADING,
     AccessRole.ANONYMOUS,
+    AccessRole.CITIZEN -> DashboardRoute
+    // D-009 slice 5 adds the account setup route; until then the session never reports SETUP.
+    AccessRole.SETUP -> DashboardRoute
+    AccessRole.ACCOUNT_PROBLEM -> AccountProblemRoute
+    AccessRole.PENDING_CITIZEN -> PendingValidationRoute
+    AccessRole.OPERATOR -> OperatorPanelRoute
+}
+
+/** One entry of the top bar's overflow menu: a label and the route it opens. */
+data class TopBarMenuItem(@StringRes val label: Int, val route: Any)
+
+/** The role-only screens each role reaches from the overflow menu (brief I.2, I.3). */
+fun menuItemsFor(role: AccessRole): List<TopBarMenuItem> = when (role) {
+    AccessRole.CITIZEN -> listOf(
+        TopBarMenuItem(R.string.menu_my_tickets, MyTicketsRoute),
+        TopBarMenuItem(R.string.menu_profile, ProfileRoute),
+    )
+    AccessRole.PENDING_CITIZEN -> listOf(
+        TopBarMenuItem(R.string.menu_profile, ProfileRoute),
+    )
+    AccessRole.OPERATOR -> listOf(
+        TopBarMenuItem(R.string.menu_approvals, ApprovalsRoute),
+        TopBarMenuItem(R.string.menu_categories, CategoriesRoute),
+        TopBarMenuItem(R.string.menu_profile, ProfileRoute),
+    )
+    AccessRole.LOADING,
+    AccessRole.ANONYMOUS,
     AccessRole.SETUP,
-    AccessRole.ACCOUNT_PROBLEM,
-    AccessRole.PENDING_CITIZEN,
-    AccessRole.CITIZEN,
-    AccessRole.OPERATOR -> DashboardRoute
+    AccessRole.ACCOUNT_PROBLEM -> emptyList()
 }
 
 /**

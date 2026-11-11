@@ -132,4 +132,26 @@
     <string name="auth_error_code_not_sent">Could not send the code. Try again.</string>
     <string name="auth_error_recent_login">Please log in again.</string>
     <string name="auth_error_unknown">Something went wrong. Try again.</string>
+
+    <!-- Role navigation (D-009) -->
+    <string name="top_bar_title_pending">Registration pending</string>
+    <string name="top_bar_title_operator_panel">Operations panel</string>
+    <string name="top_bar_title_my_tickets">My tickets</string>
+    <string name="top_bar_title_profile">Profile</string>
+    <string name="top_bar_title_approvals">Registration approvals</string>
+    <string name="top_bar_title_categories">Categories</string>
+    <string name="top_bar_title_account_problem">Account</string>
+    <string name="cd_more_options">More options</string>
+    <string name="menu_my_tickets">My tickets</string>
+    <string name="menu_profile">Profile</string>
+    <string name="menu_approvals">Registration approvals</string>
+    <string name="menu_categories">Categories</string>
+    <string name="menu_log_out">Log out</string>
+    <string name="placeholder_message">Coming soon.</string>
+    <string name="pending_title">Your registration is waiting for validation</string>
+    <string name="pending_message">The council must validate your registration before you can report issues. Meanwhile you can browse the public issues.</string>
+    <string name="pending_browse">Browse public issues</string>
+    <string name="account_problem_missing">Your account is not set up yet.</string>
+    <string name="account_problem_unavailable">Your profile could not be loaded. Check your connection.</string>
+    <string name="account_problem_retry">Retry</string>
 </resources>
