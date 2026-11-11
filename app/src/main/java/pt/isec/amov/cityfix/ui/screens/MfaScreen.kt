@@ -25,8 +25,9 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 /**
  * The SMS code step, shared by the login (second factor) and the account setup (enrolment).
  * Stateless: [phone] is where the code went, [backLabel] names the way back ("Back" on login,
- * "Change number" on setup); [backEnabled] says whether it works while a call is running. [errorRes] belongs to the code field; [messageRes] / [noticeRes]
- * are the call's error and neutral notice.
+ * "Change number" on setup); [backEnabled] says whether it works while a call is running.
+ * [errorRes] belongs to the code field; [messageRes] / [noticeRes] are the call's error and
+ * neutral notice.
  */
 @Composable
 fun MfaCodeContent(
