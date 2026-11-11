@@ -74,6 +74,7 @@
     <string name="cd_expand_tickets">Expandir ocorrências</string>
     <string name="cd_collapse_tickets">Recolher ocorrências</string>
     <string name="cd_report_ticket">Reportar ocorrência</string>
+    <string name="cd_loading_session">A carregar a sessão</string>
 
     <!-- Dashboard -->
     <string name="dashboard_repair_time_label">Tempo médio de reparação</string>

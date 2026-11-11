@@ -24,7 +24,8 @@ enum class TopBarScreen { DASHBOARD, LIST, DETAIL, REPORT }
 /**
  * App top bar. Stateless: the caller says which screen is showing and receives the clicks.
  * The toggle appears on the list only, and only when [showExpandToggle]; anonymous users never
- * get it (brief I.1.B, D-007). The add button everywhere except the report form.
+ * get it (brief I.1.B, D-007). The add button only when [showAddAction]: the caller passes true
+ * for an active citizen on every screen except the report form (D-009).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,7 @@ fun MainTopAppBar(
     canNavigateBack: Boolean,
     isExpanded: Boolean,
     showExpandToggle: Boolean,
+    showAddAction: Boolean,
     onBackClick: () -> Unit,
     onToggleExpandedClick: () -> Unit,
     onAddClick: () -> Unit,
@@ -79,7 +81,7 @@ fun MainTopAppBar(
                     )
                 }
             }
-            if (screen != TopBarScreen.REPORT) {
+            if (showAddAction) {
                 IconButton(onClick = onAddClick) {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -104,6 +106,7 @@ private fun BarPreview(
     canNavigateBack: Boolean,
     isExpanded: Boolean = false,
     showExpandToggle: Boolean = true,
+    showAddAction: Boolean = screen != TopBarScreen.REPORT,
 ) {
     CityFixTheme {
         MainTopAppBar(
@@ -111,6 +114,7 @@ private fun BarPreview(
             canNavigateBack = canNavigateBack,
             isExpanded = isExpanded,
             showExpandToggle = showExpandToggle,
+            showAddAction = showAddAction,
             onBackClick = {},
             onToggleExpandedClick = {},
             onAddClick = {},
@@ -140,6 +144,12 @@ private fun ListExpandedBarPreview() {
 @Composable
 private fun ListAnonymousBarPreview() {
     BarPreview(TopBarScreen.LIST, canNavigateBack = true, showExpandToggle = false)
+}
+
+@OrientationPreviews
+@Composable
+private fun DashboardAnonymousBarPreview() {
+    BarPreview(TopBarScreen.DASHBOARD, canNavigateBack = false, showAddAction = false)
 }
 
 @OrientationPreviews
