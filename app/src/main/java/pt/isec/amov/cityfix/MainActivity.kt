@@ -153,16 +153,9 @@ private fun CityFixApp(app: CityFixApplication) {
             launchSingleTop = true
         }
     }
-    // Redirect on a real role change only (login, logout, activation). The first value after a
-    // (re)start is only recorded, and the last handled role is saveable, so rotation or process
-    // recreation keeps the restored back stack.
+    // The last role the redirect (after the NavHost below) has handled. Saveable: null means a
+    // fresh start; a restored value means process recreation, whose back stack is kept.
     var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
-    LaunchedEffect(role) {
-        if (role != AccessRole.LOADING && role != handledRole) {
-            if (handledRole != null) goHome()
-            handledRole = role
-        }
-    }
 
     val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD ||
         screen == TopBarScreen.ACCOUNT_SETUP
@@ -346,6 +339,19 @@ private fun CityFixApp(app: CityFixApplication) {
                 RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
                     PlaceholderScreen(titleRes = R.string.top_bar_title_categories)
                 }
+            }
+        }
+
+        // Redirect to the role's home when the role changes (login, logout, activation) and on a
+        // fresh start with a stored session, so an operator or a setup user does not stay on the
+        // dashboard. Placed after the NavHost, so its graph is set before goHome() runs; never
+        // reached while the session is Loading. Rotation does not change the role, and process
+        // recreation restores handledRole, so neither resets the back stack.
+        LaunchedEffect(role) {
+            if (role != handledRole) {
+                // null = fresh start: the NavHost is on the dashboard, so only other homes navigate.
+                if (handledRole != null || homeFor(role) != DashboardRoute) goHome()
+                handledRole = role
             }
         }
     }
