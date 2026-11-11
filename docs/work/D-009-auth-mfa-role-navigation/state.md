@@ -8,7 +8,7 @@ Remote: origin/dev/Diogo
 | Plan | done | 2026-11-11 | 00-plan, 01-coding-plan, 03-docs-plan; 6 slices, no tests; Q1-Q13 for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-11 | Approved by Diogo; Q1 MFA mandatory for both roles (brief I.2.B, I.3.B); Q7 nobody expands (deviation from the plan); Q2-Q6, Q8-Q13 as recommended |
 | Code | done | 2026-11-11 | 6 slices committed (e38f449..2b4c1a3); build + lint green each slice (0 errors, 18 warnings); device and console checks not run (Diogo) |
-| Review | pending | | |
+| Review | done | 2026-11-11 | review.md: 1 blocking (cold start skips the role home), 3 should-fix, 7 nits; build + lint re-run (0 errors, 18 warnings) |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -52,3 +52,8 @@ Append-only.
   - Q1 sub-question / Q10: `firestore.rules` and `storage.rules` untouched, no `firebase` command run, no deploy.
   - Francisco's files untouched (`ShowScreen`, `ListScreen`, `DashboardScreen`, `ReportScreen`, `TicketCard`, `TicketsRepository`, `LocalTicketsRepository`, `model/`). Shared files edited as planned: `CityFixApplication.kt` (two `by lazy` repositories, Q11), `MainActivity.kt`, `ui/navigation/*`, `values*/strings.xml`; tell Francisco the route names (`MyTicketsRoute` etc.) and the `Session` / `AccessRole` API.
   - Not pushed.
+- 2026-11-11 Review: reviewer (Claude) read `git diff c3e4e66..HEAD` against the plans, the task file, the brief I paste, decisions 0006/0010/0011, `firestore.rules`, the overview handover and the Kotlin rules; re-ran `assembleDebug` + `lint` (OK, 0 errors, 18 warnings = baseline). Findings in `review.md`:
+  - **B1 (blocking):** `MainActivity.kt:156-165` skips the redirect when `handledRole == null`, which happens only on a fresh cold start with a persisted session, so an operator, a setup user, a pending citizen or an account-problem user lands on the public dashboard; the operator panel and account setup are then unreachable. Comes from the 01-coding-plan wording. Fix: redirect on the first non-loading value too (unless home is the dashboard), with the effect placed after the `NavHost`.
+  - Should-fix: S1 e-mail field `KeyboardActions(onAny = {})` kills ImeAction.Next on Login; S2 a failed `reload()` after a successful `enroll()` reports an error and leaves the account stale; S3 `catch (e: Exception)` in suspend repository calls swallows `CancellationException`.
+  - Nits N1-N7: stale comments, Back/Resend disabled during a send, system Back on the setup code step, verification e-mail per entry, Forgot password saved-state key equals the route arg, invalid-number mapping, session gap after `resolveSignIn`.
+  - Server-side MFA (`sign_in_second_factor`) still absent from the rules, as Gate Q1 decided (deploy step). Device/console checks listed at the end of `review.md`. Nothing run on a device.
