@@ -2,8 +2,8 @@ package pt.isec.amov.cityfix.ui.navigation
 
 import kotlinx.serialization.Serializable
 
-// Type-safe Navigation Compose routes for the phase-1 flow: dashboard -> list -> detail -> report.
-// The NavHost that uses them is built in MainActivity (D-006).
+// Type-safe Navigation Compose routes of the app. The NavHost that uses them is built in
+// MainActivity (D-006); the role routes' homes, menu and guards are in RoleAccess.kt (D-009).
 
 /** Start destination: dashboard figures. */
 @Serializable

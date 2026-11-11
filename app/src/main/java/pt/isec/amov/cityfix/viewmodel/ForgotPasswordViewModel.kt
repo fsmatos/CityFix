@@ -57,6 +57,8 @@ class ForgotPasswordViewModel(
     }
 
     private companion object {
-        const val KEY_EMAIL = "email"
+        // Not "email": the back stack entry's handle already holds the route argument under
+        // that name, which would hide initialEmail.
+        const val KEY_EMAIL = "typedEmail"
     }
 }

@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
@@ -39,6 +40,9 @@ fun AccountSetupScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
+    // The setup screen is the only back stack entry: system Back on the code step goes back to
+    // the phone step instead of leaving the app.
+    BackHandler(enabled = state.step == SetupStep.CODE, onBack = viewModel::changeNumber)
     AccountSetupContent(
         state = state,
         onResendEmail = viewModel::sendVerificationEmail,
@@ -124,6 +128,8 @@ fun AccountSetupContent(
             noticeRes = state.notice,
             isBusy = state.isBusy,
             backLabel = R.string.setup_change_number,
+            // changeNumber() ignores taps while busy, so the button is disabled then too.
+            backEnabled = !state.isBusy,
             onCodeChange = onCodeChange,
             onConfirm = onConfirmCode,
             onResend = onSendCode,

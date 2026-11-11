@@ -157,7 +157,7 @@
     <!-- Account setup and SMS code (D-009) -->
     <string name="top_bar_title_account_setup">Account setup</string>
     <string name="setup_verify_title">Verify your e-mail</string>
-    <string name="setup_verify_intro">We sent a verification link to %1$s. Open it, then come back and tap \"I have verified\".</string>
+    <string name="setup_verify_intro">Open the verification link sent to %1$s, then come back and tap \"I have verified\".</string>
     <string name="setup_verified_button">I have verified</string>
     <string name="setup_resend_email">Resend e-mail</string>
     <string name="setup_verification_sent">Verification e-mail sent.</string>

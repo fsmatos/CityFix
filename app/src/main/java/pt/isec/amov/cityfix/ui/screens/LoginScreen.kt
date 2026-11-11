@@ -74,6 +74,9 @@ fun LoginScreen(
             noticeRes = state.notice,
             isBusy = state.isBusy,
             backLabel = R.string.mfa_back,
+            // Always: LoginViewModel drops the answer of a send started before Back (R3: a lost
+            // onCodeSent would otherwise keep the user waiting up to 60 s).
+            backEnabled = true,
             onCodeChange = viewModel::onCodeChange,
             onConfirm = viewModel::confirmCode,
             onResend = { activity?.let(viewModel::sendCode) },
@@ -112,7 +115,6 @@ fun LoginContent(
             enabled = !state.isBusy,
             onValueChange = onEmailChange,
             imeAction = ImeAction.Next,
-            onImeAction = {},
         )
         val passwordError = state.passwordError?.let { stringResource(it) }
         val toggleDescription = stringResource(
@@ -199,7 +201,7 @@ internal fun FormColumn(
     }
 }
 
-/** E-mail field shared by Login and Forgot password. */
+/** E-mail field shared by Login and Forgot password. [onImeAction] replaces the keyboard's default action. */
 @Composable
 internal fun EmailField(
     value: String,
@@ -207,7 +209,7 @@ internal fun EmailField(
     enabled: Boolean,
     onValueChange: (String) -> Unit,
     imeAction: ImeAction,
-    onImeAction: () -> Unit,
+    onImeAction: (() -> Unit)? = null,
 ) {
     val error = errorRes?.let { stringResource(it) }
     OutlinedTextField(
@@ -219,7 +221,12 @@ internal fun EmailField(
         isError = error != null,
         supportingText = error?.let { { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = imeAction),
-        keyboardActions = KeyboardActions(onAny = { onImeAction() }),
+        // Without a handler the keyboard keeps its default (Next moves focus to the next field).
+        keyboardActions = if (onImeAction == null) {
+            KeyboardActions.Default
+        } else {
+            KeyboardActions(onAny = { onImeAction() })
+        },
         modifier = Modifier
             .fillMaxWidth()
             .semantics { if (error != null) error(error) },

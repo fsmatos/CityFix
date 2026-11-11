@@ -116,7 +116,12 @@ class AccountSetupViewModel(
                     }
                 }
                 is CodeSendResult.Failure -> _uiState.update {
-                    it.copy(isBusy = false, error = result.error.messageRes())
+                    if (result.error == AuthError.INVALID_PHONE_NUMBER) {
+                        // Shown on the field, like the local format check.
+                        it.copy(isBusy = false, phoneError = result.error.messageRes())
+                    } else {
+                        it.copy(isBusy = false, error = result.error.messageRes())
+                    }
                 }
             }
         }

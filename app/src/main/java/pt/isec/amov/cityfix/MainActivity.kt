@@ -242,7 +242,8 @@ private fun CityFixApp(app: CityFixApplication) {
                 val id = entry.toRoute<TicketDetailRoute>().ticketId
                 ShowScreen(
                     ticket = tickets.firstOrNull { it.id == id },
-                    // Phase 1 has no login: every user is anonymous (decisions 0006, 0007).
+                    // `tickets` is still the projected public list, so every session gets the
+                    // PUBLIC detail (decision 0006; F-011/F-014/D-013 add the other sources).
                     audience = DetailAudience.PUBLIC,
                 )
             }

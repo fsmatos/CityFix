@@ -25,7 +25,7 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 /**
  * The SMS code step, shared by the login (second factor) and the account setup (enrolment).
  * Stateless: [phone] is where the code went, [backLabel] names the way back ("Back" on login,
- * "Change number" on setup). [errorRes] belongs to the code field; [messageRes] / [noticeRes]
+ * "Change number" on setup); [backEnabled] says whether it works while a call is running. [errorRes] belongs to the code field; [messageRes] / [noticeRes]
  * are the call's error and neutral notice.
  */
 @Composable
@@ -37,6 +37,7 @@ fun MfaCodeContent(
     @StringRes noticeRes: Int?,
     isBusy: Boolean,
     @StringRes backLabel: Int,
+    backEnabled: Boolean,
     onCodeChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onResend: () -> Unit,
@@ -78,7 +79,7 @@ fun MfaCodeContent(
         TextButton(onClick = onResend, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.mfa_resend))
         }
-        TextButton(onClick = onBack, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onBack, enabled = backEnabled, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(backLabel))
         }
     }
@@ -95,6 +96,7 @@ private fun MfaPreview(@StringRes errorRes: Int? = null, @StringRes noticeRes: I
             noticeRes = noticeRes,
             isBusy = false,
             backLabel = R.string.mfa_back,
+            backEnabled = true,
             onCodeChange = {},
             onConfirm = {},
             onResend = {},

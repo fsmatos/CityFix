@@ -26,6 +26,8 @@ enum class AuthError {
     WRONG_CODE,
     CODE_EXPIRED,
     CODE_NOT_SENT,
+    /** Firebase refused the phone number given for enrolment. */
+    INVALID_PHONE_NUMBER,
     RECENT_LOGIN_REQUIRED,
     UNKNOWN,
 }

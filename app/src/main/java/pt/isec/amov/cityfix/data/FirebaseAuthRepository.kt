@@ -22,6 +22,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
 /**
@@ -31,6 +32,10 @@ import kotlin.coroutines.resume
  *
  * The listener fires on sign-in and sign-out only. `reload()` and enrolment change the same
  * FirebaseUser without firing it, so those calls update [account] themselves.
+ *
+ * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException: `await()`
+ * throws it when the caller's scope is cancelled (a screen closed), and turning it into an
+ * AuthError would break structured concurrency.
  */
 class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
 
@@ -56,6 +61,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             } else {
                 SignInResult.SecondFactorRequired(SecondFactorChallenge(e.resolver, hint))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             SignInResult.Failure(e.toAuthError())
         }
@@ -80,6 +87,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             // Signs the user in: the AuthStateListener then updates the account.
             challenge.resolver.resolveSignIn(PhoneMultiFactorGenerator.getAssertion(credential)).await()
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.toAuthError()
         }
@@ -88,6 +97,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         try {
             auth.sendPasswordResetEmail(email).await()
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.toAuthError()
         }
@@ -97,6 +108,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         return try {
             user.sendEmailVerification().await()
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.toAuthError()
         }
@@ -110,6 +123,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             user.getIdToken(true).await()
             _account.value = auth.currentUser?.toAccount()
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.toAuthError()
         }
@@ -119,6 +134,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         val user = auth.currentUser ?: return CodeSendResult.Failure(AuthError.UNKNOWN)
         val session = try {
             user.multiFactor.session.await()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             return CodeSendResult.Failure(e.toAuthError())
         }
@@ -136,9 +153,20 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             val credential = PhoneAuthProvider.getCredential(verificationId, code)
             user.multiFactor.enroll(PhoneMultiFactorGenerator.getAssertion(credential), FACTOR_NAME).await()
             // The AuthStateListener does not fire for an enrolment: reload and re-emit by hand.
-            user.reload().await()
+            // The factor is already enrolled on the server, so a failed reload (a network blip)
+            // must not report the enrolment as failed: the reload is best effort.
+            try {
+                user.reload().await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Nothing to report. enroll() is expected to update the local user's factors
+                // too; if it does not, the factor shows after the next login (device check).
+            }
             _account.value = auth.currentUser?.toAccount()
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.toAuthError()
         }
@@ -170,7 +198,9 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
 
                     override fun onVerificationFailed(e: FirebaseException) {
                         val error = when (val mapped = e.toAuthError()) {
-                            AuthError.NETWORK, AuthError.TOO_MANY_REQUESTS -> mapped
+                            AuthError.NETWORK,
+                            AuthError.TOO_MANY_REQUESTS,
+                            AuthError.INVALID_PHONE_NUMBER -> mapped
                             else -> AuthError.CODE_NOT_SENT
                         }
                         if (continuation.isActive) continuation.resume(CodeSendResult.Failure(error))
@@ -201,6 +231,7 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         is FirebaseAuthInvalidCredentialsException -> when (errorCode) {
             "ERROR_INVALID_VERIFICATION_CODE" -> AuthError.WRONG_CODE
             "ERROR_SESSION_EXPIRED" -> AuthError.CODE_EXPIRED
+            "ERROR_INVALID_PHONE_NUMBER" -> AuthError.INVALID_PHONE_NUMBER
             else -> AuthError.INVALID_CREDENTIALS
         }
         is FirebaseAuthInvalidUserException ->
