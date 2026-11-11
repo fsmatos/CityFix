@@ -119,7 +119,6 @@
     <string name="login_error_email_blank">Enter your e-mail.</string>
     <string name="login_error_email_invalid">Enter a valid e-mail.</string>
     <string name="login_error_password_blank">Enter your password.</string>
-    <string name="login_error_second_factor_unsupported">Second factor not supported yet.</string>
     <string name="forgot_intro">Enter your account e-mail. We will send you a link to choose a new password.</string>
     <string name="forgot_submit">Send link</string>
     <string name="forgot_sent">If an account exists for this e-mail, a reset link was sent.</string>

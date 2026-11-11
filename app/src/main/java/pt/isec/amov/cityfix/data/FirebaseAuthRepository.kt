@@ -7,12 +7,14 @@ import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthMultiFactorException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.PhoneMultiFactorGenerator
+import com.google.firebase.auth.PhoneMultiFactorInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +47,15 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         try {
             auth.signInWithEmailAndPassword(email, password).await()
             SignInResult.Success
+        } catch (e: FirebaseAuthMultiFactorException) {
+            // Right password, enrolled account: Firebase asks for the second factor. Accounts
+            // have one phone factor (D-009 Q13), so the first phone hint is the one.
+            val hint = e.resolver.hints.filterIsInstance<PhoneMultiFactorInfo>().firstOrNull()
+            if (hint == null) {
+                SignInResult.Failure(AuthError.UNKNOWN)
+            } else {
+                SignInResult.SecondFactorRequired(SecondFactorChallenge(e.resolver, hint))
+            }
         } catch (e: Exception) {
             SignInResult.Failure(e.toAuthError())
         }
@@ -52,19 +63,26 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     override suspend fun sendSecondFactorCode(
         activity: Activity,
         challenge: SecondFactorChallenge,
-    ): CodeSendResult {
-        // D-009 slice 6
-        return CodeSendResult.Failure(AuthError.UNKNOWN)
-    }
+    ): CodeSendResult = requestCode(
+        PhoneAuthOptions.newBuilder(auth)
+            .setMultiFactorHint(challenge.hint)
+            .setMultiFactorSession(challenge.resolver.session)
+            .setActivity(activity),
+    )
 
     override suspend fun resolveSecondFactor(
         challenge: SecondFactorChallenge,
         verificationId: String,
         code: String,
-    ): AuthError? {
-        // D-009 slice 6
-        return AuthError.UNKNOWN
-    }
+    ): AuthError? =
+        try {
+            val credential = PhoneAuthProvider.getCredential(verificationId, code)
+            // Signs the user in: the AuthStateListener then updates the account.
+            challenge.resolver.resolveSignIn(PhoneMultiFactorGenerator.getAssertion(credential)).await()
+            null
+        } catch (e: Exception) {
+            e.toAuthError()
+        }
 
     override suspend fun sendPasswordReset(email: String): AuthError? =
         try {

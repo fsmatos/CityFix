@@ -146,16 +146,16 @@ private fun CityFixApp(app: CityFixApplication) {
     // backStackEntry, so a back-stack change recomposes this line too (D-005 review N4).
     val canNavigateBack = navController.previousBackStackEntry != null
 
-    // Redirect on a real role change only (login, logout, activation): go to the role's home and
-    // clear the back stack. The first value after a (re)start is only recorded, and the last
-    // handled role is saveable, so rotation or process recreation keeps the restored back stack.
-    // Used by every destination guard: the role's home, with the back stack cleared.
+    // The role's home with the back stack cleared: used by the redirect and every destination guard.
     val goHome = {
         navController.navigate(homeFor(role)) {
             popUpTo(navController.graph.id) { inclusive = true }
             launchSingleTop = true
         }
     }
+    // Redirect on a real role change only (login, logout, activation). The first value after a
+    // (re)start is only recorded, and the last handled role is saveable, so rotation or process
+    // recreation keeps the restored back stack.
     var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
     LaunchedEffect(role) {
         if (role != AccessRole.LOADING && role != handledRole) {

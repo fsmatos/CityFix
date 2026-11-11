@@ -1,5 +1,7 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,12 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.viewmodel.LoginStep
 import pt.isec.amov.cityfix.viewmodel.LoginUiState
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 
 /**
- * Stateful login screen: collects [viewModel] and passes the state to [LoginContent].
- * [onForgotPassword] receives the typed e-mail, so the reset form starts with it.
+ * Stateful login screen: collects [viewModel] and shows [LoginContent] or, for an enrolled
+ * account, the SMS code step ([MfaCodeContent]). [onForgotPassword] receives the typed e-mail,
+ * so the reset form starts with it. Firebase needs the Activity for the reCAPTCHA fallback when
+ * it sends the SMS, so it is read here and handed to the ViewModel call, never stored.
  */
 @Composable
 fun LoginScreen(
@@ -52,6 +58,31 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
+
+    if (state.step == LoginStep.SECOND_FACTOR) {
+        // The first SMS of the step goes out once; codeRequested stops a resend on rotation.
+        LaunchedEffect(state.step) {
+            if (!state.codeRequested && activity != null) viewModel.sendCode(activity)
+        }
+        BackHandler(onBack = viewModel::backToCredentials)
+        MfaCodeContent(
+            phone = state.maskedPhone,
+            code = state.code,
+            errorRes = state.codeError,
+            messageRes = state.error,
+            noticeRes = state.notice,
+            isBusy = state.isBusy,
+            backLabel = R.string.mfa_back,
+            onCodeChange = viewModel::onCodeChange,
+            onConfirm = viewModel::confirmCode,
+            onResend = { activity?.let(viewModel::sendCode) },
+            onBack = viewModel::backToCredentials,
+            modifier = modifier,
+        )
+        return
+    }
+
     LoginContent(
         state = state,
         onEmailChange = viewModel::onEmailChange,

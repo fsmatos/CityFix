@@ -121,7 +121,6 @@
     <string name="login_error_email_blank">Indique o seu e-mail.</string>
     <string name="login_error_email_invalid">Indique um e-mail válido.</string>
     <string name="login_error_password_blank">Indique a sua palavra-passe.</string>
-    <string name="login_error_second_factor_unsupported">O segundo fator ainda não é suportado.</string>
     <string name="forgot_intro">Indique o e-mail da sua conta. Vamos enviar-lhe uma ligação para escolher uma nova palavra-passe.</string>
     <string name="forgot_submit">Enviar ligação</string>
     <string name="forgot_sent">Se existir uma conta com este e-mail, foi enviada uma ligação de recuperação.</string>
