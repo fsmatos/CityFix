@@ -43,9 +43,9 @@ The app navigates dashboard -> list -> detail -> report, keeps state on rotation
 Firebase Auth/MFA, Firestore, WorkManager, permissions, geofence, impact detection and FCM.
 
 ## Risks to handle in the Firebase phase
-1. `Attachment` does not distinguish a report photo from resolution proof (RESOLVED needs proof): add a field (e.g. `phase`) or link it to `StatusHistory`. **Handled in the model by D-008** (`AttachmentPhase`, `Attachment.phase`, proof required by `Ticket.transition`; decision 0011). The Firestore mapping is still F-011.
+1. `Attachment` does not distinguish a report photo from resolution proof (RESOLVED needs proof): add a field (e.g. `phase`) or link it to `StatusHistory`. **Handled in the model by D-008** (`AttachmentPhase`, `Attachment.phase`, proof required by `Ticket.transition`; decision 0012). The Firestore mapping is still F-011.
 2. `User` has no FCM token, and Firestore does not convert inheritance: always store `role`.
 3. Anonymous users must not see coordinates and Firestore cannot hide fields inside a document: use a public collection with reduced fields.
 4. NIF uniqueness needs one document per NIF created in a transaction.
 5. `Municipality` is more general than the brief (one municipality, Pr. República, 10 km): a single document is enough.
-6. Reopening (5 days) has no field of its own: compute it from the `StatusHistory` entry with RESOLVED. **Handled in the model by D-008** (`resolvedAt`, `canReopen`, `effectiveStatus` in `model/TicketLifecycle.kt`; decision 0011). The Firestore mapping (and any server-side check) is still F-011.
+6. Reopening (5 days) has no field of its own: compute it from the `StatusHistory` entry with RESOLVED. **Handled in the model by D-008** (`resolvedAt`, `canReopen`, `effectiveStatus` in `model/TicketLifecycle.kt`; decision 0012). The Firestore mapping (and any server-side check) is still F-011.

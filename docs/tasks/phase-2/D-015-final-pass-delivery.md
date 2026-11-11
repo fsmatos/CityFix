@@ -20,6 +20,7 @@ Check the whole app against brief V and build the ZIP for Nonio.
 ## Acceptance checks
 - [ ] Every screen works in portrait and landscape, EN and PT.
 - [ ] `lint` clean, `assembleDebug` passes from the unzipped copy.
+- [ ] `app/google-services.json` copied into the ZIP by hand (a clean checkout does not have it, decision 0011), and the unzipped copy builds with it.
 - [ ] ZIP name and contents match brief VI; PDF inside.
 - [ ] Submitted on Nonio before 2026-11-22 23:59.
 

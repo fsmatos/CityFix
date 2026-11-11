@@ -1,4 +1,4 @@
-# 0011: Ticket lifecycle rules
+# 0012: Ticket lifecycle rules
 
 Status: accepted (D-008, Gate 1 on 2026-11-11, Q1-Q11 as recommended; review fixes S1/S2 on 2026-11-11). Number agreed with Francisco: 0010 is F-010's Firestore schema record.
 

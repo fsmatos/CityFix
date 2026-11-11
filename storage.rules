@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// CityFix Storage rules: DRAFT (F-010, decision 0010). Not deployed.
+// Deploying needs the person's OK (CLAUDE.md).
+//
+// Paths have no user ids. Cross-service rules read Firestore to decide who
+// may see a ticket's media. At most two Firestore documents may be accessed
+// per rules evaluation (Firebase docs, storage/security/rules-conditions), so
+// every rule reads at most the ticket and the caller's users/{uid}.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Anonymous users do not sign in (brief I.1); an anonymous-auth token
+    // counts as not signed in.
+    function isSignedIn() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Same as firestore.rules: the operator role needs a verified e-mail.
+    function isOperator() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'OPERATOR';
+    }
+
+    // The ticket document, read once per rule and passed to the checks below.
+    function ticketDoc(ticketId) {
+      return firestore.get(/databases/(default)/documents/tickets/$(ticketId)).data;
+    }
+
+    function isParticipant(ticket) {
+      return isSignedIn() && request.auth.uid in ticket.participantIds;
+    }
+
+    // scope == 'PUBLIC' exactly when publicTickets/{id} exists (written in the
+    // same batch at creation; scope never changes). Reading the ticket instead
+    // of publicTickets keeps the rule within the two-document limit.
+    function canReadMedia(ticket) {
+      return ticket.scope == 'PUBLIC' || isOperator() || isParticipant(ticket);
+    }
+
+    // No uploads to a CLOSED ticket (brief II.5): its attachments are locked.
+    function canUploadMedia(ticket) {
+      return ticket.currentStatus != 'CLOSED'
+        && (isOperator() || isParticipant(ticket));
+    }
+
+    // Images and thumbnails up to 10 MB, videos up to 100 MB.
+    function isImageUpTo10Mb() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    function isVideoUpTo100Mb() {
+      return request.resource.contentType.matches('video/.*')
+        && request.resource.size < 100 * 1024 * 1024;
+    }
+
+    // {attachmentId}.jpg, {attachmentId}.mp4 and {attachmentId}_thumb.jpg.
+    // Uploaded by the WorkManager worker (F-013); files are never replaced.
+    // Photos have their GPS EXIF removed and videos their location metadata
+    // removed before upload, because public media are readable by anonymous users.
+    match /tickets/{ticketId}/{fileName} {
+      allow read: if canReadMedia(ticketDoc(ticketId));
+      allow create: if canUploadMedia(ticketDoc(ticketId))
+        && (isImageUpTo10Mb() || isVideoUpTo100Mb());
+      allow update, delete: if false;
+    }
+
+    match /users/{uid}/photo.jpg {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isOperator());
+      allow create, update: if isSignedIn()
+        && request.auth.uid == uid
+        && isImageUpTo10Mb();
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+  }
+}

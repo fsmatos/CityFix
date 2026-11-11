@@ -83,7 +83,7 @@ F-011 writes `publicTickets/{id}` from `toAnonymousView()`, the single function 
 | `creatorId` | `""` | author |
 | `followerIds`, `messages` | empty | other citizens, message authors |
 
-`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0011](0011-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
+`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0012](0012-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
 
 Rules the public document must keep:
 - A projected ticket is a **view, not a valid ticket**: it has a `currentStatus` with an empty history, which breaks the "at least one history entry" rule and the "update both together" note on `Ticket.currentStatus` (decision 0004). Never write it back to `tickets/`, and never run lifecycle rules (D-008) on it. (`Ticket.kt`'s `currentStatus` KDoc does not mention this yet; add one line next time that file changes, D-007 review N2. Done by D-008 on 2026-11-11.)
