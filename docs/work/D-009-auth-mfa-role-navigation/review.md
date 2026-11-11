@@ -91,3 +91,35 @@ If `enrolledFactors` is still empty without the reload (check on the device), ke
 - Process death ("Don't keep activities") on Login's code step (back to credentials, e-mail kept) and on the setup code step (step and number kept).
 - PT strings on screen, TalkBack on the top-bar actions, password toggle and code field.
 - After the rules deploy (Q10, with Diogo's OK): the test users still work, in particular the console-seeded operator (`email_verified`).
+
+## Round 2
+
+Reviewed: `git diff df2373b..HEAD` (8524ea1 B1, b35c684 S1-S3 + N1-N6, 9674e54 state log). The reviewer re-ran `./gradlew assembleDebug lint`: build OK, lint 0 errors / 18 warnings, the same as the baseline (1 AndroidGradlePluginVersion, 4 GradleDependency, 5 NewerVersionAvailable, 1 RedundantLabel, 7 UnusedResources). EN and PT string keys still match (apart from `app_name` and the two `translatable="false"` +351 strings). No Firebase import outside `data/` and `CityFixApplication.kt`.
+
+**Verdict: approved.** No blocking or should-fix findings remain. Two new nits, both optional.
+
+### B1, checked (`MainActivity.kt:346-357`)
+The redirect `LaunchedEffect(role)` now sits inside the Scaffold content, after `NavHost(...)` and after the `return@Scaffold` of the Loading branch. So it is never composed while the session is Loading, and the NavHost has already set its graph during composition when the effect body runs. `handledRole` is still `rememberSaveable` in `CityFixApp`, outside the content lambda, so it is not reset when the Loading gate swaps the content.
+- **Fresh cold start** (`handledRole == null`): operator -> `OperatorPanelRoute`; setup user (e-mail unverified, or verified with no factor) -> `AccountSetupRoute`; pending citizen -> `PendingValidationRoute`; ProfileMissing/Unavailable -> `AccountProblemRoute`. Anonymous and active citizen have `homeFor == DashboardRoute`, so the role is only recorded and the start destination stays.
+- **Rotation:** the activity-scoped `SessionViewModel` keeps the role, and `handledRole` is restored, so `role == handledRole` and nothing navigates.
+- **Process death:** `handledRole` is restored to the old role, and the restored back stack is kept unless the role changed meanwhile (then `goHome()`, which is correct).
+- **No loop with `RequireAccess`:** `goHome()` always goes to `homeFor(role)`, and each home is allowed for its own role (Dashboard is unguarded, AccountSetup is SETUP, AccountProblem is ACCOUNT_PROBLEM, Pending is PENDING_CITIZEN, OperatorPanel is OPERATOR). When the guard and the redirect both fire, it is the same `navigate` with `popUpTo(graph) inclusive` + `launchSingleTop`, so it is idempotent.
+
+### Round-1 findings
+- **S1, fixed.** `EmailField.onImeAction` is nullable and falls back to `KeyboardActions.Default`. Login no longer passes `{}`, so Next moves focus. Forgot password keeps Send.
+- **S2, fixed.** After `enroll()` succeeds, `reload()` is best effort, then the account is re-emitted and `null` is returned. Whether `enrolledFactors` is filled without the reload is a device check (logged).
+- **S3, fixed.** Every `catch (e: Exception)` in `FirebaseAuthRepository` is preceded by a rethrow of `CancellationException`, including the inner reload catch. `kotlin.coroutines.cancellation.CancellationException` is the same type that kotlinx throws.
+- **N1, N3, N4, N5, N6, fixed.**
+- **N2, fixed.** Login's Back is always enabled. A send or confirm that finishes after Back is dropped by `challenge !== current`. A `resolveSignIn` that succeeds after Back still signs the user in, and the redirect then runs, which is acceptable. Setup keeps Back disabled while busy, consistent with `changeNumber()`.
+- **N7:** left for decision 0013 in the Docs phase, as logged.
+
+### New nits
+- **R2-N1.** `MfaScreen.kt:28`: the KDoc line added for `backEnabled` is about 150 characters. Rewrap it to the file's ~100-character width.
+- **R2-N2.** `AccountSetupScreen.kt:45`: while the code step is busy, the enabled `BackHandler` calls `changeNumber()`, which returns immediately, so system Back does nothing for up to 60 s. Optional: `BackHandler(enabled = state.step == SetupStep.CODE && !state.isBusy, ...)`. Back then leaves the app during a send, so the current behaviour is also defensible. Pick one and say which at the defence.
+
+### Still needs the device
+Everything in "Needs the device or the console" above, plus:
+- cold start as operator, setup user, pending citizen and account-problem user;
+- process death on an operator placeholder ("Don't keep activities");
+- `enrolledFactors` after enrolment without the reload (S2);
+- keyboard Next on Login.
