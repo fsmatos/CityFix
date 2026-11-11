@@ -83,8 +83,10 @@ F-011 writes `publicTickets/{id}` from `toAnonymousView()`, the single function 
 | `creatorId` | `""` | author |
 | `followerIds`, `messages` | empty | other citizens, message authors |
 
+`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0011](0011-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
+
 Rules the public document must keep:
-- A projected ticket is a **view, not a valid ticket**: it has a `currentStatus` with an empty history, which breaks the "at least one history entry" rule and the "update both together" note on `Ticket.currentStatus` (decision 0004). Never write it back to `tickets/`, and never run lifecycle rules (D-008) on it. (`Ticket.kt`'s `currentStatus` KDoc does not mention this yet; add one line next time that file changes, D-007 review N2.)
+- A projected ticket is a **view, not a valid ticket**: it has a `currentStatus` with an empty history, which breaks the "at least one history entry" rule and the "update both together" note on `Ticket.currentStatus` (decision 0004). Never write it back to `tickets/`, and never run lifecycle rules (D-008) on it. (`Ticket.kt`'s `currentStatus` KDoc does not mention this yet; add one line next time that file changes, D-007 review N2. Done by D-008 on 2026-11-11.)
 - Dashboard stats cannot come from `publicTickets`: no history (no RESOLVED date, so no repair time) and no private tickets. F-011's counters or stats document must read the full data or be maintained on write.
 - 10 m grouping (`findNearby`) must run on full tickets: a 1 km grid point is useless at 10 m.
 - The public document must be rewritten whenever a field it holds changes: status (D-013), attachments after upload (F-013); deleted or rewritten when the scope or activity changes. That is F-011/D-013's design; D-007 only defines the content.

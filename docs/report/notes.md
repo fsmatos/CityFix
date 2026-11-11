@@ -652,4 +652,60 @@ Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 202
 - Round `createdAt` to the day if dates ever become sensitive.
 - Neutral camera file names (`IMG_<UUID>.jpg`) and Storage paths without times or user ids (F-013).
 - Strip video and XMP location, and optionally make/model/time EXIF (media task).
-- One KDoc line on `Ticket.currentStatus` saying projected tickets keep it without a history (review N2).
+- One KDoc line on `Ticket.currentStatus` saying projected tickets keep it without a history (review N2). (Done by D-008.)
+
+## D-008: Ticket lifecycle rules
+Decision: [0011](../decisions/0011-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
+
+**Not checked against the brief.** The brief PDF could not be opened in the D-008 sessions; the rules tagged brief II, II.2, I.2.E, III and I.3.E come from the task files. Check them in the PDF before writing them into the report as the brief's wording.
+
+### The state machine
+| From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
+| --- | --- | --- |
+| OPEN | INFO_REQUESTED, IN_PROGRESS | - |
+| INFO_REQUESTED | IN_PROGRESS | - |
+| IN_PROGRESS | INFO_REQUESTED, RESOLVED | - |
+| RESOLVED (< 5 days) | - | OPEN (reopen, with justification) |
+| CLOSED (stored, or RESOLVED >= 5 days) | - | - |
+
+Diagram for the report (draw it; text version):
+```
+OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5 d--> OPEN
+  \--op--------------------------->/                        \--time, >= 5 d (system)--> CLOSED (locked)
+```
+- Nobody closes by hand; CLOSED comes from time only. A citizen's question is a message, not a status change (Gate 1 Q1).
+
+### Technical solutions
+- **One pure function changes the status.** Decision 0004 keeps `currentStatus` next to the history; `Ticket.transition` is the only place that changes both (one `copy`, one history entry with time, user and justification), so the citizen and operator screens apply the same rules and the history is a full audit trail (brief I.3.E timestamps, not checked against the brief).
+- **`allowedTransitions(by: User, now)`** works on the effective status and includes the role (the type of the sealed `User`), the relation (creator or follower), the registration and the window. The UI offers exactly this set and `transition` accepts only it, so the screen and the rule cannot disagree.
+- **Reopening and closing without stored fields.** Both are computed from the last RESOLVED entry. CLOSED is shown on read (`effectiveStatus`) and written lazily by `closeIfExpired` (Spark plan, no server), timestamped at the exact closing moment (`resolvedAt + 5 d`) rather than when someone noticed, with `responsibleId = "system"`.
+- **Consistent boundary.** `<` in `canReopen`, `>=` in `effectiveStatus`, on the same difference: at exactly 5 days the ticket is closed and not reopenable, never both.
+- **Proof of resolution.** `AttachmentPhase { REPORT, RESOLUTION }` answers phase-1 risk 1. The proof is passed to the RESOLVED transition and appended in the same operation, so an offline queued write stays consistent and a re-resolve after a reopen needs new proof.
+- **Refusals as `null`**, like `reportTicket` and `TicketsList.add`; exhaustive `when` with no `else` for the operator moves, so a new status does not compile until its moves are decided.
+- **Safe on projected tickets.** A projection has no history, so every function returns `null`/`false`/empty instead of a wrong answer.
+- **Nothing else changed.** RESOLVED and CLOSED are both inactive, and a later CLOSED entry does not move the last RESOLVED time, so the public list, the grouping and the dashboard are unaffected.
+
+### Options chosen and rejected (Gate 1, 2026-11-11)
+- Q2: creator and followers may reopen (Option A); rejected creator only.
+- Q5: `allowedTransitions(by, now)`; rejected the task's static `allowedTransitions(status, role)`.
+- Q6: `AttachmentPhase` added in D-008 (decision 0011), F-010 reuses it; rejected waiting for F-010 or a predicate parameter.
+- Q7: `Ticket?`; rejected throwing with `require`.
+- Q8: proof as a parameter of the RESOLVED transition; rejected "the ticket has any RESOLUTION attachment".
+- Q9: no committed tests; Q10: no new sample tickets (previews use a fixed `t0`).
+- Rejected: an `object TicketLifecycle`, a manual CLOSED transition for operators.
+
+### Defence notes
+- `canReopen` is time-only; the Reopen button uses `OPEN in allowedTransitions(user, now)` (review S1).
+- `closingWarningAt()` can be in the past for an expired ticket not yet closed; F-016 checks `!isLocked(now)` (review S2).
+- In `transition`, `isReopen` also tests `currentStatus == RESOLVED`, which is always true when `to == OPEN` (OPEN is only allowed through `canReopen`). Kept on purpose: it states the rule in the code (review N4).
+
+### Verification
+- No automated tests (Q9). `./gradlew assembleDebug` and `./gradlew lint` passed after each slice and after the review fixes (0 errors, 16 warnings, baseline). Greps: no imports and no `System.currentTimeMillis` in `TicketLifecycle.kt`. The implementer and the reviewer each walked the T1-T8 / R1-R16 table (boundaries at 4 d 23 h, 5 d, 5 d 1 h; proof rules; roles; projected tickets; one history entry per transition). Nothing has run on a device: no screen calls the rules yet.
+
+### Limits and improvement opportunities
+- Device clocks decide the window; a Firestore rule on `request.time` or a Cloud Function would make it server-side.
+- Concurrent transitions are last-write-wins; a transaction or a precondition on `currentStatus` fixes it (F-011/D-013).
+- History can be out of time order with offline queues (`now` earlier than the last entry is accepted).
+- Old RESOLUTION proof stays on a reopened, public ticket; screens should label or filter by `phase`.
+- No automated tests by project choice; the pure functions would be easy to cover with JUnit.
+- A `PublicTicket` type and a sealed result type (instead of `null`) would let the compiler enforce more, and tell the UI why a move was refused.
