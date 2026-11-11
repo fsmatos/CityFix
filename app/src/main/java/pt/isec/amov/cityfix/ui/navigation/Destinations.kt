@@ -60,3 +60,7 @@ data object CategoriesRoute
 /** An account without a usable profile (missing, or not loadable offline). */
 @Serializable
 data object AccountProblemRoute
+
+/** First login of an account without MFA: verify the e-mail, then enrol a phone (D-009 Q1, Q8). */
+@Serializable
+data object AccountSetupRoute

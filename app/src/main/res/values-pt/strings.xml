@@ -156,4 +156,26 @@
     <string name="account_problem_missing">A sua conta ainda não está configurada.</string>
     <string name="account_problem_unavailable">Não foi possível carregar o seu perfil. Verifique a ligação.</string>
     <string name="account_problem_retry">Tentar novamente</string>
+
+    <!-- Account setup and SMS code (D-009) -->
+    <string name="top_bar_title_account_setup">Configurar conta</string>
+    <string name="setup_verify_title">Confirme o seu e-mail</string>
+    <string name="setup_verify_intro">Enviámos uma ligação de confirmação para %1$s. Abra-a e depois volte e toque em \"Já confirmei\".</string>
+    <string name="setup_verified_button">Já confirmei</string>
+    <string name="setup_resend_email">Reenviar e-mail</string>
+    <string name="setup_verification_sent">E-mail de confirmação enviado.</string>
+    <string name="setup_not_verified">Ainda não confirmado. Abra primeiro a ligação do e-mail.</string>
+    <string name="setup_phone_title">Adicione o seu telemóvel</string>
+    <string name="setup_phone_intro">A sua conta precisa de um segundo fator. Sempre que iniciar sessão, enviaremos um código por SMS para este número.</string>
+    <string name="setup_phone_label">Número de telemóvel</string>
+    <string name="setup_error_phone">Indique um número de telemóvel português: 9 dígitos começados por 9.</string>
+    <string name="setup_send_code">Enviar código</string>
+    <string name="setup_change_number">Alterar número</string>
+    <string name="mfa_code_intro">Introduza o código de 6 dígitos enviado por SMS para %1$s.</string>
+    <string name="mfa_code_label">Código SMS</string>
+    <string name="mfa_confirm">Confirmar</string>
+    <string name="mfa_resend">Enviar novo código</string>
+    <string name="mfa_back">Voltar</string>
+    <string name="mfa_code_sent">Código enviado.</string>
+    <string name="mfa_error_code_length">Introduza o código de 6 dígitos.</string>
 </resources>

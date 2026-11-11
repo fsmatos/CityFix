@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix.data
 
 import android.app.Activity
+import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuth
@@ -8,10 +9,18 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.PhoneMultiFactorGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
 /**
  * [AuthRepository] over Firebase Auth. Created once in CityFixApplication, so it lives for the
@@ -89,18 +98,75 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     }
 
     override suspend fun sendEnrolmentCode(activity: Activity, phoneE164: String): CodeSendResult {
-        // D-009 slice 5
-        return CodeSendResult.Failure(AuthError.UNKNOWN)
+        val user = auth.currentUser ?: return CodeSendResult.Failure(AuthError.UNKNOWN)
+        val session = try {
+            user.multiFactor.session.await()
+        } catch (e: Exception) {
+            return CodeSendResult.Failure(e.toAuthError())
+        }
+        return requestCode(
+            PhoneAuthOptions.newBuilder(auth)
+                .setPhoneNumber(phoneE164)
+                .setMultiFactorSession(session)
+                .setActivity(activity),
+        )
     }
 
     override suspend fun enrolSecondFactor(verificationId: String, code: String): AuthError? {
-        // D-009 slice 5
-        return AuthError.UNKNOWN
+        val user = auth.currentUser ?: return AuthError.UNKNOWN
+        return try {
+            val credential = PhoneAuthProvider.getCredential(verificationId, code)
+            user.multiFactor.enroll(PhoneMultiFactorGenerator.getAssertion(credential), FACTOR_NAME).await()
+            // The AuthStateListener does not fire for an enrolment: reload and re-emit by hand.
+            user.reload().await()
+            _account.value = auth.currentUser?.toAccount()
+            null
+        } catch (e: Exception) {
+            e.toAuthError()
+        }
     }
 
     override fun signOut() {
         auth.signOut()
     }
+
+    /**
+     * Sends an SMS code with [builder] (phone or hint, session and activity already set) and
+     * waits for Firebase's callbacks. With requireSmsValidation(true) the code is always typed:
+     * an auto-retrieval (onVerificationCompleted) is ignored. The callbacks are bound to the
+     * activity, so a rotation during the send can lose onCodeSent: after [SEND_TIMEOUT_MS] the
+     * result is CODE_NOT_SENT and the screen offers Resend.
+     */
+    private suspend fun requestCode(builder: PhoneAuthOptions.Builder): CodeSendResult =
+        withTimeoutOrNull(SEND_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                    override fun onCodeSent(
+                        verificationId: String,
+                        token: PhoneAuthProvider.ForceResendingToken,
+                    ) {
+                        if (continuation.isActive) continuation.resume(CodeSendResult.Sent(verificationId))
+                    }
+
+                    override fun onVerificationCompleted(credential: PhoneAuthCredential) = Unit
+
+                    override fun onVerificationFailed(e: FirebaseException) {
+                        val error = when (val mapped = e.toAuthError()) {
+                            AuthError.NETWORK, AuthError.TOO_MANY_REQUESTS -> mapped
+                            else -> AuthError.CODE_NOT_SENT
+                        }
+                        if (continuation.isActive) continuation.resume(CodeSendResult.Failure(error))
+                    }
+                }
+                PhoneAuthProvider.verifyPhoneNumber(
+                    builder
+                        .setTimeout(SEND_TIMEOUT_MS / 1_000, TimeUnit.SECONDS)
+                        .requireSmsValidation(true)
+                        .setCallbacks(callbacks)
+                        .build(),
+                )
+            }
+        } ?: CodeSendResult.Failure(AuthError.CODE_NOT_SENT)
 
     private fun FirebaseUser.toAccount() = AuthAccount(
         uid = uid,
@@ -125,5 +191,12 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         is FirebaseNetworkException -> AuthError.NETWORK
         is FirebaseTooManyRequestsException -> AuthError.TOO_MANY_REQUESTS
         else -> AuthError.UNKNOWN
+    }
+
+    private companion object {
+        const val SEND_TIMEOUT_MS = 60_000L
+
+        /** The factor's name in the Firebase console; never shown in the app. */
+        const val FACTOR_NAME = "Phone"
     }
 }

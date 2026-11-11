@@ -35,10 +35,13 @@ class SessionViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     val session: StateFlow<Session> = combine(auth.account, retries) { account, _ -> account }
         .flatMapLatest { account ->
-            if (account == null) {
-                flowOf(Session.Anonymous)
-            } else {
-                users.observeUser(account.uid).map { it.toSession() }
+            when {
+                account == null -> flowOf(Session.Anonymous)
+                // MFA is mandatory for both roles (Gate Q1), and Firebase needs a verified
+                // e-mail before a factor can be enrolled: both steps come before the profile.
+                !account.isEmailVerified -> flowOf(Session.NeedsEmailVerification(account.email))
+                !account.hasSecondFactor -> flowOf(Session.NeedsSecondFactor(account.email))
+                else -> users.observeUser(account.uid).map { it.toSession() }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Session.Loading)

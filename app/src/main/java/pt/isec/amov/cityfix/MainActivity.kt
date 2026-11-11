@@ -41,6 +41,7 @@ import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
+import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
 import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
 import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
@@ -59,6 +60,7 @@ import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
 import pt.isec.amov.cityfix.ui.navigation.homeFor
 import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
+import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
@@ -70,6 +72,8 @@ import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.AccessRole
+import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
+import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
@@ -160,7 +164,8 @@ private fun CityFixApp(app: CityFixApplication) {
         }
     }
 
-    val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD
+    val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD ||
+        screen == TopBarScreen.ACCOUNT_SETUP
     val accountAction = when {
         session.isSignedIn -> AccountAction.LOG_OUT
         role == AccessRole.ANONYMOUS && !onAuthScreen -> AccountAction.LOG_IN
@@ -287,6 +292,13 @@ private fun CityFixApp(app: CityFixApplication) {
                     )
                 }
             }
+            composable<AccountSetupRoute> {
+                RequireAccess(role = role, allowed = setOf(AccessRole.SETUP), onDenied = goHome) {
+                    val setupViewModel: AccountSetupViewModel =
+                        viewModel(factory = AccountSetupViewModelFactory(app.authRepository))
+                    AccountSetupScreen(viewModel = setupViewModel, onLogOut = sessionViewModel::signOut)
+                }
+            }
             composable<PendingValidationRoute> {
                 RequireAccess(role = role, allowed = setOf(AccessRole.PENDING_CITIZEN), onDenied = goHome) {
                     PendingValidationScreen(
@@ -354,5 +366,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<ApprovalsRoute>() -> TopBarScreen.APPROVALS
     hasRoute<CategoriesRoute>() -> TopBarScreen.CATEGORIES
     hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM
+    hasRoute<AccountSetupRoute>() -> TopBarScreen.ACCOUNT_SETUP
     else -> TopBarScreen.DASHBOARD
 }

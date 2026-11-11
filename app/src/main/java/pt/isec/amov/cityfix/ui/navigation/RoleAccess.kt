@@ -14,8 +14,7 @@ fun homeFor(role: AccessRole): Any = when (role) {
     AccessRole.LOADING,
     AccessRole.ANONYMOUS,
     AccessRole.CITIZEN -> DashboardRoute
-    // D-009 slice 5 adds the account setup route; until then the session never reports SETUP.
-    AccessRole.SETUP -> DashboardRoute
+    AccessRole.SETUP -> AccountSetupRoute
     AccessRole.ACCOUNT_PROBLEM -> AccountProblemRoute
     AccessRole.PENDING_CITIZEN -> PendingValidationRoute
     AccessRole.OPERATOR -> OperatorPanelRoute
