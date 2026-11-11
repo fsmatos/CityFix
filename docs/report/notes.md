@@ -657,7 +657,7 @@ Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 202
 ## D-008: Ticket lifecycle rules
 Decision: [0012](../decisions/0012-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
 
-**Not checked against the brief.** The brief PDF could not be opened in the D-008 sessions; the rules tagged brief II, II.2, I.2.E, III and I.3.E come from the task files. Check them in the PDF before writing them into the report as the brief's wording.
+**Brief status (updated 2026-11-11).** The brief PDF could not be opened in the D-008 sessions; the rules came from the task files. The brief section I text Diogo pasted in D-009 now checks I.3.E ("pedido de dados" is an operator action; resolving needs "carregamento de foto/vídeo do trabalho concluído") and I.2.E (reopening among the citizen's own tickets, "se dentro de 5 dias após conclusão"); the I.2 Obs ("acompanham") supports followers reopening as a reading, not literally. Sections II, II.2 and III (automatic close after 5 days, lock, information requests, 24 h warning) are still not checked: check them in the PDF before writing them into the report as the brief's wording.
 
 ### The state machine
 | From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
@@ -771,3 +771,58 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - Upgrade Kotlin to 2.4 and the Firebase BoM to 35.x together.
 - `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011).
 - A note in the `CityFixApplication` KDoc that `Firebase.firestore` must never be called directly (review N6), and the remaining round-1 nits (key whitelists per role, active category and at least one attachment on ticket create).
+
+## D-009: Login, MFA, password recovery and role navigation
+Decision: [0013](../decisions/0013-session-role-navigation-mfa.md) (also amends [0006](../decisions/0006-anonymous-projection-phase-1.md) on `canExpandCards`). Code: `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `viewmodel/Session.kt`, `viewmodel/SessionViewModel.kt`, the Login / Forgot password / Account setup ViewModels, `ui/navigation/RoleAccess.kt`, the new screens, `MainActivity.kt`. Overview: "Auth and session (D-009)", "Roles", "Handover (D-009)".
+
+Brief (section I text pasted by Diogo; the PDF itself was unreadable in the session): I.2.B and I.3.B ask for "e-mail/password, com duplo fator (MFA) e recuperação de credenciais por e-mail" for both the registered citizen and the operator; I.1.B and I.2.D define what the public list shows and that citizens keep the anonymous features; I.2.A leaves a citizen "pendente até validação"; I.3.E puts the operator's full view in the "Painel de Gestão Operacional".
+
+**Nothing has run on a device or in the console yet.** Build and lint pass (0 errors, 18 warnings, the baseline). Two review rounds, approved.
+
+### Technical solutions
+- **A sealed `Session` drives navigation.** Seven states (`Loading`, `Anonymous`, `NeedsEmailVerification`, `NeedsSecondFactor`, `ProfileMissing`, `ProfileUnavailable`, `SignedIn(user)`), checked in a fixed order, and one `AccessRole` per home screen. Every navigation and visibility rule is a plain `when` on it, so the compiler forces a decision for every state and the code reads like the table in the overview.
+- **Two sources combined in one ViewModel.** `AuthRepository.account` (Auth state) and `UsersRepository.observeUser(uid)` (the `users/{uid}` listener) stay separate; `SessionViewModel` combines them with `flatMapLatest`, so logging out or switching account **cancels** the previous Firestore listener. The task asked for `currentUser: Flow<User?>`, which cannot express "e-mail not verified", "no second factor" or "profile not loaded".
+- **Redirect keyed on the role, with a saveable "last role".** One `LaunchedEffect(role)` after the `NavHost` sends the user to their home on login, logout or activation and clears the back stack. The last handled role is in `rememberSaveable`, so rotation and process recreation keep the back stack; on a fresh cold start (nothing restored) it goes home unless home is already the start destination. A good defence example of a bug found in review: the plan said "only record the first value", which left operators on the public dashboard after a cold start (B1).
+- **Guarding in layers.** Hidden entry points (add button, overflow menu by role) -> `RequireAccess` on every role destination (back-stack leftovers, future deep links) -> the Firestore rules as the real enforcement. The same "UI is a second layer" idea as the anonymous projection.
+- **MFA flows** with the Firebase API: sign-in `FirebaseAuthMultiFactorException` -> `MultiFactorResolver` -> `PhoneAuthProvider.verifyPhoneNumber` (hint + resolver session) -> `PhoneAuthProvider.getCredential` -> `PhoneMultiFactorGenerator.getAssertion` -> `resolveSignIn`; enrolment `multiFactor.session` -> `verifyPhoneNumber` (phone + session) -> `getAssertion` -> `multiFactor.enroll`.
+- **Callbacks turned into a suspend call.** `verifyPhoneNumber`'s callbacks are wrapped in `suspendCancellableCoroutine` inside `withTimeoutOrNull(60 s)`, so the ViewModel writes a straight `val result = repository.sendCode(...)` and a lost callback becomes a timeout with Resend instead of a hang.
+- **Firebase types stay in `data/`.** The resolver is wrapped in an opaque `SecondFactorChallenge` (internal constructor), held in a private ViewModel field, never in `UiState` or saved state. The `Activity` that reCAPTCHA needs is passed through the call and never stored.
+- **E-mail verification + token refresh** before enrolment: Firebase requires a verified e-mail for MFA, and the operator rule checks `email_verified`, so "I have verified" runs `reload()` + `getIdToken(true)` (the F-010 handover).
+- **Offline profile vs missing profile.** A non-existent `users/{uid}` that comes from the cache is reported as "unavailable" (offline), not "missing", so an offline user is never told their account is not set up.
+- **Structured concurrency kept in the repository.** Every `catch (e: Exception)` around `await()` first rethrows `CancellationException` (review S3), so closing a screen cancels the call instead of turning it into an error.
+
+### Options chosen and why (Gate 1, 2026-11-11)
+- **SMS with console test numbers, not TOTP** (decision 0011): no authenticator app at the defence, no SMS cost, fixed codes.
+- **MFA mandatory for both roles** (Q1; I.2.B, I.3.B): enrolment happens in D-009's Account setup after the first login (verify e-mail, phone, code).
+- **Console-seeded test accounts until D-010** (Q9): no seeding code to defend, and client code could not write an operator profile under the rules.
+- **Pending citizens may log in** (Q2) and get a waiting home with the anonymous features; activation switches them live.
+- **No expand toggle for anyone** (Q7, Diogo's deviation from the plan's "operators only"): the public list is always projected, so an expanded card would add only the date; the operator's full view is the D-013 panel (I.3.E).
+- **No extra session store** (Q5): Firebase Auth persistence and the Firestore cache already keep the session and profile offline (brief IV); a DataStore copy would be a second source of truth.
+- **Login, Forgot password and Account setup as routes; the code as a step of Login** (Q6), because the resolver is not serialisable.
+- **Rejected:** per-role graphs (crash on an unknown route), a session-driven `startDestination` (resets the graph), a `CompositionLocal` session (hidden dependency), optional MFA, an e-mail one-time code (needs a server), `setAppVerificationDisabledForTesting` (documented for phone sign-in, not MFA).
+
+### Limits to state honestly
+- **Login needs the network**; only an already-cached session works offline.
+- **Rotation while the code is being sent** can lose the Firebase callback (bound to the activity); the 60 s timeout and Resend recover. Not yet observed on a device.
+- **reCAPTCHA on non-Play builds:** debug builds may show a reCAPTCHA page; whether it appears on our AVD is not yet recorded.
+- **One second factor per user:** a lost phone needs a reset in the console; there is no self-service recovery.
+- **MFA is enforced only in the client** until the Firestore/Storage rules check `sign_in_second_factor` (planned for the deploy, with Diogo's OK).
+- **Real SMS cost and the region policy** apply to real numbers only; test numbers send nothing.
+- **Placeholder screens** for My tickets (F-014), Profile (D-011), Operations panel (D-013), Approvals and Categories (D-012).
+- **A short gap after the second factor:** the session is still the previous state until the profile snapshot arrives (review N7); nothing is visible, but code reacting to login must wait for `SignedIn`.
+- **The verification e-mail is sent once per screen entry**, not once per account (review N4), which can hit the rate limit after several restarts.
+- **Firebase `errorCode` strings** for wrong and expired codes come from the docs and are not yet confirmed in Logcat.
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after every slice and both review rounds: 0 errors, 18 warnings, the same as the baseline (no new warning).
+- Static checks before each commit: `app/google-services.json` ignored and never staged; no Firebase import outside `data/` and `CityFixApplication.kt`; `Firebase.firestore` only in `CityFixApplication.kt`; no phone number or code in the diff; EN/PT string keys match.
+- **Not run yet (device and console, for Diogo):** the console steps; login per role landing on different homes (including cold start as operator, setup user and pending citizen); wrong / right code at sign-in and enrolment; the verify and reset e-mails arriving; pending -> ACTIVE live switch; airplane-mode cold start; rotation and process death on each step; R2 and R3; PT strings and TalkBack on screen. Which AVD (Google Play image or not) and the results go here once run. Rules deploy: not yet (fill in the date). Never write test numbers, codes, UIDs or e-mails here.
+
+### Improvement opportunities
+- A second factor or TOTP as a backup, so a lost phone does not lock the account.
+- The server-side `sign_in_second_factor` check in the rules.
+- Deep-link-safe guards (today `RequireAccess` covers the back stack; deep links are not declared).
+- The SplashScreen API instead of the in-app progress gate.
+- SMS Retriever / User Consent API to fill the code automatically.
+- A re-authentication flow for sensitive actions (D-011 password change; `RECENT_LOGIN_REQUIRED`).
+- Send the verification e-mail once per account (remember the last send), and confirm the `errorCode` strings.

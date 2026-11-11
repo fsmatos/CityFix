@@ -1,6 +1,6 @@
 # D-009: Login, MFA, password recovery and role navigation
 
-Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `ui.navigation` · Phase 2 · Status: to do · Target: 2026-11-13
+Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `ui.navigation` · Phase 2 · Status: code, review and docs done (2026-11-11); device and console checks pending · Target: 2026-11-13
 Depends on: F-010 · Blocks: D-010, F-014, F-016 and everything role-specific
 
 ## Goal
@@ -28,6 +28,19 @@ New `data/AuthRepository.kt`, `data/UsersRepository.kt` (read part), `viewmodel/
 - [ ] Closing and reopening the app keeps the session.
 - [ ] Password reset email arrives.
 - [ ] Logged out, the report and operator routes cannot be reached.
+
+Status of the checks (2026-11-11): none ticked, because each needs the device or the Firebase console, and nothing has run there yet. Only `./gradlew assembleDebug` and `./gradlew lint` ran (0 errors, 18 warnings, the baseline). Pending, for Diogo (full list at the end of `docs/work/D-009-auth-mfa-role-navigation/review.md`):
+- console steps (Identity Platform, SMS MFA, test numbers, SHA-1/SHA-256, three test users with `users/{uid}`; overview "Setup");
+- login per role, and cold start as operator, setup user, pending citizen and account-problem user;
+- wrong / right code at sign-in and at enrolment, with the `errorCode` strings seen in Logcat;
+- verify and reset e-mails arriving; pending -> ACTIVE switching live;
+- airplane-mode cold start after one online login, and a first install offline;
+- logout from an operator placeholder (Back leaves the app);
+- rotation and process death on each step; R2 (reCAPTCHA) and R3 (rotation during the send);
+- PT strings, TalkBack labels, keyboard Next on Login, `enrolledFactors` after enrolment;
+- after the rules deploy (with Diogo's OK): the test users still work.
+
+Decision: [0013](../../decisions/0013-session-role-navigation-mfa.md). Work item: `docs/work/D-009-auth-mfa-role-navigation/`.
 
 ## References
 Brief I, I.2.B, I.3.B, IV, V; decision 0010.

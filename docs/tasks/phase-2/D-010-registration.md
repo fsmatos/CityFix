@@ -17,6 +17,7 @@ Register citizens (pending until the council validates the NIF) and operators (a
 - **`UsersRepository.register(...)`:** create the Auth user, then in one Firestore transaction create `nifs/{role}_{nif}` (fails if it exists) and `users/{uid}`; if the transaction fails, delete the Auth user and show "NIF already registered".
 - Impact detection switch (citizen).
 - After registration go to MFA enrolment (D-009).
+- See the overview's "Handover (D-009)": after sign-up the session itself routes to Account setup (verify e-mail, then phone); the operator's `users/{uid}` is created only after the e-mail is verified.
 
 ## Files
 New `ui/screens/RegisterScreen.kt`, `viewmodel/RegisterViewModel.kt`, `viewmodel/RegisterUiState.kt`, `utils/Validation.kt`; `data/UsersRepository.kt`, navigation, strings EN/PT.
