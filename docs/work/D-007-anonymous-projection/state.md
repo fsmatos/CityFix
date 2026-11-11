@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-10 | review.md: 0 blocking, 1 should-fix (run device/preview checks), 3 nits; build and lint re-run: 0 errors, 16 warnings |
 | Docs | done | 2026-11-10 | 0006 amended; overview, report notes, task file updated; 0007 and READMEs not edited; S1 checks still pending |
 | Pushed | done | 2026-11-10 | dfaa8bf to origin/dev/Diogo |
-| Merged | pending | | |
+| Merged | done | 2026-11-11 | main at 8b52e5b; not pushed yet |
 
 ## Log
 Append-only.
@@ -31,3 +31,4 @@ Append-only.
 - 2026-11-11 Emulator: the first run from Android Studio failed with "error running the app" because emulator-5554 was listed but did not answer adb (then `offline` after an adb restart). The build was fine (assembleDebug passes). A cold boot of the AVD fixed it; no code change.
 - 2026-11-11 Manual test (review S1): Diogo ran the 01-coding-plan slice 2 checks by hand on the emulator and in Android Studio and reported everything passed: no expand toggle on the list and "+" kept, collapsed cards (category, situation, status, thumbnail only) in portrait and landscape, EN and PT, still collapsed after rotation; `sample-1`/`sample-2` details show header, media and coarse map only; dashboard 3 issues / 67% / 3 days / "Based on 1 repair", then 4 total / 3 active after a new PUBLIC report with a photo, which shows its thumbnail and no description or date; previews with and without the toggle and the expanded TicketCard/ListScreen previews render. The itemised results were not recorded beyond this. S1 closed; acceptance checks 1 and 3 ticked.
 - 2026-11-11 Note from the manual test: the category names ("Pavement", "Public lighting") stay in English in PT. They are data from `data/SampleCategories.kt` and `data/SampleTickets.kt` (Francisco's, F-008), not UI strings; operator-created categories in Firestore (D-012) will carry the name the operator types. Not a D-007 issue; suggested to Francisco to write the samples in Portuguese.
+- 2026-11-11 Merge: dev/Diogo into main (asked by Diogo) as 8b52e5b. Local main was 50 commits behind origin/main with nothing of its own, so it was fast-forwarded to 03b7327 first. No conflicts; assembleDebug and lint pass on main, 0 errors, 16 warnings. main merged back into dev/Diogo. main not pushed yet.
