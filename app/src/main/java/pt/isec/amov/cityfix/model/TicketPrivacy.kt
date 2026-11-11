@@ -17,7 +17,7 @@ const val ANONYMOUS_COORDINATE_DECIMALS = 2
  *
  * Kept: id, situation, scope, currentStatus (status badge), createdAt (ordering only, never
  * shown to anonymous users), categoryId, categoryName, and the attachments' id, type, file,
- * thumbnail and uploadState.
+ * thumbnail, uploadState and phase.
  *
  * The result is a view, not a valid ticket (it has no history entry): never store it as a full
  * ticket and never compute stats, lifecycle rules or 10 m grouping from it.
