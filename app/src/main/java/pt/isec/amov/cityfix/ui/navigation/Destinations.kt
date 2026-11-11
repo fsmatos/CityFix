@@ -24,3 +24,11 @@ data class TicketDetailRoute(val ticketId: String)
 /** Provisional report form. */
 @Serializable
 data object ReportTicketRoute
+
+/** E-mail and password; the SMS code is a step of this route (D-009, slice 6). */
+@Serializable
+data object LoginRoute
+
+/** Password reset; [email] prefills the field with what was typed on Login. */
+@Serializable
+data class ForgotPasswordRoute(val email: String = "")

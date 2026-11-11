@@ -2,6 +2,8 @@ package pt.isec.amov.cityfix.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -19,13 +21,17 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /** The screen the top bar is showing. One value per route in Destinations.kt. */
-enum class TopBarScreen { DASHBOARD, LIST, DETAIL, REPORT }
+enum class TopBarScreen { DASHBOARD, LIST, DETAIL, REPORT, LOGIN, FORGOT_PASSWORD }
+
+/** The account button at the end of the bar: Log in for anonymous users, Log out once signed in. */
+enum class AccountAction { NONE, LOG_IN, LOG_OUT }
 
 /**
  * App top bar. Stateless: the caller says which screen is showing and receives the clicks.
  * The toggle appears on the list only, and only when [showExpandToggle]; anonymous users never
  * get it (brief I.1.B, D-007). The add button only when [showAddAction]: the caller passes true
- * for an active citizen on every screen except the report form (D-009).
+ * for an active citizen on every screen except the report form (D-009). [accountAction] picks
+ * the Log in / Log out button, which calls [onAccountClick].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +41,11 @@ fun MainTopAppBar(
     isExpanded: Boolean,
     showExpandToggle: Boolean,
     showAddAction: Boolean,
+    accountAction: AccountAction,
     onBackClick: () -> Unit,
     onToggleExpandedClick: () -> Unit,
     onAddClick: () -> Unit,
+    onAccountClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val titleRes = when (screen) {
@@ -45,6 +53,8 @@ fun MainTopAppBar(
         TopBarScreen.LIST -> R.string.top_bar_title_list
         TopBarScreen.DETAIL -> R.string.top_bar_title_detail
         TopBarScreen.REPORT -> R.string.top_bar_title_report
+        TopBarScreen.LOGIN -> R.string.top_bar_title_login
+        TopBarScreen.FORGOT_PASSWORD -> R.string.top_bar_title_forgot_password
     }
 
     TopAppBar(
@@ -89,6 +99,21 @@ fun MainTopAppBar(
                     )
                 }
             }
+            when (accountAction) {
+                AccountAction.NONE -> Unit
+                AccountAction.LOG_IN -> IconButton(onClick = onAccountClick) {
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = stringResource(R.string.cd_log_in),
+                    )
+                }
+                AccountAction.LOG_OUT -> IconButton(onClick = onAccountClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = stringResource(R.string.cd_log_out),
+                    )
+                }
+            }
         },
     )
 }
@@ -107,6 +132,7 @@ private fun BarPreview(
     isExpanded: Boolean = false,
     showExpandToggle: Boolean = true,
     showAddAction: Boolean = screen != TopBarScreen.REPORT,
+    accountAction: AccountAction = AccountAction.LOG_OUT,
 ) {
     CityFixTheme {
         MainTopAppBar(
@@ -115,9 +141,11 @@ private fun BarPreview(
             isExpanded = isExpanded,
             showExpandToggle = showExpandToggle,
             showAddAction = showAddAction,
+            accountAction = accountAction,
             onBackClick = {},
             onToggleExpandedClick = {},
             onAddClick = {},
+            onAccountClick = {},
         )
     }
 }
@@ -149,7 +177,23 @@ private fun ListAnonymousBarPreview() {
 @OrientationPreviews
 @Composable
 private fun DashboardAnonymousBarPreview() {
-    BarPreview(TopBarScreen.DASHBOARD, canNavigateBack = false, showAddAction = false)
+    BarPreview(
+        TopBarScreen.DASHBOARD,
+        canNavigateBack = false,
+        showAddAction = false,
+        accountAction = AccountAction.LOG_IN,
+    )
+}
+
+@OrientationPreviews
+@Composable
+private fun LoginBarPreview() {
+    BarPreview(
+        TopBarScreen.LOGIN,
+        canNavigateBack = true,
+        showAddAction = false,
+        accountAction = AccountAction.NONE,
+    )
 }
 
 @OrientationPreviews

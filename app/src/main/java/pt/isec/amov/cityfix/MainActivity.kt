@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,20 +39,30 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
+import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
+import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
+import pt.isec.amov.cityfix.ui.navigation.LoginRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
 import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
 import pt.isec.amov.cityfix.ui.navigation.RequireAccess
 import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketListRoute
 import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
+import pt.isec.amov.cityfix.ui.navigation.homeFor
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
+import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
+import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.AccessRole
+import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
+import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.LoginViewModel
+import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.Session
@@ -59,6 +70,7 @@ import pt.isec.amov.cityfix.viewmodel.SessionViewModel
 import pt.isec.amov.cityfix.viewmodel.SessionViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.accessRole
 import pt.isec.amov.cityfix.viewmodel.canReport
+import pt.isec.amov.cityfix.viewmodel.isSignedIn
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 
@@ -119,6 +131,29 @@ private fun CityFixApp(app: CityFixApplication) {
     // backStackEntry, so a back-stack change recomposes this line too (D-005 review N4).
     val canNavigateBack = navController.previousBackStackEntry != null
 
+    // Redirect on a real role change only (login, logout, activation): go to the role's home and
+    // clear the back stack. The first value after a (re)start is only recorded, and the last
+    // handled role is saveable, so rotation or process recreation keeps the restored back stack.
+    var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
+    LaunchedEffect(role) {
+        if (role != AccessRole.LOADING && role != handledRole) {
+            if (handledRole != null) {
+                navController.navigate(homeFor(role)) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+            handledRole = role
+        }
+    }
+
+    val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD
+    val accountAction = when {
+        session.isSignedIn -> AccountAction.LOG_OUT
+        role == AccessRole.ANONYMOUS && !onAuthScreen -> AccountAction.LOG_IN
+        else -> AccountAction.NONE
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -129,10 +164,19 @@ private fun CityFixApp(app: CityFixApplication) {
                 isExpanded = isExpanded,
                 showExpandToggle = canExpandCards,
                 showAddAction = session.canReport && screen != TopBarScreen.REPORT,
+                accountAction = accountAction,
                 onBackClick = { navController.navigateUp() },
                 onToggleExpandedClick = { isExpanded = !isExpanded },
                 onAddClick = {
                     navController.navigate(ReportTicketRoute) { launchSingleTop = true }
+                },
+                onAccountClick = {
+                    if (accountAction == AccountAction.LOG_OUT) {
+                        // The session becomes Anonymous and the redirect goes to the dashboard.
+                        sessionViewModel.signOut()
+                    } else {
+                        navController.navigate(LoginRoute) { launchSingleTop = true }
+                    }
                 },
             )
         },
@@ -186,6 +230,22 @@ private fun CityFixApp(app: CityFixApplication) {
                     audience = DetailAudience.PUBLIC,
                 )
             }
+            composable<LoginRoute> {
+                val loginViewModel: LoginViewModel =
+                    viewModel(factory = LoginViewModelFactory(app.authRepository))
+                LoginScreen(
+                    viewModel = loginViewModel,
+                    onForgotPassword = { email ->
+                        navController.navigate(ForgotPasswordRoute(email)) { launchSingleTop = true }
+                    },
+                )
+            }
+            composable<ForgotPasswordRoute> { entry ->
+                val email = entry.toRoute<ForgotPasswordRoute>().email
+                val forgotViewModel: ForgotPasswordViewModel =
+                    viewModel(factory = ForgotPasswordViewModelFactory(app.authRepository, email))
+                ForgotPasswordScreen(viewModel = forgotViewModel)
+            }
             composable<ReportTicketRoute> {
                 // Active citizens only (brief I.2.E); anyone else is sent back to the dashboard.
                 RequireAccess(
@@ -227,5 +287,7 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<TicketListRoute>() -> TopBarScreen.LIST
     hasRoute<TicketDetailRoute>() -> TopBarScreen.DETAIL
     hasRoute<ReportTicketRoute>() -> TopBarScreen.REPORT
+    hasRoute<LoginRoute>() -> TopBarScreen.LOGIN
+    hasRoute<ForgotPasswordRoute>() -> TopBarScreen.FORGOT_PASSWORD
     else -> TopBarScreen.DASHBOARD
 }
