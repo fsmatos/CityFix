@@ -30,6 +30,8 @@ fun Ticket.resolvedAt(): Long? {
 /**
  * Brief II: true while RESOLVED and less than [REOPEN_WINDOW_MS] has passed since [resolvedAt].
  * A negative gap (device clock behind) counts as inside the window.
+ * Time only: it does not check who reopens. To show a Reopen button, use
+ * `TicketStatus.OPEN in allowedTransitions(user, now)` (review S1).
  */
 fun Ticket.canReopen(now: Long): Boolean {
     if (currentStatus != TicketStatus.RESOLVED) return false
@@ -51,7 +53,10 @@ fun Ticket.effectiveStatus(now: Long): TicketStatus {
 /** Brief II: a closed ticket is locked: no messages, no reopen, no operator action. */
 fun Ticket.isLocked(now: Long): Boolean = effectiveStatus(now) == TicketStatus.CLOSED
 
-/** Brief III: time of the 24 h closing warning ([resolvedAt] + [CLOSING_WARNING_MS]) while RESOLVED; null otherwise. */
+/**
+ * Brief III: time of the 24 h closing warning ([resolvedAt] + [CLOSING_WARNING_MS]) while RESOLVED; null otherwise.
+ * It can be in the past for an expired ticket not yet closed: check `!isLocked(now)` before warning (review S2).
+ */
 fun Ticket.closingWarningAt(): Long? {
     if (currentStatus != TicketStatus.RESOLVED) return null
     val resolved = resolvedAt() ?: return null
