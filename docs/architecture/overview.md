@@ -13,7 +13,7 @@ Seeded from the factory manifest (A1-A4). Update as the app takes shape.
   - `ReportViewModel` + `ReportUiState` (F-006) + `ReportViewModelFactory(repository, attachmentStorage)`: form-only, created per route inside `composable<ReportTicketRoute>` (see "Report form (F-006)").
 - `data/`: repositories over Firebase Auth, Firestore, Storage, FCM; WorkManager workers for media upload. In phase 1 (F-008, [decision 0009](../decisions/0009-tickets-repository.md)): `TicketsRepository` (interface), `LocalTicketsRepository` (in-memory cache seeded from `SampleTickets`, categories from `SampleCategories`), `AttachmentStorage` (gallery copy on `Dispatchers.IO`), and the sample data `SampleTickets` (3 tickets) and `SampleCategories` (3 active + 1 inactive). The Firebase phase adds a second `TicketsRepository` implementation.
 - `CityFixApplication` (root package, `android:name` in the manifest): holds one `ticketsRepository` and one `attachmentStorage` `by lazy`, like `ContactsApp`. `MainActivity` reads it with `application as CityFixApplication` and passes it to the factories.
-- `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence).
+- `model/`: entities, enums and pure rules (ticket lifecycle, 5-day reopen, 10 m grouping, 10 km anonymous radius, 20 m geofence). The lifecycle and its time rules (transitions, reopen window, effective CLOSED, lock, 24 h warning, automatic close) live in `model/TicketLifecycle.kt` (D-008, see "Lifecycle (D-008)").
 - `utils/`: stateless helpers (date formatting, distance maths, `FileUtils` for local attachment files (F-007) and for removing photo GPS EXIF with `androidx.exifinterface` (F-009); later image compression and thumbnails). Code that `model/` imports (`haversineMeters` in `utils/Distance.kt`) must stay pure Kotlin, with no Android imports; the only package dependency is `model -> utils`. `FileUtils` depends on Android, so `model/` must not import it.
 
 ## Domain model
@@ -36,12 +36,13 @@ The diagram is implemented in English in `model/` (task D-001), one type per fil
 | `Ticket` | `Ticket` |
 | `Mensagem` | `Message` (text, sentAt, authorId) |
 | `HistoricoEstado` | `StatusHistory` (status, dateTime, justification?, responsibleId) |
-| `Anexo` | `Attachment` (type, file, thumbnail?, uploadState, uploadedById) |
+| `Anexo` | `Attachment` (type, file, thumbnail?, uploadState, uploadedById, phase). `file` is an absolute local path before upload (F-007), a Storage path or URL after it; `phase` (D-008) is not in the diagram |
 | `centro`, `localizacao`, `georreferenciacao` | `Coordinates` (latitude, longitude; WGS84) |
 | `EstadoTicket`, `Situacao`, `Alcance` | `TicketStatus`, `Situation`, `Scope` |
 | `TipoAnexo`, `EstadoUpload`, `EstadoRegisto` | `AttachmentType`, `UploadState`, `RegistrationStatus` |
+| (none; D-008) | `AttachmentPhase` (report media or resolution proof) |
 
-Enum values: `TicketStatus { OPEN, INFO_REQUESTED, IN_PROGRESS, RESOLVED, CLOSED }`, `Situation { DAMAGE, BREAKDOWN, DESTRUCTION, THEFT }`, `Scope { PUBLIC, PRIVATE }`, `AttachmentType { IMAGE, VIDEO }`, `UploadState { PENDING, UPLOADING, UPLOADED, FAILED }`, `RegistrationStatus { PENDING, ACTIVE }`.
+Enum values: `TicketStatus { OPEN, INFO_REQUESTED, IN_PROGRESS, RESOLVED, CLOSED }`, `Situation { DAMAGE, BREAKDOWN, DESTRUCTION, THEFT }`, `Scope { PUBLIC, PRIVATE }`, `AttachmentType { IMAGE, VIDEO }`, `UploadState { PENDING, UPLOADING, UPLOADED, FAILED }`, `RegistrationStatus { PENDING, ACTIVE }`, `AttachmentPhase { REPORT, RESOLUTION }` (D-008, [decision 0011](../decisions/0011-ticket-lifecycle-rules.md)).
 
 Representation rules:
 - Ids are `String`, default `""` (later the Firestore document id, or the Auth uid for users). Previews and sample data must set distinct ids, because lists key on `id`.
@@ -50,9 +51,9 @@ Representation rules:
 - Enums are persisted by constant name, so the names are a contract and must not be renamed. UI labels come from string resources (EN + `values-pt`), never from `.name`.
 - The role is the type: `User` is a sealed interface; there is no `role` field in the model. The data layer writes and reads a `role` string in Firestore.
 - Every class can be built with no arguments (all parameters have defaults); all properties are `val` and collections are `List`. Mapping from Firestore documents happens in `data/` later.
-- Defaults: `currentStatus = OPEN`, `situation = DAMAGE`, `scope = PRIVATE`, `type = IMAGE`, `uploadState = PENDING`, `registrationStatus = PENDING`, `active = true`, `impactDetection = false`, `Coordinates()` = (0, 0). (0, 0) is not a real location; distance code must not treat it as one.
+- Defaults: `currentStatus = OPEN`, `situation = DAMAGE`, `scope = PRIVATE`, `type = IMAGE`, `uploadState = PENDING`, `registrationStatus = PENDING`, `phase = REPORT`, `active = true`, `impactDetection = false`, `Coordinates()` = (0, 0). (0, 0) is not a real location; distance code must not treat it as one.
 - A default `Ticket()` does not satisfy the diagram's `1..*` multiplicities (no history entry, no attachment); creation logic enforces them, not the constructor.
-- `Ticket.currentStatus` duplicates the last `statusHistory` entry on purpose (decision 0004); both change together.
+- `Ticket.currentStatus` duplicates the last `statusHistory` entry on purpose (decision 0004); both change together, and after creation only through `Ticket.transition` or `closeIfExpired` (D-008).
 - `Ticket.followerIds` does not include `creatorId`; notifications go to the creator plus the followers.
 - `Ticket.messages`, `statusHistory` and `attachments` are lists on the ticket in phase 1; moving them to subcollections is a Firebase-phase decision.
 - Fields an anonymous view must never show: `Ticket.location` (coarse map zoom only), `creatorId`, `followerIds`, `messages`, `description`, `statusHistory` (D-007), and all `Citizen` personal data. The full list enforced in phase 1 (including `Attachment.uploadedById`) is in "ViewModel (D-003)". The 10 km radius of `Municipality` limits where anonymous users may be, not where tickets may be.
@@ -83,6 +84,55 @@ Details and reasons: [decision 0005](../decisions/0005-tickets-list-rules.md).
 - The 10 m grouping is `findNearby(location, categoryId, situation)`: same `categoryId` + `situation`, active, at most 10 m by Haversine (inclusive, nearest wins), (0, 0) ignored, any scope. A report next to a RESOLVED ticket creates a new ticket. Following the found ticket is the caller's job.
 - `stats()` returns `DashboardStats` over every ticket, private ones included: `totalTickets`, `activeTickets`, `resolvedTickets` (tickets in the average), `averageRepairTimeMillis` (milliseconds, last RESOLVED entry minus `createdAt`, active tickets skipped, `null` when nothing is resolved) and the computed `activeRatio` (0.0..1.0, never NaN).
 
+### Lifecycle (D-008)
+Details and reasons: [decision 0011](../decisions/0011-ticket-lifecycle-rules.md). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Pure Kotlin: the file has no `import` lines and never reads the clock; `now` (epoch ms, UTC) is always a parameter. No screen, repository, `TicketsList` or `SampleTickets` change: the first callers are F-014 and D-013.
+
+**Not checked against the brief.** The brief PDF could not be opened in the D-008 sessions. The rules below come from the task files (D-008, D-013, D-014, F-014, F-016) and Gate 1; each rule tagged "brief II", "II.2", "I.2.E", "III" or "I.3.E" here is the task files' reading of that section, to be checked in the PDF before the defence.
+
+- Transitions, on the **effective** status (Gate 1 Q1-Q3, Q11; brief II, not checked against the brief):
+
+  | From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
+  | --- | --- | --- |
+  | OPEN | INFO_REQUESTED, IN_PROGRESS | - |
+  | INFO_REQUESTED | IN_PROGRESS | - |
+  | IN_PROGRESS | INFO_REQUESTED, RESOLVED | - |
+  | RESOLVED (less than 5 days) | - | OPEN (reopen) |
+  | CLOSED (stored, or RESOLVED for 5 days or more) | - | - |
+
+  Nobody moves a ticket to CLOSED by hand; only `closeIfExpired` writes it. A citizen's question is a plain message and does not move the status (Q1; brief II.2 not checked). Followers may reopen as well as the creator (Q2; brief II / I.2.E not checked). A `PENDING` citizen gets nothing (Q11).
+- API (top-level extension functions, like `isActive` and `toAnonymousView()`):
+  - `const val SYSTEM_RESPONSIBLE_ID = "system"`, `REOPEN_WINDOW_MS = 432_000_000` (5 d), `CLOSING_WARNING_MS = 345_600_000` (4 d, i.e. 24 h before closing; brief III not checked);
+  - `Ticket.resolvedAt(): Long?`: time of the **last** RESOLVED entry while `currentStatus` is RESOLVED or CLOSED, otherwise `null`;
+  - `Ticket.canReopen(now): Boolean`: RESOLVED and `now - resolvedAt < REOPEN_WINDOW_MS`. **Time only**: it does not check who reopens (review S1);
+  - `Ticket.effectiveStatus(now): TicketStatus`: CLOSED when RESOLVED and `now - resolvedAt >= REOPEN_WINDOW_MS`, else `currentStatus`;
+  - `Ticket.isLocked(now): Boolean`: `effectiveStatus(now) == CLOSED`;
+  - `Ticket.closingWarningAt(): Long?`: `resolvedAt + CLOSING_WARNING_MS` while RESOLVED, else `null`. **Can be in the past** for an expired ticket nobody closed yet (review S2);
+  - `Ticket.allowedTransitions(by: User, now): Set<TicketStatus>`: the table above, with the role taken from the type of `by` (exhaustive `when` on the sealed `User`);
+  - `Ticket.transition(to, by, now, justification = null, proof = emptyList()): Ticket?`: the new ticket or `null` (rejected);
+  - `Ticket.closeIfExpired(now): Ticket?`: the CLOSED copy or `null`.
+- Justification (Q4): required (non-blank after trim) for INFO_REQUESTED and for the reopen; optional for IN_PROGRESS and RESOLVED; stored trimmed, or `null` when blank. `StatusHistory.justification`'s KDoc already said "reason for reopening or for an info request".
+- Proof (Q6, Q8; brief I.3.E not checked): RESOLVED needs a non-empty `proof` list passed with the transition; each proof attachment gets `phase = RESOLUTION` and `uploadedById = by.id` and is appended in the same `copy`. Proof with any other target, a blank id, an id repeated in `proof` or already on the ticket is rejected. Only fresh proof counts, so a reopened ticket resolved again needs new proof.
+- One write path: every accepted `transition` appends exactly one `StatusHistory(to, now, reason, by.id)` and sets `currentStatus = to` in one `copy` (decision 0004). Callers must never `copy(currentStatus = ...)` by hand.
+- Boundary: `canReopen` uses `<` and `effectiveStatus` uses `>=` on the same difference, so at exactly `t0 + 5 d` a ticket is CLOSED and not reopenable; it is never both. A negative difference (device clock behind the operator's) counts as inside the window.
+- Closing: `effectiveStatus` shows CLOSED on read with no write. `closeIfExpired(now)` is the optional write: one CLOSED entry at `resolvedAt + REOPEN_WINDOW_MS` (when it closed, not when someone noticed), `responsibleId = SYSTEM_RESPONSIBLE_ID`, no justification.
+- **Never on a projected ticket.** `toAnonymousView()` drops the history (decision 0006, D-007), so `resolvedAt`/`closingWarningAt`/`transition`/`closeIfExpired` return `null`, `canReopen` `false`, `allowedTransitions` the empty set, and `effectiveStatus` the stored status. A ticket whose last history entry differs from `currentStatus` is also refused (private `isFullTicket()`).
+- Why nothing else changes: `isActive` treats RESOLVED and CLOSED alike (both inactive), so `publicActive()`, `findNearby()` and "% active" are unaffected by the effective CLOSED. `stats()` reads the last RESOLVED entry, and a later CLOSED entry comes after it, so the repair time is unchanged. A reopened ticket is OPEN, active, and out of the average until resolved again (decision 0005). The dashboard stays at 3 / 67% / 3 days / 1 repair.
+- `phase` passes through `toAnonymousView()` (not personal data). `SYSTEM_RESPONSIBLE_ID` and the justifications live in the history, which the projection drops.
+- **How F-014 / D-013 / F-016 use it:**
+  - **F-014 (citizen reopen):** show Reopen only when `TicketStatus.OPEN in ticket.allowedTransitions(user, now)` (not `canReopen` alone, which ignores the user and a broken history; review S1). Ask for a justification and call `transition(OPEN, user, now, justification)`. Treat `isLocked(now)` as read-only (no messages, no reopen).
+  - **D-013 (operator transitions):** offer exactly `allowedTransitions(operator, now)`. Resolve by building the proof `Attachment` (upload state PENDING) and calling `transition(RESOLVED, operator, now, proof = listOf(att))`; no separate `addResolutionProof` is needed. Write `tickets` and `publicTickets` in one batch, and use a transaction or a precondition on `currentStatus` against concurrent writes. The INFO_REQUESTED justification is also posted as a message (D-013's job).
+  - **F-016 (24 h warning):** schedule at `closingWarningAt()` and cancel when the ticket leaves RESOLVED. The time can be in the past: before notifying check `!isLocked(now)` (or `closingWarningAt()!! > now` when scheduling), or a 6-day-old ticket gets a "closes in 24 h" message (review S2).
+  - **Badges:** registered and operator screens pass `effectiveStatus(now)` to `StatusBadge`, not `currentStatus`, so an expired RESOLVED ticket shows CLOSED.
+  - **History display (D-013, F-014; review N1):** a `responsibleId` equal to `SYSTEM_RESPONSIBLE_ID` is shown as a string resource ("Closed automatically" / "Encerrado automaticamente"), not looked up as a user (there is no `users/system`).
+  - **Attachments after a reopen (D-013, F-014; review N2):** the old RESOLUTION proof stays on the ticket, which is active and public again. Detail screens group or label attachments by `phase`, and the card thumbnail uses the first REPORT attachment (`attachments.firstOrNull { it.phase == AttachmentPhase.REPORT }`) once proof exists. Not personal data (`uploadedById` is blanked).
+  - **Previews (Q10):** build a RESOLVED ticket at a fixed `t0` and pass `now = t0 + 4 d` (Reopen shown) and `t0 + 6 d` (CLOSED, locked). `sample-3` has no RESOLUTION attachment; harmless, the proof rule applies to transitions, not to stored tickets.
+- **Handover to Francisco (F-010, F-011):**
+  - D-008 already adds `AttachmentPhase { REPORT, RESOLUTION }` (`model/AttachmentPhase.kt`) and `Attachment.phase` (default REPORT). F-010 should use them, not add its own, and decision 0010 should point to 0011.
+  - F-011 maps `phase` by constant name; a missing field reads as REPORT.
+  - F-011's security rules must allow `responsibleId == "system"` for the CLOSED entry written by `closeIfExpired` (only CLOSED, at `resolvedAt + 5 d`); a rule `statusHistory[last].responsibleId == request.auth.uid` would reject it (review N1). The rules may also check the 5-day window with `request.time`, and should guard concurrent status writes.
+- Defence note (review N4): in `transition`, `isReopen` tests `to == OPEN && currentStatus == RESOLVED`, although OPEN is only ever allowed through `canReopen`, which already needs RESOLVED. The second check is redundant on purpose: it states the KDoc rule ("a reopen is RESOLVED -> OPEN") in the code.
+- Known limits: the device clock decides the window (skew moves it); `transition` does not reject a `now` earlier than the last entry (offline queues), so history can be out of time order; concurrent transitions are last-write-wins until F-011/D-013 add a transaction. No automated tests (Q9): checked with the T1-T8 / R1-R16 table in `docs/work/D-008-ticket-lifecycle-rules/01-coding-plan.md`.
+
 ### ViewModel (D-003)
 Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phase-1.md), superseded in part by [decision 0009](../decisions/0009-tickets-repository.md) (F-008). Code: `viewmodel/TicketsViewModel.kt`, `viewmodel/TicketsViewModelFactory.kt`, `data/TicketsRepository.kt`, `data/LocalTicketsRepository.kt`, `model/TicketPrivacy.kt`, `data/SampleTickets.kt`.
 - **Repository (F-008).** `LocalTicketsRepository` owns the `TicketsList` cache, seeded from `SampleTickets.all`: 3 PUBLIC tickets near Pr. Republica (`sample-1` OPEN, `sample-2` IN_PROGRESS, `sample-3` RESOLVED 3 days after creation), with fixed UTC epoch times so the dashboard figures are reproducible. Their category ids are `pavement`, `lighting` and `furniture`. Suspend members run in `withContext(Dispatchers.IO) { mutex.withLock { ... } }`. One instance per process, in `CityFixApplication`, so tickets live as long as the process (Q4); process death restores the samples.
@@ -101,7 +151,7 @@ Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phas
   - `description` blank and `statusHistory` empty (D-007; `currentStatus` is kept, so the badge still shows). Dropping the whole history also drops the creator's id in the first OPEN entry and the free-text justifications, so there is no per-entry mapping any more;
   - every `Attachment.uploadedById` blank;
   - the location rounded to `ANONYMOUS_COORDINATE_DECIMALS = 2` (about 1 km; (0, 0) stays (0, 0)). Nearby tickets collapse onto one grid point (all three samples become (40.21, -8.42)), so a future anonymous map must cluster or offset markers, never use exact coordinates.
-  - Kept: `id`, `situation`, `scope`, `currentStatus`, `createdAt` (ordering only, never shown to anonymous users), `categoryId`, `categoryName`, and each attachment's `id`, `type`, `file`, `thumbnail`, `uploadState`.
+  - Kept: `id`, `situation`, `scope`, `currentStatus`, `createdAt` (ordering only, never shown to anonymous users), `categoryId`, `categoryName`, and each attachment's `id`, `type`, `file`, `thumbnail`, `uploadState`, `phase` (D-008; not personal data).
 
   The result is a view, not a valid ticket (no history entry): never store it as a full ticket and never compute stats, lifecycle rules or grouping from it. A field added to `Ticket`, `StatusHistory` or `Attachment` later is copied through unchanged, so it must be checked against this list.
 - **Done by D-007 (2026-11-10):** the F-005 review S4 gap (description and history hidden only in the UI) and the list/detail inconsistency of [decision 0007](../decisions/0007-ticket-detail-by-audience.md) are closed: the projection drops both fields, and the expand toggle is hidden for anonymous users (see "Top bar (D-005)" and "App shell (D-006)"). Only `model/TicketPrivacy.kt` changed in this layer; the two call sites in `data/LocalTicketsRepository.kt` and `TicketsViewModel.kt` did not. The public projection contract that F-011 builds `publicTickets` on (field table and rules) is in [decision 0006, "Amended 2026-11-10 (D-007)"](../decisions/0006-anonymous-projection-phase-1.md).
