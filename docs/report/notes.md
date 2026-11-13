@@ -576,7 +576,7 @@ Decision: [0009](../decisions/0009-tickets-repository.md) (supersedes in part [0
 - Async copy reopened F-007's limit race (review B1): two media results arriving back to back could exceed 3. Fix: the limit is checked again when each copy returns, against the slots free then; extra copies are deleted with the limit notice; copies returning after a submit are deleted. A `copiesInProgress` counter keeps Submit and the add buttons disabled until the last copy ends. A good example for the defence of how moving work off the main thread turns a synchronous check into a race.
 
 ### Improvement opportunities
-- `FirestoreTicketsRepository` behind the same interface, with listeners instead of `refresh()` (also fixes the two separate locks in `refresh()`, review N2).
+- `FirestoreTicketsRepository` behind the same interface, with listeners instead of `refresh()` (also fixes the two separate locks in `refresh()`, review N2). (Done by F-011.)
 - A separate `CategoriesRepository` (categories per municipality).
 - A `saved` flag in `ReportUiState` consumed by a `LaunchedEffect` instead of the `onSuccess` callback; `onCleared` keyed on "saved" rather than "submitted" (review N4, N7).
 - An `isLoading` state to hide the first empty frame.
@@ -670,7 +670,7 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - **Rules unit tests with the Firebase Emulator Suite** (`@firebase/rules-unit-testing`), covering each allow/deny case the reviews traced by hand.
 - **Geohash queries** for the 10 m grouping instead of loading `ticketLocations`.
 - Upgrade Kotlin to 2.4 and the Firebase BoM to 35.x together.
-- `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011).
+- `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011). (Done by F-011: counters, decision 0013.)
 - A note in the `CityFixApplication` KDoc that `Firebase.firestore` must never be called directly (review N6), and the remaining round-1 nits (key whitelists per role, active category and at least one attachment on ticket create).
 
 ## D-007: Anonymous projection and expand toggle
@@ -771,3 +771,58 @@ OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5
 - Old RESOLUTION proof stays on a reopened, public ticket; screens should label or filter by `phase`.
 - No automated tests by project choice; the pure functions would be easy to cover with JUnit.
 - A `PublicTicket` type and a sealed result type (instead of `null`) would let the compiler enforce more, and tell the UI why a move was refused.
+
+## F-011: Firestore tickets repository and public projection
+Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (reads per audience, stand-in user, flows, counters, seed), [0009](../decisions/0009-tickets-repository.md) and [0010](../decisions/0010-firestore-schema.md) amended. Code: `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `data/DebugSeed.kt`, `CityFixApplication.kt`, `viewmodel/TicketsViewModel(+Factory).kt`, `viewmodel/ReportViewModel(+Factory).kt`, `MainActivity.kt`, `firestore.rules` (`stats` block). Overview: "Firestore repository (F-011)", "Handover (F-011)", "ViewModel (D-003)", "Report form (F-006)".
+
+**The device checks D1-D10 have not run yet** (no device attached). Build and lint pass (0 errors, 18 warnings, all from before F-011); the review read the code and approved with two should-fix items, both applied.
+
+### Technical solutions
+- **Offline-first writes.** A report is one batched write (`tickets`, `ticketLocations`, `publicTickets` for PUBLIC, and the `stats/summary` counters). The Firestore cache queues batches offline, while transactions fail without a network, so no transaction is used. `commit()` is not awaited: it completes only when the server acknowledges, so awaiting it offline would keep the form open. The form closes at once and the snapshot listener shows the ticket from the local cache; the batch reaches the server when the network returns. The new id comes from `collection("tickets").document()`, which is created locally.
+- **Privacy by collection, not by field.** Firestore rules cannot hide fields in a document, so anonymous users read a separate collection, `publicTickets`. One function builds it: `toPublicTicketDocument()` calls `toAnonymousView()` first and copies 7 keys (category id and name, situation, status, coarse location about 1 km, thumbnails, created time). The anonymous code path never queries `tickets` or `ticketLocations`, so the privacy rule holds in the repository layer (`.claude/rules/kotlin.md`), not only in the UI.
+- **Reads per audience.** Anonymous: active `publicTickets`. Citizen: their own full tickets (`participantIds` array-contains their id) combined with the public ones; the full copy wins. Operator: every ticket. The audience is the type of the sealed `User` (no role enum), with `null` for anonymous.
+- **Dashboard without a server.** Anonymous users cannot read private tickets, but the dashboard counts them (decision 0005). So four counters live in `stats/summary` and change in the same atomic batch as the ticket, with `FieldValue.increment`. The increment is computed by the existing pure rule: `statsIncrements(before, after)` = `stats(after) - stats(before)` on one-ticket lists, so the definitions of "active" and "repair time" exist once. Increments work offline (they queue) and two devices writing at once do not overwrite each other.
+- **Live data.** Snapshot listeners wrapped in `callbackFlow { ... awaitClose { registration.remove() } }`, collected in `viewModelScope`. Listeners survive rotation with the ViewModel and are removed when it is cleared, with no `onCleared` bookkeeping. A report on one device appears on another without a refresh, so `refresh()` is gone.
+- **Listener errors.** On a listener error Firestore stops that listener; the error is logged and the flow is not closed, so the collector never throws. The flow sends nothing more and the ViewModel keeps the last list until the flow is collected again.
+- **No composite indexes.** Every query is single-field (`whereIn`, `whereArrayContains`, `whereEqualTo`); the newest-first sort runs on the client with the existing `TicketsList` order.
+- **Manual mapping as in class.** Documents are `hashMapOf`, read back with the typed getters and the model default (`getString(...) ?: ""`, as in the T8 demo). `toObject()` was not used: field names differ from the model, and `GeoPoint` is not `Coordinates`.
+- **Clearing on user change** (review S1). `setUser` clears the list before starting the new listener, so after a sign-out (D-009) an anonymous user never sees the previous user's full tickets, even offline with an empty cache.
+
+### Class material vs beyond class
+- **From class:** one Firestore instance (`getInstance()` in class, `app.firestore` with the cache settings here), `set`/`get` with success and failure listeners, typed getters like `doc.getString`, and `db.batch()` + `commit()` (T8 demo "clear all", 09_Storage); `Flow`, `collect` and ViewModel-owned `MutableStateFlow` + `asStateFlow()` (08, P08).
+- **Beyond class, accepted at Gate 1:** `addSnapshotListener` (live updates and offline cache on every change), `callbackFlow`/`awaitClose` (the listener as a `Flow`, removed when the collector is cancelled, which is the 08 slide "cancelling the collector aborts the emitter"), `combine` (the citizen's two lists), `FieldValue.increment` with `SetOptions.merge()` (counters).
+
+### Options chosen and rejected (Gate 1, 2026-11-13)
+- Q1: a `currentUser: User?` stand-in in `CityFixApplication` (edited by hand) and `TicketsViewModel.setUser` as D-009's seam; rejected a debug "View as" menu and waiting for D-009.
+- Q2: `callbackFlow`; rejected callbacks returning a `Subscription` handle (closer to class, more bookkeeping).
+- Q3: counters in `stats/summary`; rejected stats over `publicTickets` only (leaves out private tickets), an operator's device recomputing the counters (stale when no operator app runs), and `count()`/`average()` aggregations (server only, no offline).
+- Q4: `LocalTicketsRepository` deleted; nothing else used it.
+- Q5: debug-only seed of categories and tickets, so a resolved ticket exists for the repair time before D-013; removed before delivery.
+- Q6: `ticketLocations` written now, (0, 0) until F-012.
+- Q7: draft rules for `stats/summary`, not deployed.
+- After Gate 1 the person switched the readers from casts to the typed getters (the class style), and removed a guard that skipped wrong-typed documents: such a field can only come from a hand edit in the console.
+
+### Known limits
+- Device checks D1-D10 not run yet.
+- Thumbnails are empty in the anonymous list until F-013 uploads the media; other devices show the card placeholder.
+- Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database.
+- `DebugSeed` must be removed before delivery (D-015 checklist).
+- The `currentUser` seam is temporary; D-009 replaces it with the signed-in user.
+- A write the server later refuses (only once rules are deployed, or after the test mode ends on 2026-12-10) is only logged, not shown.
+- Counters drift if a future write path forgets `statsIncrements` (D-013 and F-014 must add it). Repair: recompute the four counters by hand from `tickets/` in the console.
+- With an empty cache and no network at first install, the lists, dashboard and categories are empty.
+- `toTicket()` does not read `resolvedAt` yet; the model uses the RESOLVED history entry (D-013/F-014 decide).
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and after the review fixes: 0 errors, 18 warnings (17 after F-010 plus one newer-version check, none in the F-011 files).
+- Greps: no `LocalTicketsRepository`, `loadPublicTickets`, `loadStats` or `refresh()` left; `toAnonymousView()` is called in `data/` only by `toPublicTicketDocument()`.
+- Review: the anonymous path reads only `publicTickets`, `stats/summary` and `categories`; the report batch matches decision 0010; the counters keep decision 0005's meaning; listeners are removed by `awaitClose`.
+
+### Improvement opportunities
+- Deploy and test the security rules (decision 0012 Q5), including the `stats/summary` block.
+- A Cloud Function or scheduled job that recomputes `stats/summary` from the tickets and detects drift.
+- Show the user when a queued offline write is later refused by the server.
+- Real authentication instead of the stand-in (D-009).
+- Thumbnails for the public list (F-013).
+- A loading state, so the first frame before the first snapshot does not show "no tickets".
+- Restart a listener after an error (for example when the user reopens the screen or the network returns) instead of waiting for a new collection.

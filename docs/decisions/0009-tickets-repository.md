@@ -4,6 +4,13 @@ Status: accepted (F-008, Gate 1 on 2026-11-08, plan revision 2; review fixes on 
 
 Amended by F-010 (2026-11-10): `CityFixApplication` now also holds the Firebase instances (`auth`, `firestore` with the persistent cache, `storage`, `messaging`), each `by lazy`. The manual-DI decision itself is unchanged. See [decision 0010](0010-firestore-schema.md) and the overview, "Firebase (F-010)".
 
+Amended by F-011 (2026-11-13, Gate 1 Q2 and Q4; details in [decision 0013](0013-firestore-reads-and-dashboard-counters.md)):
+- **Firestore implementation.** `FirestoreTicketsRepository` implements `TicketsRepository`; `CityFixApplication.ticketsRepository` uses it. `LocalTicketsRepository` and its `Mutex` are deleted (Q4): nothing else used it, and previews use `SampleTickets` directly.
+- **Flows replace the suspend loads.** The interface is `publicTickets()`, `participantTickets(userId)`, `allTickets()`, `stats()` and `activeCategories()`, each a `Flow` over a snapshot listener, plus `suspend reportTicket(..., creatorId)`. `loadPublicTickets`, `loadStats`, `getTicketById` and the synchronous `activeCategories()` are gone. The projection still happens only in `data/`: `toAnonymousView()` is called in `toPublicTicketDocument()`.
+- **ViewModels still own their `StateFlow`s**, filled by collecting the flows in `viewModelScope`. `TicketsViewModel(repository, user)` has `setUser(user)` instead of `refresh()`; `ReportViewModel(repository, attachmentStorage, creatorId)` collects the categories in `init`. `MainActivity` no longer calls `refresh()` after a report.
+- **`reportTicket` returns once the batch is queued**, without waiting for the server, and keeps the photo GPS EXIF step (F-009).
+- Consequences below: "One empty frame" now lasts until the first snapshot (from the cache, or the server on a first install). "Callback risks" is **narrowed**: the save now takes only the EXIF strip and the queueing, so the window is a few milliseconds; the `saved` flag is still open. "`refresh()` ... two lock acquisitions" no longer applies.
+
 ## Context
 - The ViewModels owned the data: `TicketsViewModel` held `TicketsList(SampleTickets.all)`, built tickets and called `toAnonymousView()`; `ReportViewModel` read `SampleCategories`. `.claude/rules/kotlin.md` wants the anonymous filter in the repository layer, and `kotlin-conventions` wants ViewModels on repository interfaces. 0006 and 0008 put the repository off until Firebase.
 - F-007 copied gallery picks on the main thread (F-007 Gate 1 Q13, an accepted exception to `.claude/rules/kotlin.md`).

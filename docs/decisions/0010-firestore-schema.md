@@ -2,6 +2,12 @@
 
 Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)).
 
+Amended by F-011 (2026-11-13, see [decision 0013](0013-firestore-reads-and-dashboard-counters.md)):
+- **`stats/summary` is decided** (Q3): four counters `totalTickets`, `activeTickets`, `resolvedTickets`, `repairTimeSumMillis`, changed with `FieldValue.increment` (`statsIncrements(before, after)`, `SetOptions.merge()`) in the same batch as every ticket change; read by everyone. The rules draft has a `stats/{docId}` block (write: `summary` only, active citizens and operators, only the four keys; values not bounded). Not deployed.
+- **`ticketLocations` is written by F-011** in the create batch (`active: true`), with location (0, 0) until F-012.
+- **`storagePath` holds the local file path while the attachment is PENDING**; F-013 replaces it with the Storage path.
+- **`resolvedAt` is not read yet.** `toTicket()` drops it and the model uses the RESOLVED history entry (`Ticket.resolvedAt()`). D-013/F-014 decide whether to map it; until then the "clients compute the window from `resolvedAt`" line below is not implemented.
+
 ## Context
 - Phase 1 kept everything in memory (`LocalTicketsRepository`, [decision 0009](0009-tickets-repository.md)). Every Firebase task (F-011..F-016, D-009..D-014) needs one shared data layout.
 - Phase 1 left six schema risks open: attachment phase, FCM token and `role`, a public collection, NIF uniqueness, one municipality document, the reopen window.
@@ -24,7 +30,7 @@ Model types stay as [decision 0003](0003-domain-model-representation.md) defines
 | `tickets/{id}/reports/{uid}` | `categoryId`, `situation`, `location` (GeoPoint, exact), `description`, `createdAt` | its author; operators | an active citizen joining the ticket by grouping, in the same batch as the `followerIds`/`participantIds` update; never updated |
 | `publicTickets/{id}` | `categoryId`, `categoryName`, `situation`, `currentStatus`, `coarseLocation` (2 decimals, about 1 km), `thumbnails` (REPORT-phase thumbnail paths), `createdAt`, `resolvedAt?` (same value as the ticket's) | everyone | the creator in the same batch as `tickets/{id}` (PUBLIC scope only, status `OPEN`, no `resolvedAt`); afterwards the status mirror in the same batch as the ticket transition (operators; participants only reopen/close), and thumbnails by participants and operators; nobody once CLOSED |
 | `ticketLocations/{id}` | `categoryId`, `situation`, `location` (GeoPoint, exact), `active` (bool, `true` while the ticket is not CLOSED) | signed-in active citizens; operators; never anonymous users | the creator in the same batch as `tickets/{id}` (`active: true`); `active: false` by an operator or participant only in the batch that closes the ticket; nothing once CLOSED |
-| `stats/summary` | reserved for dashboard counters | decided in F-011 | decided in F-011 |
+| `stats/summary` | `totalTickets`, `activeTickets`, `resolvedTickets`, `repairTimeSumMillis` (F-011, decision 0013) | everyone | every batch that changes a ticket adds `FieldValue.increment` deltas (`statsIncrements`), active citizens and operators |
 | Storage `tickets/{ticketId}/{attachmentId}.jpg\|mp4`, `tickets/{ticketId}/{attachmentId}_thumb.jpg` | - | everyone when the ticket's `scope` is PUBLIC (exactly when `publicTickets/{ticketId}` exists); otherwise participants and operators | participants and operators (the F-013 upload worker), not once CLOSED; `image/*` under 10 MB, `video/*` under 100 MB |
 | Storage `users/{uid}/photo.jpg` | - | the owner; operators | the owner; `image/*` under 10 MB |
 
@@ -43,7 +49,7 @@ Model types stay as [decision 0003](0003-domain-model-representation.md) defines
 - **Times stay `Long` epoch milliseconds**, not `Timestamp` (decision 0003): trivial mapping, rules compare numbers.
 - **Coordinates are `GeoPoint`**, used in `data/` only.
 - **Storage paths have no user ids.** Media of a public ticket are readable by anonymous users through cross-service rules: `firestore.get` on `tickets/{ticketId}` (read once per rule) checks `scope == 'PUBLIC'` (true exactly when `publicTickets/{ticketId}` exists), otherwise participants and operators (see the two-document limit in Consequences).
-- **`stats/summary` is reserved (Q11)**: counters written in the same batch as each ticket change are the likely answer for the anonymous dashboard, which cannot read private tickets. F-011 decides and adds its rules; until then the path is denied.
+- **`stats/summary` is reserved (Q11)**: counters written in the same batch as each ticket change are the likely answer for the anonymous dashboard, which cannot read private tickets. F-011 decides and adds its rules; until then the path is denied. (Decided by F-011, see the amendment at the top and decision 0013.)
 - **`Attachment.phase` in `model/` is not part of F-010 (Q10).** The Firestore field is fixed here; the `AttachmentPhase` enum is added by the first task that writes a RESOLUTION attachment (D-013), or by F-011 if Diogo agrees.
 
 ### Phase 1 risks
