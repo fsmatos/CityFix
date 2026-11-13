@@ -378,7 +378,7 @@ private fun MediaTile(
 /** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_CREATED = 1_792_089_000_000L
 
-/** Already in anonymous form (no author ids, rounded location), like TicketsViewModel.tickets. */
+/** Raw ticket with no author ids and a rounded location; the PUBLIC preview hides description and history. */
 private val previewTicket = Ticket(
     id = "preview-1",
     description = "Three street lamps have been off for a week on the main avenue. " +
