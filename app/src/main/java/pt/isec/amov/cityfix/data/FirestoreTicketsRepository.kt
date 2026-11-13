@@ -46,7 +46,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
         firestore.collection(PUBLIC_TICKETS)
             .whereIn("currentStatus", ACTIVE_STATUS_NAMES)
             .listen { snapshot ->
-                TicketsList(snapshot.documents.map { it.toPublicTicket() }).getAllSorted()
+                TicketsList(snapshot.documents.mapNotNull { doc -> doc.readOrNull { toPublicTicket() } }).getAllSorted()
             }
 
     /** Full tickets whose participantIds contain [userId] (creator or follower), newest first. */
@@ -54,20 +54,20 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
         firestore.collection(TICKETS)
             .whereArrayContains("participantIds", userId)
             .listen { snapshot ->
-                TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
+                TicketsList(snapshot.documents.mapNotNull { doc -> doc.readOrNull { toTicket() } }).getAllSorted()
             }
 
     /** Every full ticket, newest first (operators). */
     fun allTickets(): Flow<List<Ticket>> =
         firestore.collection(TICKETS)
             .listen { snapshot ->
-                TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
+                TicketsList(snapshot.documents.mapNotNull { doc -> doc.readOrNull { toTicket() } }).getAllSorted()
             }
 
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     fun stats(): Flow<DashboardStats> =
         firestore.document(STATS_SUMMARY)
-            .listen { snapshot -> snapshot.toDashboardStats() }
+            .listen { snapshot -> snapshot.readOrNull { toDashboardStats() } ?: DashboardStats() }
 
     /** Active categories (I.3.E), sorted by name with Collator (locale-aware). */
     fun activeCategories(): Flow<List<Category>> =
@@ -75,7 +75,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
             .whereEqualTo("active", true)
             .listen { snapshot ->
                 val collator = Collator.getInstance()
-                snapshot.documents.map { it.toCategory() }
+                snapshot.documents.mapNotNull { doc -> doc.readOrNull { toCategory() } }
                     .sortedWith { a, b -> collator.compare(a.name, b.name) }
             }
 

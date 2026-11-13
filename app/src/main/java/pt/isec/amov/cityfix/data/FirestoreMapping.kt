@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.data
 
+import android.util.Log
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
@@ -24,10 +25,11 @@ import pt.isec.amov.cityfix.model.toAnonymousView
  * the Firestore field names differ from the model (storagePath = Attachment.file, GeoPoint =
  * Coordinates) and some fields exist only in Firestore (participantIds, resolvedAt).
  *
- * Reading never throws: a missing field, a value of the wrong type or an unknown enum name reads
- * as the model default. Values are read with `get(field) as? Type` instead of getString/getLong,
- * because those throw when a field has the wrong type (for example edited in the console), and
- * a throw inside a snapshot listener would crash the app.
+ * Reading uses the document's typed getters, as in the class demo (`doc.getString("name") ?: ""`),
+ * with the model default when a field is missing. A getter throws when a field has the wrong type
+ * (only possible after an edit by hand in the console); [readOrNull] catches that so one broken
+ * document is skipped instead of crashing the snapshot listener. Lists and the maps inside the
+ * statusHistory/attachments arrays have no typed getters, so those few values are cast.
  */
 
 /** Collection and document paths (decision 0010). */
@@ -127,18 +129,18 @@ private fun Coordinates.toGeoPoint() = GeoPoint(latitude, longitude)
 /** A full ticket from `tickets/{id}`. Firestore-only fields (participantIds, resolvedAt) are dropped. */
 internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
     id = id,
-    description = get("description") as? String ?: "",
-    situation = enumOrDefault(get("situation") as? String, Situation.DAMAGE),
-    scope = enumOrDefault(get("scope") as? String, Scope.PRIVATE),
-    location = (get("location") as? GeoPoint).toCoordinates(),
-    currentStatus = enumOrDefault(get("currentStatus") as? String, TicketStatus.OPEN),
-    createdAt = (get("createdAt") as? Number)?.toLong() ?: 0L,
-    categoryId = get("categoryId") as? String ?: "",
-    categoryName = get("categoryName") as? String ?: "",
-    creatorId = get("creatorId") as? String ?: "",
-    followerIds = (get("followerIds") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-    statusHistory = mapList(get("statusHistory")).map { it.toStatusHistory() },
-    attachments = mapList(get("attachments")).map { it.toAttachment() },
+    description = getString("description") ?: "",
+    situation = enumOrDefault(getString("situation"), Situation.DAMAGE),
+    scope = enumOrDefault(getString("scope"), Scope.PRIVATE),
+    location = getGeoPoint("location").toCoordinates(),
+    currentStatus = enumOrDefault(getString("currentStatus"), TicketStatus.OPEN),
+    createdAt = getLong("createdAt") ?: 0L,
+    categoryId = getString("categoryId") ?: "",
+    categoryName = getString("categoryName") ?: "",
+    creatorId = getString("creatorId") ?: "",
+    followerIds = getStringList("followerIds"),
+    statusHistory = getMapList("statusHistory").map { it.toStatusHistory() },
+    attachments = getMapList("attachments").map { it.toAttachment() },
 )
 
 /**
@@ -147,16 +149,16 @@ internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
  * the card can show it.
  */
 internal fun DocumentSnapshot.toPublicTicket(): Ticket {
-    val thumbnails = (get("thumbnails") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+    val thumbnails = getStringList("thumbnails")
     return Ticket(
         id = id,
-        situation = enumOrDefault(get("situation") as? String, Situation.DAMAGE),
+        situation = enumOrDefault(getString("situation"), Situation.DAMAGE),
         scope = Scope.PUBLIC,
-        location = (get("coarseLocation") as? GeoPoint).toCoordinates(),
-        currentStatus = enumOrDefault(get("currentStatus") as? String, TicketStatus.OPEN),
-        createdAt = (get("createdAt") as? Number)?.toLong() ?: 0L,
-        categoryId = get("categoryId") as? String ?: "",
-        categoryName = get("categoryName") as? String ?: "",
+        location = getGeoPoint("coarseLocation").toCoordinates(),
+        currentStatus = enumOrDefault(getString("currentStatus"), TicketStatus.OPEN),
+        createdAt = getLong("createdAt") ?: 0L,
+        categoryId = getString("categoryId") ?: "",
+        categoryName = getString("categoryName") ?: "",
         attachments = thumbnails.mapIndexed { index, path ->
             Attachment(
                 id = "thumb-$index",
@@ -170,18 +172,18 @@ internal fun DocumentSnapshot.toPublicTicket(): Ticket {
 
 internal fun DocumentSnapshot.toCategory(): Category = Category(
     id = id,
-    name = get("name") as? String ?: "",
-    active = get("active") as? Boolean ?: true,
+    name = getString("name") ?: "",
+    active = getBoolean("active") ?: true,
 )
 
 /** Dashboard figures from `stats/summary`; a missing document means no tickets yet. */
 internal fun DocumentSnapshot.toDashboardStats(): DashboardStats {
     if (!exists()) return DashboardStats()
-    val resolved = (get("resolvedTickets") as? Number)?.toInt() ?: 0
-    val repairSum = (get("repairTimeSumMillis") as? Number)?.toLong() ?: 0L
+    val resolved = getLong("resolvedTickets")?.toInt() ?: 0
+    val repairSum = getLong("repairTimeSumMillis") ?: 0L
     return DashboardStats(
-        totalTickets = (get("totalTickets") as? Number)?.toInt() ?: 0,
-        activeTickets = (get("activeTickets") as? Number)?.toInt() ?: 0,
+        totalTickets = getLong("totalTickets")?.toInt() ?: 0,
+        activeTickets = getLong("activeTickets")?.toInt() ?: 0,
         resolvedTickets = resolved,
         averageRepairTimeMillis = if (resolved > 0) repairSum / resolved else null,
     )
@@ -206,9 +208,25 @@ private fun Map<*, *>.toAttachment() = Attachment(
     phase = enumOrDefault(this["phase"] as? String, AttachmentPhase.REPORT),
 )
 
+/** A Firestore array of strings (no typed getter exists for lists). */
+private fun DocumentSnapshot.getStringList(field: String): List<String> =
+    (get(field) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
 /** A Firestore array of maps (statusHistory, attachments); anything else is skipped. */
-private fun mapList(value: Any?): List<Map<*, *>> =
-    (value as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
+private fun DocumentSnapshot.getMapList(field: String): List<Map<*, *>> =
+    (get(field) as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
+
+/**
+ * [read] applied to this document, or null when a typed getter throws because a field has the
+ * wrong type (edited by hand in the console). The listener then skips this one document.
+ */
+internal inline fun <T> DocumentSnapshot.readOrNull(read: DocumentSnapshot.() -> T): T? =
+    try {
+        read()
+    } catch (e: RuntimeException) {
+        Log.w("FirestoreMapping", "Skipped malformed document ${reference.path}", e)
+        null
+    }
 
 private fun GeoPoint?.toCoordinates(): Coordinates =
     if (this == null) Coordinates() else Coordinates(latitude, longitude)
