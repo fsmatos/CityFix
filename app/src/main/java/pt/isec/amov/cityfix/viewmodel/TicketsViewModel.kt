@@ -49,22 +49,24 @@ class TicketsViewModel(private val repository: TicketsRepository, user: User?) :
 
     /**
      * Restarts the ticket listener for [user]: null = anonymous. D-009 calls this on sign-in and
-     * sign-out. The last list stays until the first snapshot of the new listener arrives.
+     * sign-out. The list is cleared first, so after sign-out an anonymous user never sees the
+     * previous user's full tickets while the new listener loads.
      */
     fun setUser(user: User?) {
         ticketsJob?.cancel()
+        _tickets.value = emptyList()
         ticketsJob = viewModelScope.launch {
             when (user) {
                 null -> repository.publicTickets().collect { _tickets.value = it }
 
-                // combine (beyond class) emits again whenever either flow emits. The citizen's own
-                // full tickets replace the public copy with the same id.
+                // combine (beyond class) emits again whenever either flow emits. Own tickets go
+                // first: TicketsList keeps the first ticket with an id, so the citizen's full
+                // ticket wins over its public copy.
                 is Citizen -> combine(
                     repository.participantTickets(user.id),
                     repository.publicTickets(),
                 ) { own, public ->
-                    val ownIds = own.map { it.id }.toSet()
-                    TicketsList(own + public.filter { it.id !in ownIds }).getAllSorted()
+                    TicketsList(own + public).getAllSorted()
                 }.collect { _tickets.value = it }
 
                 is Operator -> repository.allTickets().collect { _tickets.value = it }

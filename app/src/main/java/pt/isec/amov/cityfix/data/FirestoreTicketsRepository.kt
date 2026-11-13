@@ -164,8 +164,9 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
      * callbackFlow is the flow { } builder for callback APIs: the listener calls trySend for each
      * new snapshot, and awaitClose runs when the collector is cancelled (for example when the
      * ViewModel's viewModelScope ends), removing the listener so it does not leak.
-     * A listener error is logged and the flow keeps its last value instead of failing, so the
-     * collector never throws and the list stays as last seen.
+     * A listener error is only logged: Firestore then stops that listener, so the flow sends
+     * nothing more (live updates stop) and the ViewModel keeps showing the last list it received,
+     * until the flow is collected again (screen reopened or user changed).
      */
     private fun <T> Query.listen(map: (QuerySnapshot) -> T): Flow<T> = callbackFlow {
         val registration = addSnapshotListener { snapshot, error ->
@@ -194,10 +195,10 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
         private const val TAG = "FirestoreTickets"
 
         /**
-         * Names of the active statuses for the publicTickets query, taken from Ticket.isActive
-         * so "active" keeps one definition (decision 0005).
+         * Names of the active statuses for the publicTickets query: the same statuses as
+         * Ticket.isActive (decision 0005).
          */
         private val ACTIVE_STATUS_NAMES: List<String> =
-            TicketStatus.entries.filter { Ticket(currentStatus = it).isActive }.map { it.name }
+            listOf(TicketStatus.OPEN, TicketStatus.INFO_REQUESTED, TicketStatus.IN_PROGRESS).map { it.name }
     }
 }

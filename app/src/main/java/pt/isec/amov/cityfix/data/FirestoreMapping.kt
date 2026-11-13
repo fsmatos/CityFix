@@ -236,13 +236,14 @@ private inline fun <reified E : Enum<E>> enumOrDefault(name: String?, default: E
  * (handover to D-013 and F-014). Both tickets need a non-blank id (TicketsList ignores blank ids).
  */
 internal fun statsIncrements(before: Ticket?, after: Ticket): Map<String, Any> {
-    val a = TicketsList(listOf(after)).stats()
-    val b = if (before == null) DashboardStats() else TicketsList(listOf(before)).stats()
-    val repairDelta = (a.averageRepairTimeMillis ?: 0L) - (b.averageRepairTimeMillis ?: 0L)
+    val afterStats = TicketsList(listOf(after)).stats()
+    val beforeStats = if (before == null) DashboardStats() else TicketsList(listOf(before)).stats()
+    val repairDelta =
+        (afterStats.averageRepairTimeMillis ?: 0L) - (beforeStats.averageRepairTimeMillis ?: 0L)
     return hashMapOf(
-        "totalTickets" to FieldValue.increment((a.totalTickets - b.totalTickets).toLong()),
-        "activeTickets" to FieldValue.increment((a.activeTickets - b.activeTickets).toLong()),
-        "resolvedTickets" to FieldValue.increment((a.resolvedTickets - b.resolvedTickets).toLong()),
+        "totalTickets" to FieldValue.increment((afterStats.totalTickets - beforeStats.totalTickets).toLong()),
+        "activeTickets" to FieldValue.increment((afterStats.activeTickets - beforeStats.activeTickets).toLong()),
+        "resolvedTickets" to FieldValue.increment((afterStats.resolvedTickets - beforeStats.resolvedTickets).toLong()),
         "repairTimeSumMillis" to FieldValue.increment(repairDelta),
     )
 }
