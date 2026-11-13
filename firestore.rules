@@ -1,0 +1,397 @@
+rules_version = '2';
+
+// CityFix Firestore rules: DRAFT (F-010, decision 0010). Not deployed.
+// Deploying needs the person's OK (CLAUDE.md). Check the syntax in the
+// console Rules Playground without publishing.
+//
+// Anything not matched below is denied. Anonymous users (no sign-in) can
+// read only publicTickets, categories and municipality.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+
+    // Anonymous users do not sign in (brief I.1, "nao autenticados"). A Firebase
+    // anonymous-auth token counts as not signed in, in case that provider is
+    // ever turned on.
+    function isSignedIn() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function userDoc() {
+      return get(userPath(request.auth.uid));
+    }
+
+    function hasUserDoc() {
+      return isSignedIn() && exists(userPath(request.auth.uid));
+    }
+
+    // The municipality domain is only proven by a verified e-mail (brief I.3.A).
+    function isOperator() {
+      return hasUserDoc()
+        && userDoc().data.role == 'OPERATOR'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isActiveCitizen() {
+      return hasUserDoc()
+        && userDoc().data.role == 'CITIZEN'
+        && userDoc().data.registrationStatus == 'ACTIVE';
+    }
+
+    // ticket: the data map of a tickets/{id} document.
+    function isParticipant(ticket) {
+      return isSignedIn() && request.auth.uid in ticket.participantIds;
+    }
+
+    function ticketPath(ticketId) {
+      return /databases/$(database)/documents/tickets/$(ticketId);
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function municipality() {
+      return get(/databases/$(database)/documents/municipality/main).data;
+    }
+
+    // ---------- Ticket lifecycle helpers (brief II) ----------
+
+    // The five TicketStatus names in model/ (stored by name, decision 0003).
+    function isTicketStatus(status) {
+      return status in ['OPEN', 'INFO_REQUESTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+    }
+
+    // History is append-only: exactly one new entry with the same status as the
+    // new currentStatus (decision 0004). Its dateTime (Long epoch ms) is not
+    // earlier than the previous entry and at most 5 minutes after the server
+    // time (clock skew). Who wrote it is checked by the callers below.
+    function historyAppended() {
+      let old = resource.data.statusHistory;
+      let neu = request.resource.data.statusHistory;
+      let t = neu[old.size()].dateTime;
+      return neu.size() == old.size() + 1
+        && neu[0:old.size()] == old
+        && neu[old.size()].status == request.resource.data.currentStatus
+        && t is int
+        && t >= old[old.size() - 1].dateTime
+        && t <= request.time.toMillis() + 300000;
+    }
+
+    // The new history entry (call only after historyAppended()).
+    function newEntry() {
+      return request.resource.data.statusHistory[resource.data.statusHistory.size()];
+    }
+
+    // A transition made by a person: the new entry names the caller.
+    function entryBySelf() {
+      return newEntry().responsibleId == request.auth.uid;
+    }
+
+    // Non-blank justification on the new entry (D-008: required for
+    // INFO_REQUESTED and for the reopen).
+    function hasJustification() {
+      return 'justification' in newEntry()
+        && newEntry().justification is string
+        && newEntry().justification.trim().size() > 0;
+    }
+
+    // Operator moves from the stored status (D-008, decision 0011): operators
+    // never reopen or close.
+    function isOperatorMove(from, to) {
+      return (from == 'OPEN' && to in ['INFO_REQUESTED', 'IN_PROGRESS'])
+        || (from == 'INFO_REQUESTED' && to == 'IN_PROGRESS')
+        || (from == 'IN_PROGRESS' && to in ['INFO_REQUESTED', 'RESOLVED']);
+    }
+
+    // Automatic close (D-008 closeIfExpired, decision 0011): RESOLVED -> CLOSED
+    // with one entry by SYSTEM_RESPONSIBLE_ID ("system"), no justification,
+    // dated exactly 5 days after the RESOLVED entry. Any participant's or
+    // operator's device may write it once the window is over (server time).
+    function isAutomaticClose() {
+      let old = resource.data.statusHistory;
+      return resource.data.currentStatus == 'RESOLVED'
+        && request.resource.data.currentStatus == 'CLOSED'
+        && newEntry().responsibleId == 'system'
+        && !('justification' in newEntry() && newEntry().justification != null)
+        && newEntry().dateTime == old[old.size() - 1].dateTime + 432000000;
+    }
+
+    // resolvedAt is a server timestamp: the server time of the write
+    // (FieldValue.serverTimestamp()) whenever the status becomes RESOLVED,
+    // and unchanged by every other write.
+    function resolvedAtIsServerTime() {
+      return request.resource.data.currentStatus == 'RESOLVED'
+        ? request.resource.data.resolvedAt == request.time
+        : !changedKeys().hasAny(['resolvedAt']);
+    }
+
+    // RESOLVED -> CLOSED only after 5 days (brief II.5), for everyone.
+    function closesOnlyAfterFiveDays() {
+      return request.resource.data.currentStatus != 'CLOSED'
+        || (resource.data.currentStatus == 'RESOLVED'
+            && request.time > resource.data.resolvedAt + duration.value(5, 'd'));
+    }
+
+    // RESOLVED -> OPEN by a citizen: within 5 days, with a justification (brief II.4).
+    function isJustifiedReopen() {
+      return resource.data.currentStatus == 'RESOLVED'
+        && request.resource.data.currentStatus == 'OPEN'
+        && request.time <= resource.data.resolvedAt + duration.value(5, 'd')
+        && hasJustification();
+    }
+
+    // Grouping (brief I.2 obs., decision 0002): the citizen's own report in
+    // tickets/{id}/reports/{uid}, written in the same batch, has the ticket's
+    // category and situation and lies in a box of about 10 m around it.
+    // Box: 0.0001 deg latitude (11 m) and 0.00013 deg longitude (11 m at
+    // Coimbra, 40.2 N). The exact 10 m circle is checked by the client (F-012).
+    function reportMatchesTicket(ticketId) {
+      let report = getAfter(/databases/$(database)/documents/tickets/$(ticketId)/reports/$(request.auth.uid)).data;
+      let place = get(/databases/$(database)/documents/ticketLocations/$(ticketId)).data;
+      return report.categoryId == place.categoryId
+        && report.situation == place.situation
+        && math.abs(report.location.latitude() - place.location.latitude()) <= 0.0001
+        && math.abs(report.location.longitude() - place.location.longitude()) <= 0.00013;
+    }
+
+    // ---------- Users and NIF uniqueness ----------
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isOperator());
+
+      // Registration: one transaction writes users/{uid} and nifs/{ROLE}_{nif}.
+      // getAfter checks that the NIF document is written in the same transaction.
+      // An operator registers only with a verified e-mail in the municipality domain.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && getAfter(/databases/$(database)/documents/nifs/$(request.resource.data.role + '_' + request.resource.data.nif)).data.uid == uid
+        && (
+          (request.resource.data.role == 'CITIZEN'
+            && request.resource.data.registrationStatus == 'PENDING'
+            && !('validatedBy' in request.resource.data)
+            && !('validatedAt' in request.resource.data))
+          ||
+          (request.resource.data.role == 'OPERATOR'
+            && request.auth.token.email_verified == true
+            && request.auth.token.email.lower().split('@')[1] == municipality().emailDomain)
+        );
+
+      // The owner edits their own profile, but never name, NIF, georeferencing
+      // (brief I.2.C, I.3.C) or the identity and validation fields.
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && !changedKeys().hasAny(['role', 'name', 'nif', 'email', 'createdAt', 'georeferencing',
+                                  'registrationStatus', 'validatedBy', 'validatedAt']);
+
+      // An operator validates a pending citizen and nothing else.
+      allow update: if isOperator()
+        && resource.data.role == 'CITIZEN'
+        && changedKeys().hasOnly(['registrationStatus', 'validatedBy', 'validatedAt'])
+        && request.resource.data.validatedBy == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // Document id: {ROLE}_{nif}, for example CITIZEN_123456789. Create-only,
+    // and only in the same transaction as the caller's own new users/{uid}
+    // with the same role and NIF (no squatting of other people's NIFs).
+    match /nifs/{nifId} {
+      allow get: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && !exists(userPath(request.auth.uid))
+        && getAfter(userPath(request.auth.uid)).data.role + '_'
+             + getAfter(userPath(request.auth.uid)).data.nif == nifId;
+      allow list, update, delete: if false;
+    }
+
+    // ---------- Reference data ----------
+
+    // Single document municipality/main, edited in the console only.
+    match /municipality/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isOperator();
+    }
+
+    // ---------- Tickets ----------
+
+    match /tickets/{ticketId} {
+      // Citizens query with whereArrayContains("participantIds", uid).
+      allow read: if isOperator() || isParticipant(resource.data);
+
+      // Report: one batch writes tickets/{id}, ticketLocations/{id} and, for
+      // PUBLIC tickets only, publicTickets/{id}.
+      allow create: if isActiveCitizen()
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.participantIds == [request.auth.uid]
+        && request.resource.data.followerIds == []
+        && request.resource.data.currentStatus == 'OPEN'
+        && !('resolvedAt' in request.resource.data)
+        && request.resource.data.statusHistory.size() == 1
+        && request.resource.data.statusHistory[0].status == 'OPEN'
+        && request.resource.data.statusHistory[0].responsibleId == request.auth.uid
+        && request.resource.data.statusHistory[0].dateTime is int
+        && request.resource.data.statusHistory[0].dateTime <= request.time.toMillis() + 300000
+        && existsAfter(/databases/$(database)/documents/ticketLocations/$(ticketId))
+        && (request.resource.data.scope == 'PUBLIC')
+            == existsAfter(/databases/$(database)/documents/publicTickets/$(ticketId));
+
+      // Grouping (brief I.2 obs., decision 0002): a citizen who reports the same
+      // problem joins the ticket, PUBLIC or PRIVATE. They add only their own uid
+      // to followerIds and participantIds (FieldValue.arrayUnion appends), in the
+      // same batch as their report tickets/{id}/reports/{uid}. No free follow.
+      allow update: if isActiveCitizen()
+        && resource.data.currentStatus != 'CLOSED'
+        && !(request.auth.uid in resource.data.participantIds)
+        && changedKeys().hasOnly(['followerIds', 'participantIds'])
+        && request.resource.data.followerIds == resource.data.followerIds.concat([request.auth.uid])
+        && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+        && reportMatchesTicket(ticketId);
+
+      // Lifecycle (brief I.3.E, II; transition table in D-008, decision 0011).
+      // currentStatus and one appended history entry change together; the
+      // status must be one of the five and must actually change.
+      // - Operator: the D-008 moves (INFO_REQUESTED needs a justification;
+      //   RESOLVED needs new proof attachments, and resolvedAt is then the
+      //   server time). Operators never reopen or close by hand.
+      // - Participant: reopen a RESOLVED ticket within 5 days with a justification.
+      // - Automatic close: the "system" entry 5 days after RESOLVED (decision
+      //   0012, Q4), written by a participant's or operator's device once the
+      //   window is over; ticketLocations.active turns false in the same batch.
+      // CLOSED is locked (brief II.5).
+      allow update: if resource.data.currentStatus != 'CLOSED'
+        && isTicketStatus(request.resource.data.currentStatus)
+        && request.resource.data.currentStatus != resource.data.currentStatus
+        && historyAppended()
+        && resolvedAtIsServerTime()
+        && closesOnlyAfterFiveDays()
+        && (request.resource.data.currentStatus != 'CLOSED'
+            || getAfter(/databases/$(database)/documents/ticketLocations/$(ticketId)).data.active == false)
+        && (
+          (isOperator()
+            && entryBySelf()
+            && isOperatorMove(resource.data.currentStatus, request.resource.data.currentStatus)
+            && (request.resource.data.currentStatus != 'INFO_REQUESTED' || hasJustification())
+            && (request.resource.data.currentStatus == 'RESOLVED'
+                ? request.resource.data.attachments.size() > resource.data.attachments.size()
+                : !changedKeys().hasAny(['attachments']))
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments', 'resolvedAt']))
+          ||
+          (isActiveCitizen()
+            && isParticipant(resource.data)
+            && entryBySelf()
+            && isJustifiedReopen()
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory']))
+          ||
+          ((isOperator() || isParticipant(resource.data))
+            && isAutomaticClose()
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory']))
+        );
+
+      // Upload state of attachments (F-013 worker) and a follower's report media:
+      // only the attachments change and the list never shrinks.
+      allow update: if resource.data.currentStatus != 'CLOSED'
+        && (isOperator() || isParticipant(resource.data))
+        && changedKeys().hasOnly(['attachments'])
+        && request.resource.data.attachments.size() >= resource.data.attachments.size();
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isOperator() || isParticipant(get(ticketPath(ticketId)).data);
+        allow create: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+          && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
+          && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // Document id: the reporting citizen's uid. The report of a citizen who
+      // joined the ticket by grouping, written in the same batch as their
+      // followerIds/participantIds update. Read only by its author and operators.
+      match /reports/{uid} {
+        allow read: if isOperator() || (isSignedIn() && request.auth.uid == uid);
+        allow create: if isActiveCitizen()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location',
+              'description', 'createdAt'])
+          && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
+          && !(uid in get(ticketPath(ticketId)).data.participantIds)
+          && uid in getAfter(ticketPath(ticketId)).data.participantIds;
+        allow update, delete: if false;
+      }
+    }
+
+    // Anonymous projection, built only by toAnonymousView(). Only these fields
+    // are allowed, so no author data or exact coordinates can be stored here.
+    match /publicTickets/{ticketId} {
+      allow read: if true;
+
+      allow create: if isActiveCitizen()
+        && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
+        && getAfter(ticketPath(ticketId)).data.scope == 'PUBLIC'
+        && request.resource.data.currentStatus == 'OPEN'
+        && request.resource.data.keys().hasOnly(['categoryId', 'categoryName', 'situation',
+            'currentStatus', 'coarseLocation', 'thumbnails', 'createdAt']);
+
+      // Status mirror, in the same batch as the tickets/{id} transition (whose
+      // own rule decides who may make it): status and resolvedAt equal the
+      // ticket's new values. CLOSED is locked.
+      allow update: if resource.data.currentStatus != 'CLOSED'
+        && changedKeys().hasOnly(['currentStatus', 'resolvedAt'])
+        && request.resource.data.currentStatus == getAfter(ticketPath(ticketId)).data.currentStatus
+        && request.resource.data.get('resolvedAt', null)
+             == getAfter(ticketPath(ticketId)).data.get('resolvedAt', null)
+        && (isOperator()
+            || (isParticipant(get(ticketPath(ticketId)).data)
+                && resource.data.currentStatus == 'RESOLVED'
+                && request.resource.data.currentStatus in ['OPEN', 'CLOSED']));
+
+      // Thumbnails after upload (F-013 worker); the list never shrinks.
+      allow update: if resource.data.currentStatus != 'CLOSED'
+        && (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+        && changedKeys().hasOnly(['thumbnails'])
+        && request.resource.data.thumbnails.size() >= resource.data.thumbnails.size();
+
+      allow delete: if false;
+    }
+
+    // Exact locations for the 10 m grouping (Q8). Never readable by anonymous users.
+    match /ticketLocations/{ticketId} {
+      allow read: if isActiveCitizen() || isOperator();
+
+      allow create: if isActiveCitizen()
+        && getAfter(ticketPath(ticketId)).data.creatorId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location', 'active'])
+        && request.resource.data.active == true;
+
+      // active == (ticket not CLOSED). It changes only in the batch that changes
+      // the ticket's status and must match the new status, so in practice it
+      // becomes false once, in the closing batch. Locked once CLOSED.
+      allow update: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
+        && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
+        && changedKeys().hasOnly(['active'])
+        && getAfter(ticketPath(ticketId)).data.currentStatus != get(ticketPath(ticketId)).data.currentStatus
+        && request.resource.data.active == (getAfter(ticketPath(ticketId)).data.currentStatus != 'CLOSED');
+
+      allow delete: if false;
+    }
+
+    // stats/summary is reserved for the dashboard counters (Q11). F-011 decides
+    // and adds its rules; until then it is denied like every other path.
+  }
+}
