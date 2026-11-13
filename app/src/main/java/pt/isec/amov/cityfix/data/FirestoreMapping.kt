@@ -1,6 +1,5 @@
 package pt.isec.amov.cityfix.data
 
-import android.util.Log
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
@@ -26,9 +25,7 @@ import pt.isec.amov.cityfix.model.toAnonymousView
  * Coordinates) and some fields exist only in Firestore (participantIds, resolvedAt).
  *
  * Reading uses the document's typed getters, as in the class demo (`doc.getString("name") ?: ""`),
- * with the model default when a field is missing. A getter throws when a field has the wrong type
- * (only possible after an edit by hand in the console); [readOrNull] catches that so one broken
- * document is skipped instead of crashing the snapshot listener. Lists and the maps inside the
+ * with the model default when a field is missing. Lists and the maps inside the
  * statusHistory/attachments arrays have no typed getters, so those few values are cast.
  */
 
@@ -215,18 +212,6 @@ private fun DocumentSnapshot.getStringList(field: String): List<String> =
 /** A Firestore array of maps (statusHistory, attachments); anything else is skipped. */
 private fun DocumentSnapshot.getMapList(field: String): List<Map<*, *>> =
     (get(field) as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
-
-/**
- * [read] applied to this document, or null when a typed getter throws because a field has the
- * wrong type (edited by hand in the console). The listener then skips this one document.
- */
-internal inline fun <T> DocumentSnapshot.readOrNull(read: DocumentSnapshot.() -> T): T? =
-    try {
-        read()
-    } catch (e: RuntimeException) {
-        Log.w("FirestoreMapping", "Skipped malformed document ${reference.path}", e)
-        null
-    }
 
 private fun GeoPoint?.toCoordinates(): Coordinates =
     if (this == null) Coordinates() else Coordinates(latitude, longitude)
