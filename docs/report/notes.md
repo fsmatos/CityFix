@@ -656,7 +656,7 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - **An offline RESOLVED gets the sync time as `resolvedAt`**, not the tap time; the history entry keeps the device time, so the two can differ. A device clock more than 5 minutes fast cannot write status changes.
 - **Signed-in active citizens can read exact locations, category and situation of every ticket** through `ticketLocations` (no author, description or media). Accepted for Option A.
 - **`google-services.json` is handled outside git** and copied into the ZIP by hand.
-- **The rules were drafted on 2026-11-10 and deployed on <date> (fill in later).** They were checked by reading only; they have not been run in the Rules Playground or the emulator yet. Until the deploy, the test-mode database is open to anyone with the project config (expires 2026-12-10).
+- **The rules are drafted but not deployed (decision 0012 Q5, amended 2026-11-13).** They were checked by reading only, never run in the Rules Playground or the emulator. The database runs in test mode (expires 2026-12-10), open to anyone with the project config, so the privacy and lifecycle rules hold only in the app code. Chosen because this is a school project that will not reach production; deploying the drafted rules is the first improvement for a real deployment.
 - **Smoke test only:** the offline check proved the cache with one test document; real offline flows (reporting with no network, the upload worker) are tested in F-011/F-013.
 
 ### Verification
