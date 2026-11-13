@@ -77,11 +77,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun CityFixApp(app: CityFixApplication) {
     val ticketsViewModel: TicketsViewModel =
-        viewModel(factory = TicketsViewModelFactory(app.ticketsRepository))
+        viewModel(factory = TicketsViewModelFactory(app.ticketsRepository, app.currentUser))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
     val stats by ticketsViewModel.stats.collectAsStateWithLifecycle()
 
-    // Phase 1 has no login: every user is anonymous, and brief I.1.B lists only category,
+    // No login yet: the UI treats every user as anonymous, and brief I.1.B lists only category,
     // situation and thumbnail, hence no expanded cards (D-007). D-009 sets this by role.
     val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -145,7 +145,7 @@ private fun CityFixApp(app: CityFixApplication) {
                 val id = entry.toRoute<TicketDetailRoute>().ticketId
                 ShowScreen(
                     ticket = tickets.firstOrNull { it.id == id },
-                    // Phase 1 has no login: every user is anonymous (decisions 0006, 0007).
+                    // No login yet: shown as anonymous (decisions 0006, 0007); D-009 sets it by role.
                     audience = DetailAudience.PUBLIC,
                 )
             }
@@ -153,15 +153,19 @@ private fun CityFixApp(app: CityFixApplication) {
                 // Inside the destination: scoped to this entry, so a finished form is cleared.
                 val reportViewModel: ReportViewModel =
                     viewModel(
-                        factory = ReportViewModelFactory(app.ticketsRepository, app.attachmentStorage),
+                        factory = ReportViewModelFactory(
+                            app.ticketsRepository,
+                            app.attachmentStorage,
+                            app.reporterId,
+                        ),
                     )
                 ReportScreen(
                     viewModel = reportViewModel,
-                    // Like saveContact { refreshContacts(); popBackStack() } in Contacts_#3.
+                    // Like saveContact { popBackStack() } in Contacts_#3, without the refresh:
+                    // the tickets listener shows the new ticket from the local cache.
                     // No id here: never navigate to the new ticket, a PRIVATE one is not
                     // visible (decision 0006).
                     onSubmitted = {
-                        ticketsViewModel.refresh()
                         snackbarScope.launch {
                             snackbarHostState.showSnackbar(reportSubmittedMessage)
                         }

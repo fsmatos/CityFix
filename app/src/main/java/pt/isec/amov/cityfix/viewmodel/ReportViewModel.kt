@@ -23,19 +23,27 @@ import java.io.File
  * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
  * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
  * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
- * in Contacts_#3); categories come from it too, active ones only. Picked media are copied off the
- * main thread by [attachmentStorage].
+ * in Contacts_#3) as reported by [creatorId]; categories come from it too, active ones only, and
+ * follow changes while the form is open. Picked media are copied off the main thread by
+ * [attachmentStorage].
  */
 class ReportViewModel(
     private val repository: TicketsRepository,
     private val attachmentStorage: AttachmentStorage,
+    private val creatorId: String,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        ReportUiState(categories = repository.activeCategories()),
-    )
+    private val _uiState = MutableStateFlow(ReportUiState())
 
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.activeCategories().collect { list ->
+                _uiState.update { it.copy(categories = list) }
+            }
+        }
+    }
 
     /** Gallery copies still running; isCopyingAttachments is true while this is above 0. */
     private var copiesInProgress = 0
@@ -193,6 +201,7 @@ class ReportViewModel(
                 situation = situation,
                 scope = scope,
                 attachments = checked.attachments,
+                creatorId = creatorId,
             )
             if (id != null) {
                 _uiState.update { it.copy(isSaving = false) }

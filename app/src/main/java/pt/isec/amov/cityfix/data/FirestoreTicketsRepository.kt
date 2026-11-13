@@ -39,10 +39,10 @@ import java.text.Collator
  * or `ticketLocations`, so the anonymous code path never receives author data or exact
  * coordinates.
  */
-class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
+class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : TicketsRepository {
 
     /** Active publicTickets (anonymous projection), newest first. Never reads tickets/. */
-    fun publicTickets(): Flow<List<Ticket>> =
+    override fun publicTickets(): Flow<List<Ticket>> =
         firestore.collection(PUBLIC_TICKETS)
             .whereIn("currentStatus", ACTIVE_STATUS_NAMES)
             .listen { snapshot ->
@@ -50,7 +50,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
             }
 
     /** Full tickets whose participantIds contain [userId] (creator or follower), newest first. */
-    fun participantTickets(userId: String): Flow<List<Ticket>> =
+    override fun participantTickets(userId: String): Flow<List<Ticket>> =
         firestore.collection(TICKETS)
             .whereArrayContains("participantIds", userId)
             .listen { snapshot ->
@@ -58,19 +58,19 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
             }
 
     /** Every full ticket, newest first (operators). */
-    fun allTickets(): Flow<List<Ticket>> =
+    override fun allTickets(): Flow<List<Ticket>> =
         firestore.collection(TICKETS)
             .listen { snapshot ->
                 TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
             }
 
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
-    fun stats(): Flow<DashboardStats> =
+    override fun stats(): Flow<DashboardStats> =
         firestore.document(STATS_SUMMARY)
             .listen { snapshot -> snapshot.toDashboardStats() }
 
     /** Active categories (I.3.E), sorted by name with Collator (locale-aware). */
-    fun activeCategories(): Flow<List<Category>> =
+    override fun activeCategories(): Flow<List<Category>> =
         firestore.collection(CATEGORIES)
             .whereEqualTo("active", true)
             .listen { snapshot ->
@@ -87,7 +87,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) {
      * Writes one batch (decision 0010): tickets/{id}, ticketLocations/{id}, publicTickets/{id}
      * for PUBLIC tickets, and the stats/summary counters. Returns once the batch is queued.
      */
-    suspend fun reportTicket(
+    override suspend fun reportTicket(
         description: String,
         categoryId: String,
         categoryName: String,
