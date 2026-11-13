@@ -391,7 +391,17 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // stats/summary is reserved for the dashboard counters (Q11). F-011 decides
-    // and adds its rules; until then it is denied like every other path.
+    // Dashboard counters (F-011, brief I.1.A): only stats/summary, readable by
+    // everyone (anonymous dashboard). Every ticket batch adds
+    // FieldValue.increment deltas to the four counters (statsIncrements). Rules
+    // cannot check that an increment matches the ticket written in the same
+    // batch, so the values are not bounded here. Draft: not deployed.
+    match /stats/{docId} {
+      allow read: if true;
+      allow write: if docId == 'summary'
+        && (isActiveCitizen() || isOperator())
+        && request.resource.data.keys().hasOnly(['totalTickets', 'activeTickets',
+            'resolvedTickets', 'repairTimeSumMillis']);
+    }
   }
 }
