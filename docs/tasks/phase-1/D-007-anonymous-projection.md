@@ -1,6 +1,6 @@
 # D-007: Anonymous projection and expand toggle
 
-Owner: Diogo (`dev/Diogo`) · Layer: `model` / `ui.navigation` · Phase 1 · Status: to do
+Owner: Diogo (`dev/Diogo`) · Layer: `model` / `ui.navigation` · Phase 1 · Status: done (code, docs 2026-11-10; manual test 2026-11-11)
 Depends on: D-006
 
 ## Goal
@@ -20,9 +20,11 @@ Enforce the anonymous view below the UI and make the list consistent with the de
 `model/TicketPrivacy.kt`, `ui/components/TicketCard.kt` or `ui/navigation/MainTopAppBar.kt` and `MainActivity.kt` (per the toggle decision), `docs/decisions/0006-anonymous-projection-phase-1.md`.
 
 ## Acceptance checks
-- [ ] An anonymous user cannot read a ticket's description, history or date in the list or the detail.
-- [ ] The projected ticket holds no description or history.
-- [ ] The dashboard stats are unchanged.
+- [x] An anonymous user cannot read a ticket's description, history or date in the list or the detail. *Manual test by Diogo on the emulator, 2026-11-11: no expand toggle, collapsed cards in portrait/landscape and EN/PT; `sample-1`/`sample-2` and a new PUBLIC report with a photo show no description, date or history.*
+- [x] The projected ticket holds no description or history. *Checked by reading the code and in review: `toAnonymousView()` sets `description = ""` and `statusHistory = emptyList()` and keeps `currentStatus`.*
+- [x] The dashboard stats are unchanged. *Manual test, 2026-11-11: 3 issues, 67%, 3 days, "Based on 1 repair"; 4 total / 3 active after a PUBLIC report.*
+
+Previews (`MainTopAppBar` list bars with and without the toggle, `TicketCard`/`ListScreen` expanded) checked in Android Studio on 2026-11-11. Build and lint pass (0 errors, 16 warnings, baseline). Decision 0006 amended on 2026-11-10.
 
 ## References
 - Decisions 0006, 0007; `docs/work/D-006-main-activity-nav/review.md` (S1).

@@ -16,6 +16,7 @@ Every phase-1 task (F-002..F-006, D-002..D-004) compiles against the domain type
 - **`Scope` defaults to `PRIVATE`.** A ticket that forgets to set its scope is never shown to anonymous users (privacy by default).
 - **No-arg construction, `val` properties, `List` collections.** Every parameter has a default, so `Ticket()`, `Citizen()` and the rest build with no arguments (previews, sample data, and Firestore's no-arg constructor requirement). Properties are `val` so `UiState` holds immutable values. Firestore's `toObject()` cannot fill `val`s, so reading goes through a mapping step in `data/` (by hand from the document map, or small `var` DTOs) in the Firebase phase.
 - **Non-null `Ticket.location`** (the brief makes location mandatory) and **`Attachment.file` as a `String`** (local content URI before upload, Storage path or URL after it; `android.net.Uri` is not allowed in `model/`).
+  - Amended 2026-11-11 (D-008 review N3): `file` is an absolute local path before upload (F-007), not a content URI.
 - **Diagram associations not in the phase-1 spec are left out for now:** `define` (Municipio -> Categoria), `pertence a` (Operador -> Municipio), `valida` (Operador -> Municipe) and `gere` (Operador -> Ticket). Phase 1 has one municipality; they are added in the Firebase/operator tasks.
 
 ## Consequences

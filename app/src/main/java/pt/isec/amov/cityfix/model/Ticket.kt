@@ -16,6 +16,8 @@ data class Ticket(
     /**
      * Denormalised copy of the last [statusHistory] entry. Kept so lists, filters and Firestore
      * queries read one field. Update both together.
+     * Change it only through transition or closeIfExpired (TicketLifecycle.kt, decision 0004).
+     * A projected ticket (toAnonymousView) has a status with an empty history.
      */
     val currentStatus: TicketStatus = TicketStatus.OPEN,
     /** Epoch milliseconds, UTC. */

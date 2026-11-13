@@ -1,6 +1,6 @@
 # 0006: Anonymous projection of tickets in phase 1
 
-Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009.
+Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009. Amended on 2026-11-10 by D-007: the projection also drops `description` and `statusHistory`, the expand toggle is hidden for anonymous users, and the public projection contract for F-011 is recorded (see "Amended 2026-11-10 (D-007)").
 
 ## Context
 Phase 1 has no login, so every viewer of the app is an anonymous citizen. The brief limits what anonymous users see: the list of "ocorrências públicas ativas" (I.1.B), and a detail with images/videos and a coarse map zoom, "ocultando dados pessoais do autor" (I.1.C). CLAUDE.md makes this non-negotiable: anonymous users must never see the author's personal data or exact coordinates, and the rule is enforced below the UI, not only in the screens.
@@ -36,6 +36,71 @@ In phase 1 the lowest layer between the data and the screens is `TicketsViewMode
 - A field added later to `Ticket`, `StatusHistory` or `Attachment` is copied through unchanged. It must be checked against `toAnonymousView()`, and the reviewer compares the KDoc list with the model files.
 - Coarse locations collapse onto a grid: all three sample tickets project to (40.21, -8.42). A future anonymous map must cluster or offset markers, never fall back to exact coordinates.
 - The Firebase phase cannot hide fields inside a Firestore document, so it writes the same projection into a public reduced-field collection (phase-1 README, risk 3). The pure function is reused there.
-- Registered citizens and operators need a separate, unprojected source (another flow or ViewModel); the current `tickets` must not be reused for them.
+- Registered citizens and operators need a separate, unprojected source (another flow or ViewModel); the current `tickets` must not be reused for them. Since D-007 this also holds for the description and the status history, which the projection drops: a registered or operator screen fed from `tickets` would show neither.
 - A PRIVATE report disappears from the anonymous list right after submit, and its id cannot be opened with `getTicketById`. D-006 must not navigate to it and should confirm the report another way (for example a snackbar).
 - A phase-1 report has no attachment, which does not meet the diagram's `1..*` for `Anexo`. Accepted for the provisional form; creation logic enforces it once media exist.
+
+## Amended 2026-11-10 (D-007)
+Task: [D-007](../tasks/phase-1/D-007-anonymous-projection.md); plan and Gate 1: `docs/work/D-007-anonymous-projection/00-plan.md` (approved by Diogo on 2026-11-10, Q1 option A, Q2-Q7 as recommended). Closes F-005 review S4 and the "List/detail consistency" consequence of [decision 0007](0007-ticket-detail-by-audience.md).
+
+### Context
+- The projection above kept `description` and `statusHistory`. Brief I.1.C limits the anonymous detail to media and a coarse map, so `ShowScreen` hid the two fields in its PUBLIC branch: privacy enforced only in the UI, against CLAUDE.md and `.claude/rules/kotlin.md`.
+- D-006 wired the list's expand toggle for everyone. In phase 1 every user is anonymous, so an expanded `TicketCard` showed the free-text description (which may hold personal data) and "Reported on <date>". Brief I.1.B lists only category, situation and thumbnail. Blanking `description` alone would not close this, because `createdAt` stays in the projection.
+
+### Decision
+- **The projection also drops `description` and `statusHistory`.** `toAnonymousView()` sets `description = ""` and `statusHistory = emptyList()`. `currentStatus` is a separate field ([decision 0004](0004-denormalised-current-status.md)), so the status badge still shows. The per-entry blanking of `responsibleId` and `justification` is gone, because the whole history is dropped; dropping it also removes the creator's id held by the first OPEN entry.
+  - Rejected: keeping the history with only status and date. I.1.C says "apenas" media and map, and the PUBLIC detail would not show it anyway.
+  - Still rejected: a separate `PublicTicket` type (same reasons as above).
+- **Kept fields and why.**
+  - `id`: opens the detail; a random UUID, not personal.
+  - `situation`, `categoryId`, `categoryName`: the I.1.B list fields.
+  - `scope`: always PUBLIC after `publicActive()`; harmless, F-011 may omit it.
+  - `currentStatus`: the status badge on the card and the detail.
+  - `createdAt` (Gate 1 Q2): kept for ordering (Firestore `orderBy` in F-011), **never shown** to anonymous users. It is not the author's personal data. Zeroing it was rejected because `0L` means "not set" ([decision 0003](0003-domain-model-representation.md)), so the projection would fake missing data; rounding it to the day was rejected as code for little gain.
+  - `location`: rounded as above.
+  - `attachments`: `id`, `type`, `file`, `thumbnail`, `uploadState` pass through (I.1.B thumbnail, I.1.C media); `uploadedById` blank.
+- **The expand toggle is hidden for anonymous users (Gate 1 Q1, option A).** `MainTopAppBar` has a required `showExpandToggle: Boolean` (no default, Q3, so the role decision is made at the call site); the toggle shows only when `screen == LIST && showExpandToggle`. `CityFixApp` has one local `val canExpandCards = false` (phase 1: every user is anonymous; D-009 sets it by role), passed as `showExpandToggle = canExpandCards` and as `ListScreen(isExpanded = canExpandCards && isExpanded)`. The `isExpanded` `rememberSaveable` and the toggle code stay for registered citizens and operators (Q4).
+  - Why the `&&` is kept although the toggle is hidden: once D-009 makes the flag depend on the role, a registered user who expanded the cards and then logs out keeps `isExpanded = true` in `rememberSaveable`; the `&&` still forces the anonymous cards collapsed.
+  - Rejected B: keep the toggle and give the expanded PUBLIC card only allowed fields. It changes Francisco's `TicketCard`/`ListScreen`, needs a design the brief does not ask for, and with nothing extra to show it is a button that does nothing visible.
+  - Rejected C: change only the projection and also zero `createdAt` (the card skips the date for `0L`). The toggle would again do nothing visible, the public list needs `createdAt` for ordering, and `0L` would fake missing data.
+  - Cost: the expanded state cannot be seen on a device in phase 1, so D-006's "expanded state kept on rotation" check cannot run until roles exist; the `TicketCard`/`ListScreen` expanded previews still render it.
+- **No change elsewhere.** The two `toAnonymousView()` call sites in `LocalTicketsRepository` (`visibleTickets()`, `getTicketById`), `TicketsViewModel`, the screens and `TicketCard` are unchanged. Stats run on the raw `TicketsList` in `loadStats()`, and `publicActive()` sorts before the projection, so clearing the history cannot change the dashboard figures or the order.
+
+### Public projection contract (for F-011 and D-013)
+F-011 writes `publicTickets/{id}` from `toAnonymousView()`, the single function that builds the public document, so phase 1 and phase 2 share one rule. Firestore cannot hide fields inside a document, so a separate collection is the only way.
+
+| Field | In the projection | Why |
+| --- | --- | --- |
+| `id` | kept | opens the detail; random UUID |
+| `situation`, `categoryId`, `categoryName` | kept | brief I.1.B list fields |
+| `scope` | kept (always PUBLIC) | harmless; may be omitted |
+| `currentStatus` | kept | status badge; activity filter |
+| `createdAt` | kept, not shown | ordering (`orderBy`) |
+| `location` | rounded to 2 decimals (about 1 km); (0, 0) stays (0, 0) | coarse map only (I.1.C) |
+| `attachments` | kept, each with `uploadedById = ""` | I.1.B thumbnail, I.1.C media |
+| `description` | `""` | free text, may hold personal data; not in I.1.B/I.1.C |
+| `statusHistory` | empty | not in I.1.C; held the creator's id and free-text justifications |
+| `creatorId` | `""` | author |
+| `followerIds`, `messages` | empty | other citizens, message authors |
+
+`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0011](0011-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
+
+Rules the public document must keep:
+- A projected ticket is a **view, not a valid ticket**: it has a `currentStatus` with an empty history, which breaks the "at least one history entry" rule and the "update both together" note on `Ticket.currentStatus` (decision 0004). Never write it back to `tickets/`, and never run lifecycle rules (D-008) on it. (`Ticket.kt`'s `currentStatus` KDoc does not mention this yet; add one line next time that file changes, D-007 review N2. Done by D-008 on 2026-11-11.)
+- Dashboard stats cannot come from `publicTickets`: no history (no RESOLVED date, so no repair time) and no private tickets. F-011's counters or stats document must read the full data or be maintained on write.
+- 10 m grouping (`findNearby`) must run on full tickets: a 1 km grid point is useless at 10 m.
+- The public document must be rewritten whenever a field it holds changes: status (D-013), attachments after upload (F-013); deleted or rewritten when the scope or activity changes. That is F-011/D-013's design; D-007 only defines the content.
+- Empty values may be written as missing fields instead of `""`/`[]`; the mapping must then read missing fields as the model defaults. Either way, the Firestore rules must not let anonymous users read `tickets/`.
+- A field added later to `Ticket`, `Attachment` or `StatusHistory` passes through until someone adds it to the projection; the KDoc of `toAnonymousView()` lists every dropped and kept field so a reviewer can compare it with the model files.
+
+### Known limits left to other tasks (Gate 1 Q7)
+None of these reaches the screens as text; they are recorded with their owners.
+- **`CAPTURE_<epoch millis>.jpg` file names.** A camera photo's `Attachment.id`/`file` carries the capture time, close to the hidden `createdAt` (gallery copies use `IMG_/VID_<UUID>`). Not personal data, never shown. Owner: F-013 (neutral names, and not carried into Storage paths).
+- **EXIF make, model and capture time** stay on photos (F-009 Gate 1). Owner: F-013 / the media task (compression can rewrite or drop them).
+- **Video location metadata and XMP location** are not removed (F-009 known limits). Owner: the media task (remux for video, XMP handling).
+- **Coarse locations collapse onto one grid point** (consequence above). Owner: the map work (F-012), which must cluster markers.
+
+### Consequences
+- Privacy for anonymous users is now enforced in the projection for every field the brief hides; `ShowScreen`'s `when (audience)` and the hidden toggle are a second layer, no longer the only one.
+- `ShowScreen` and `TicketCard` needed no change: PUBLIC never read the two fields, and the card reads them only when expanded, which anonymous users can no longer reach.
+- Decision 0007 (Francisco's record) still says the projection change is "not yet done"; pointing it here is left to Francisco (Gate 1 Q6).

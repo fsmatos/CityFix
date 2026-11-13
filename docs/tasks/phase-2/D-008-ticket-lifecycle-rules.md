@@ -25,10 +25,12 @@ Put the ticket state machine and its time rules in one pure place, so the citize
 New `model/TicketLifecycle.kt` (maybe `model/AttachmentPhase.kt`); `model/Attachment.kt`, `data/SampleTickets.kt`, docs.
 
 ## Acceptance checks
-- [ ] `canReopen` true at 4 days 23 h after resolution, false at 5 days 1 h.
-- [ ] RESOLVED without proof and CLOSED → anything are rejected.
-- [ ] Every transition adds one history entry with the time and the user id.
-- [ ] No Android import in the file.
+- [x] `canReopen` true at 4 days 23 h after resolution, false at 5 days 1 h. (Code reading: T1-T6 in `docs/work/D-008-ticket-lifecycle-rules/01-coding-plan.md`, walked by the implementer at 2df8cc4 and again by the reviewer; also false at exactly 5 d, where `effectiveStatus` is CLOSED. No test run, Q9.)
+- [x] RESOLVED without proof and CLOSED → anything are rejected. (Code reading: R3-R6 and R13, walked by the implementer at 1c297f8 and by the reviewer, for stored and effective CLOSED and both roles.)
+- [x] Every transition adds one history entry with the time and the user id. (Code reading plus grep: the only status writes are the single `copy` in `transition` and in `closeIfExpired` (whose entry uses `"system"`, as decided at Gate 1 Q3); no other `StatusHistory(` in `model/`. Checked in the review.)
+- [x] No Android import in the file. (Grep: `TicketLifecycle.kt` has no `import` line at all, `AttachmentPhase.kt` none either; checked after slices 2 and 3 and in the review.)
+
+Status note (D-008 docs, 2026-11-11): the brief rules (II, II.2, I.2.E, III, I.3.E) were not checked against the brief PDF, which could not be opened; see decision 0011. Nothing has run on a device: no screen uses the rules yet (F-014, D-013).
 
 ## References
 Brief I.3.E, II; decision 0004; phase 1 README risks 1 and 6.

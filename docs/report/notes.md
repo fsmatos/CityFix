@@ -235,7 +235,7 @@ No decision record (Gate 1 kept the defaults). Code: `ui/screens/ListScreen.kt`,
 - Two-column adaptive grid (`LazyVerticalGrid(GridCells.Adaptive(320.dp))`) in landscape and on tablets.
 - Pull-to-refresh and filters by category/status once Firestore is in.
 - Empty state with an illustration and a "report an issue" action.
-- Hide the expand toggle (description) for anonymous users once roles exist.
+- Hide the expand toggle (description) for anonymous users once roles exist. (Done earlier by D-007: hidden for everyone in phase 1, `canExpandCards` is the hook for the role check.)
 - Display-cutout insets in landscape (`WindowInsets.displayCutout`/`safeDrawing`).
 - PT preview with data and a landscape expanded preview (review N1, N2).
 
@@ -361,8 +361,8 @@ Decision: [0007](../decisions/0007-ticket-detail-by-audience.md) (amends [0006](
 
 ### Known gaps
 - **No real map (brief I.1.C "mapa com zoom afastado").** Accepted knowingly at Gate 1: no dependency, permission or key in this task, and the no-key option (osmdroid) is archived. To close it, replace the body of `CoarseLocationMap` with osmdroid (no key; `INTERNET` + `ACCESS_NETWORK_STATE`; `AndroidView` + `onRelease { onDetach() }`; User-Agent and OSM attribution) or Google Maps Compose (needs a Maps API key kept out of git). Either way: fixed zoom about 14, gestures off, a ~600 m circle instead of a pin, a placeholder in previews through `LocalInspectionMode`.
-- **Description and history hidden only in the UI (review S4).** `toAnonymousView()` still passes them through; Diogo's projection change should drop them (decision 0007 amends 0006).
-- **List/detail inconsistency.** The expanded anonymous list card shows the description that the detail hides (F-003 Gate 1 Q2). To be decided together with the projection change.
+- **Description and history hidden only in the UI (review S4).** `toAnonymousView()` still passes them through; Diogo's projection change should drop them (decision 0007 amends 0006). (Closed by D-007 on 2026-11-10: the projection drops both; see the D-007 section.)
+- **List/detail inconsistency.** The expanded anonymous list card shows the description that the detail hides (F-003 Gate 1 Q2). To be decided together with the projection change. (Closed by D-007: the toggle is hidden and the cards forced collapsed for anonymous users.)
 - Media tiles never show real images on a device in phase 1: the visible samples have no attachments.
 - The non-anonymous view is preview-only until the Auth task.
 
@@ -445,7 +445,7 @@ Decisions: no new record; follows [0006](../decisions/0006-anonymous-projection-
 - **Snackbar state above the `NavHost`,** because the destination that triggers it is popped at once. The message is resolved in the composable body, since `stringResource` cannot be called from `launch`.
 - **Named arguments on `reportTicket`,** because three of the parameters are `String` and the order differs from `ReportSubmission`: positional arguments could compile with fields swapped.
 - **Insets.** Edge-to-edge with `Scaffold(contentWindowInsets = WindowInsets.safeDrawing)`, and one `padding(innerPadding).consumeWindowInsets(innerPadding)` on the `NavHost`, in that order, so `imePadding()` in the report form does not add an inset twice. Screens receive no `modifier` from the caller, an intended difference from the screens' contract snippets. For the defence: why the order matters.
-- **Audience `PUBLIC` in phase 1, and three layers of privacy:** the list filter (`publicActive()`), the projection (`toAnonymousView()`) and the UI branch (`when (audience)`). The third layer is doing work that belongs to the second; see Known gaps.
+- **Audience `PUBLIC` in phase 1, and three layers of privacy:** the list filter (`publicActive()`), the projection (`toAnonymousView()`) and the UI branch (`when (audience)`). The third layer is doing work that belongs to the second; see Known gaps. (Until D-007, which moved that work into the projection.)
 
 ### Options chosen and rejected
 - `navigation-compose` 2.9.8 over the latest 2.10.2: its transitive requirement of Compose `runtime` 1.11.2 would pass our limit of 1.11.0. A good example of how Gradle's "highest requested version wins" affects a choice. 2.10.0 and 2.10.1 were not checked.
@@ -458,8 +458,8 @@ Decisions: no new record; follows [0006](../decisions/0006-anonymous-projection-
 - Rejected: navigating to the new ticket (a PRIVATE one is not visible); `getTicketById` for the detail (a snapshot that would not update); `ReportViewModel` at activity scope; a one-shot event in a ViewModel for the confirmation (an event type and a collector to save a 4-second message); `configChanges` to avoid recreation.
 
 ### Known gaps
-- **Anonymous list shows more than the brief allows, open until [D-007](../tasks/phase-1/D-007-anonymous-projection.md), before delivery.** The expand toggle is wired unconditionally as D-006's task requires (Gate 1 Q2), so a device now shows the free-text description and "Reported on" in the anonymous list. The PUBLIC detail hides both and brief I.1.B leaves them out. Blanking `description` alone would not close this, as `createdAt` stays in the projection, so D-007 decides the toggle too.
-- **`description` and `statusHistory` are hidden from anonymous users only in the UI** (F-005 review S4), against the rule that privacy is enforced below the UI. D-007 also closes this and amends decision 0006.
+- **Anonymous list shows more than the brief allows, open until [D-007](../tasks/phase-1/D-007-anonymous-projection.md), before delivery.** The expand toggle is wired unconditionally as D-006's task requires (Gate 1 Q2), so a device now shows the free-text description and "Reported on" in the anonymous list. The PUBLIC detail hides both and brief I.1.B leaves them out. Blanking `description` alone would not close this, as `createdAt` stays in the projection, so D-007 decides the toggle too. (Closed by D-007 on 2026-11-10: toggle hidden, cards forced collapsed.)
+- **`description` and `statusHistory` are hidden from anonymous users only in the UI** (F-005 review S4), against the rule that privacy is enforced below the UI. D-007 also closes this and amends decision 0006. (Closed by D-007: the projection drops both.)
 - Anonymous users can open the report form and see the add button until the Auth task (decision 0008).
 - A double tap on the back arrow goes back two screens (review N1, left as planned); `launchSingleTop` guards forward navigation only.
 - Rotating while the snackbar shows loses it, and a reported ticket is lost on process death, in which case a route that still holds its id shows "Ticket not found". Both accepted; neither was run.
@@ -612,7 +612,7 @@ Decision: no new record; [0006](../decisions/0006-anonymous-projection-phase-1.m
 - A `Log.w` on a failed strip; one KDoc line on `TicketsRepository.reportTicket`; a "Ticket video" description.
 
 ## F-010: Firebase setup and Firestore schema
-Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules design), [0011](../decisions/0011-firebase-plan-notifications-close-maps.md) (plan, notifications, 5-day close, maps), [0009](../decisions/0009-tickets-repository.md) amended. Code: `CityFixApplication.kt`, `firestore.rules`, `storage.rules`, `firebase.json`, version catalog, both Gradle files. Overview: "Firebase (F-010)", "Setup", "Handover (F-010)".
+Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules design), [0012](../decisions/0012-firebase-plan-notifications-close-maps.md) (plan, notifications, 5-day close, maps), [0009](../decisions/0009-tickets-repository.md) amended. Code: `CityFixApplication.kt`, `firestore.rules`, `storage.rules`, `firebase.json`, version catalog, both Gradle files. Overview: "Firebase (F-010)", "Setup", "Handover (F-010)".
 
 **The rules are drafts, checked by reading only** (three review rounds; no Rules Playground, no emulator), and not deployed. The smoke test and the offline check ran on the emulator on 2026-11-10 and passed (online write/read, cache read after restart, offline write synced on reconnect).
 
@@ -637,7 +637,7 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - **Media for anonymous users** through cross-service Storage rules on the ticket's scope.
 - `participantIds` (creator + followers) so "my tickets" is one `whereArrayContains` and one rule guards ticket, messages and media.
 - `Long` times and enum names kept (decision 0003); `resolvedAt` is the one `Timestamp`, because only a server timestamp is trusted by rules. `GeoPoint` only in `data/`.
-- **The four Gate decisions** (decision 0011): Blaze with a budget alert (cost guard; Storage is impossible on Spark); no Cloud Functions (no server code in a second language that both authors must defend, no deploy pipeline); 5-day close computed on read; osmdroid (no key, so the ZIP builds and the map renders for the grader). Also: `google-services.json` out of git and copied into the ZIP by hand; test mode until rules are deployed; SMS MFA with test numbers.
+- **The four Gate decisions** (decision 0012): Blaze with a budget alert (cost guard; Storage is impossible on Spark); no Cloud Functions (no server code in a second language that both authors must defend, no deploy pipeline); 5-day close computed on read; osmdroid (no key, so the ZIP builds and the map renders for the grader). Also: `google-services.json` out of git and copied into the ZIP by hand; test mode until rules are deployed; SMS MFA with test numbers.
 - **Firebase BoM 34.19.0, not 35.1.0:** 35.x libraries carry Kotlin 2.4 metadata, which our Kotlin 2.2.10 compiler cannot read. Upgrading Kotlin would have touched every plugin; stepping the BoM down was the plan's fallback. One accepted lint `GradleDependency` warning.
 
 ### Rejected
@@ -651,7 +651,7 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - **Blaze is needed only because of the 2024-2026 Storage pricing change** (default buckets need Blaze since 2024-10-30; Spark lost access on 2026-02-03). A billing account and a budget alert are part of the setup.
 - **Notifications without a server work only while some client runs** (the app or its WorkManager worker); the 24 h warning is scheduled locally.
 - **The 5-day close is computed on read**, not by a server: the ticket shows as CLOSED at once, but the CLOSED write happens when the first client sees it.
-- **Not enforceable in rules:** the exact 10 m circle (bounding box only, rules have no trigonometry); the truth of the reported location (a citizen could copy a ticket's location from `ticketLocations` and join any ticket, PRIVATE included, which follows from the brief's automatic grouping); the order of operator transitions (D-008's state machine); edits of existing attachment entries (rules cannot loop over lists); `coarseLocation` rounding; video metadata stripping (F-013).
+- **Not enforceable in rules:** the exact 10 m circle (bounding box only, rules have no trigonometry); the truth of the reported location (a citizen could copy a ticket's location from `ticketLocations` and join any ticket, PRIVATE included, which follows from the brief's automatic grouping); edits of existing attachment entries (rules cannot loop over lists); `coarseLocation` rounding; video metadata stripping (F-013).
 - **The 10 km anonymous radius is checked on the client only** (anonymous requests carry no location).
 - **An offline RESOLVED gets the sync time as `resolvedAt`**, not the tap time; the history entry keeps the device time, so the two can differ. A device clock more than 5 minutes fast cannot write status changes.
 - **Signed-in active citizens can read exact locations, category and situation of every ticket** through `ticketLocations` (no author, description or media). Accepted for Option A.
@@ -672,3 +672,102 @@ Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules desig
 - Upgrade Kotlin to 2.4 and the Firebase BoM to 35.x together.
 - `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011).
 - A note in the `CityFixApplication` KDoc that `Firebase.firestore` must never be called directly (review N6), and the remaining round-1 nits (key whitelists per role, active category and at least one attachment on ticket create).
+
+## D-007: Anonymous projection and expand toggle
+Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 2026-11-10 (closes F-005 review S4 and the list/detail consistency point of [0007](../decisions/0007-ticket-detail-by-audience.md)). Code: `model/TicketPrivacy.kt`, `ui/navigation/MainTopAppBar.kt`, `MainActivity.kt`. Overview: "ViewModel (D-003)", "Top bar (D-005)", "App shell (D-006)".
+
+**The emulator and Android Studio preview checks have not run yet** (review S1). Build and lint pass (0 errors, 16 warnings, baseline); the rest was checked by reading the code.
+
+### Technical solutions
+- **Privacy in layers, now complete for phase 1.** The list filter (`publicActive()`) picks which tickets; the projection (`toAnonymousView()`) picks which fields, now including `description` and `statusHistory`; the UI shows only the I.1.B/I.1.C fields. The third layer no longer does the second's job, which was the gap since F-005.
+- **Why `currentStatus` survives without the history.** It is a denormalised copy (decision 0004), and this is where that pays off: the status badge needs no history, so the whole history can be dropped. A good defence example of a denormalisation chosen for queries that also helps privacy.
+- **Dropping the whole history instead of blanking each entry.** The per-entry blanking of `responsibleId` and `justification` (D-003) is gone; one `emptyList()` also removes the creator's id hidden in the first OPEN entry. Simpler code, fewer fields to remember.
+- **Why the dashboard does not change.** Stats are computed from the raw tickets inside the repository (`loadStats()`) and leave it as aggregate counts, so no per-ticket data is exposed and clearing the history in the projection cannot affect the average repair time. The list order is also safe: `publicActive()` sorts before the projection.
+- **Toggle hidden, not given an empty expanded state.** `MainTopAppBar` takes a required `showExpandToggle` (no default, so the caller must decide by role, like `DetailAudience` in `ShowScreen`). `CityFixApp` has one `val canExpandCards = false`, the hook for the role check in D-009, passed to the bar and to the list as `canExpandCards && isExpanded`. The button is removed, not disabled, so TalkBack never reaches an inert control.
+- **Why the `&&` stays** although `isExpanded` cannot become true today: once D-009 makes the flag depend on the role, a registered user who expanded the cards and logs out keeps `isExpanded = true` in `rememberSaveable`, and the `&&` still forces the anonymous cards collapsed.
+- **Why `createdAt` stays in the projection.** Ordering in Firestore (`orderBy` in F-011); it is not shown to anonymous users, and it is not the author's personal data.
+- **The projection as the public document.** The same pure function builds the Firestore `publicTickets` document (F-011), so phase 1 and phase 2 share one rule. Firestore cannot hide fields inside a document, so a separate collection is the only way. Decision 0006 now holds the field table and the rules F-011 must keep (a view, not a valid ticket; no stats, lifecycle or grouping from it; rewrite on change; missing fields read as defaults).
+
+### Options chosen and rejected (Gate 1)
+- Q1, option A: hide the toggle and force the cards collapsed for anonymous users. Matches I.1.B exactly, keeps the list and the detail consistent, changes only Diogo's files.
+- Rejected B: an expanded PUBLIC card with only allowed fields (changes Francisco's files; a design the brief does not ask for; a button that does nothing visible).
+- Rejected C: zeroing `createdAt` so the card skips the date (the toggle again does nothing visible; ordering needs the field; `0L` means "not set", decision 0003).
+- Q2: keep `createdAt`; rounding it to the day was code for little gain.
+- Q4: keep `isExpanded` and the toggle code for registered citizens and operators.
+- Q5/Q6: no edits to Francisco's files or decision 0007; handovers recorded in the overview.
+- Rejected again: a `PublicTicket` type (decision 0006), and keeping a history with only status and date (I.1.C says "apenas").
+
+### Known limits (Gate 1 Q7, recorded in decision 0006 with owners)
+- Camera photos are named `CAPTURE_<epoch millis>.jpg`, so the file name carries the capture time (F-013).
+- Photo EXIF keeps make, model and capture time (F-013 / media task).
+- Video location metadata and XMP location are not removed (media task).
+- Coarse locations collapse onto one grid point; a map must cluster (F-012).
+- D-006's "expanded state kept on rotation" check cannot run on a device until roles exist; the previews still render the expanded card.
+
+### Verification
+- No automated tests. `./gradlew assembleDebug` and `./gradlew lint` passed after both slices and after review fix N1 (0 errors, 16 warnings, none in the changed files).
+- Review greps: every read of `description`, `statusHistory` and `createdAt` in `app/src` is either in an expanded card (unreachable for anonymous users) or in a non-PUBLIC detail branch; nothing reads the history of a projected ticket; stats run on the raw list.
+- Pending (review S1): the emulator checks (no toggle in portrait/landscape and EN/PT, collapsed cards, `sample-1`/`sample-2` detail, a new PUBLIC report with a photo, dashboard 3 / 67% / 3 days then 4 total / 3 active) and the previews (three `MainTopAppBar` list previews, `TicketCard`/`ListScreen` expanded).
+
+### Improvement opportunities
+- A separate `PublicTicket` type would prove the rule at compile time (rejected for now in 0006, because it duplicates `Ticket` and breaks the agreed screen signatures).
+- Round `createdAt` to the day if dates ever become sensitive.
+- Neutral camera file names (`IMG_<UUID>.jpg`) and Storage paths without times or user ids (F-013).
+- Strip video and XMP location, and optionally make/model/time EXIF (media task).
+- One KDoc line on `Ticket.currentStatus` saying projected tickets keep it without a history (review N2). (Done by D-008.)
+
+## D-008: Ticket lifecycle rules
+Decision: [0011](../decisions/0011-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
+
+**Not checked against the brief.** The brief PDF could not be opened in the D-008 sessions; the rules tagged brief II, II.2, I.2.E, III and I.3.E come from the task files. Check them in the PDF before writing them into the report as the brief's wording.
+
+### The state machine
+| From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
+| --- | --- | --- |
+| OPEN | INFO_REQUESTED, IN_PROGRESS | - |
+| INFO_REQUESTED | IN_PROGRESS | - |
+| IN_PROGRESS | INFO_REQUESTED, RESOLVED | - |
+| RESOLVED (< 5 days) | - | OPEN (reopen, with justification) |
+| CLOSED (stored, or RESOLVED >= 5 days) | - | - |
+
+Diagram for the report (draw it; text version):
+```
+OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5 d--> OPEN
+  \--op--------------------------->/                        \--time, >= 5 d (system)--> CLOSED (locked)
+```
+- Nobody closes by hand; CLOSED comes from time only. A citizen's question is a message, not a status change (Gate 1 Q1).
+
+### Technical solutions
+- **One pure function changes the status.** Decision 0004 keeps `currentStatus` next to the history; `Ticket.transition` is the only place that changes both (one `copy`, one history entry with time, user and justification), so the citizen and operator screens apply the same rules and the history is a full audit trail (brief I.3.E timestamps, not checked against the brief).
+- **`allowedTransitions(by: User, now)`** works on the effective status and includes the role (the type of the sealed `User`), the relation (creator or follower), the registration and the window. The UI offers exactly this set and `transition` accepts only it, so the screen and the rule cannot disagree.
+- **Reopening and closing without stored fields.** Both are computed from the last RESOLVED entry. CLOSED is shown on read (`effectiveStatus`) and written lazily by `closeIfExpired` (Spark plan, no server), timestamped at the exact closing moment (`resolvedAt + 5 d`) rather than when someone noticed, with `responsibleId = "system"`.
+- **Consistent boundary.** `<` in `canReopen`, `>=` in `effectiveStatus`, on the same difference: at exactly 5 days the ticket is closed and not reopenable, never both.
+- **Proof of resolution.** `AttachmentPhase { REPORT, RESOLUTION }` answers phase-1 risk 1. The proof is passed to the RESOLVED transition and appended in the same operation, so an offline queued write stays consistent and a re-resolve after a reopen needs new proof.
+- **Refusals as `null`**, like `reportTicket` and `TicketsList.add`; exhaustive `when` with no `else` for the operator moves, so a new status does not compile until its moves are decided.
+- **Safe on projected tickets.** A projection has no history, so every function returns `null`/`false`/empty instead of a wrong answer.
+- **Nothing else changed.** RESOLVED and CLOSED are both inactive, and a later CLOSED entry does not move the last RESOLVED time, so the public list, the grouping and the dashboard are unaffected.
+
+### Options chosen and rejected (Gate 1, 2026-11-11)
+- Q2: creator and followers may reopen (Option A); rejected creator only.
+- Q5: `allowedTransitions(by, now)`; rejected the task's static `allowedTransitions(status, role)`.
+- Q6: `AttachmentPhase` added in D-008 (decision 0011), F-010 reuses it; rejected waiting for F-010 or a predicate parameter.
+- Q7: `Ticket?`; rejected throwing with `require`.
+- Q8: proof as a parameter of the RESOLVED transition; rejected "the ticket has any RESOLUTION attachment".
+- Q9: no committed tests; Q10: no new sample tickets (previews use a fixed `t0`).
+- Rejected: an `object TicketLifecycle`, a manual CLOSED transition for operators.
+
+### Defence notes
+- `canReopen` is time-only; the Reopen button uses `OPEN in allowedTransitions(user, now)` (review S1).
+- `closingWarningAt()` can be in the past for an expired ticket not yet closed; F-016 checks `!isLocked(now)` (review S2).
+- In `transition`, `isReopen` also tests `currentStatus == RESOLVED`, which is always true when `to == OPEN` (OPEN is only allowed through `canReopen`). Kept on purpose: it states the rule in the code (review N4).
+
+### Verification
+- No automated tests (Q9). `./gradlew assembleDebug` and `./gradlew lint` passed after each slice and after the review fixes (0 errors, 16 warnings, baseline). Greps: no imports and no `System.currentTimeMillis` in `TicketLifecycle.kt`. The implementer and the reviewer each walked the T1-T8 / R1-R16 table (boundaries at 4 d 23 h, 5 d, 5 d 1 h; proof rules; roles; projected tickets; one history entry per transition). Nothing has run on a device: no screen calls the rules yet.
+
+### Limits and improvement opportunities
+- Device clocks decide the window; a Firestore rule on `request.time` or a Cloud Function would make it server-side.
+- Concurrent transitions are last-write-wins; a transaction or a precondition on `currentStatus` fixes it (F-011/D-013).
+- History can be out of time order with offline queues (`now` earlier than the last entry is accepted).
+- Old RESOLUTION proof stays on a reopened, public ticket; screens should label or filter by `phase`.
+- No automated tests by project choice; the pure functions would be easy to cover with JUnit.
+- A `PublicTicket` type and a sealed result type (instead of `null`) would let the compiler enforce more, and tell the UI why a move was refused.

@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-02 | review.md: 0 blocking, 1 should-fix, 3 nits; slice 6 and emulator checks treated as known open items |
 | Docs | done | 2026-11-02 | overview.md, report notes, phase-1 README; no new decision record; task file left unticked, see Log |
 | Pushed | done | 2026-11-02 | 3f4d401 to origin/dev/Diogo |
-| Merged | | | |
+| Merged | done | 2026-11-02 | main at bf1a3f1; not pushed yet, Diogo pushes it |
 
 ## Log
 Append-only.
@@ -34,3 +34,4 @@ Append-only.
 - 2026-11-02 Docs: docs-writer updated overview.md (new "App shell (D-006)", contract blocks replaced, stale lines fixed, N3 fixed by naming `GradleDependency` and limiting the D-004 sentence, D-007 linked), docs/report/notes.md (D-006 section) and docs/tasks/phase-1/README.md (D-007 row, signatures). No decision 0009, as Q5 did not change the plan. Deviation: `D-006-main-activity-nav.md` was left unticked at status "to do", because the plan ticks it once Diogo confirms on the emulator and the checks ran through adb, not by hand. Not committed (no shell).
 - 2026-11-02 Manual test: Diogo tested the app by hand against the phase 1 checklist and reported no problem; acceptance checks ticked in the task file. The itemised results were not recorded.
 - 2026-11-02 Push: approved by Diogo; verify (assembleDebug + lint) green; `git push -u origin dev/Diogo` at 3f4d401. Not merged into main.
+- 2026-11-02 Merge: dev/Diogo into main (asked by Diogo) as bf1a3f1, no conflicts; assembleDebug and lint pass on main, 0 errors, 14 warnings. main merged back into dev/Diogo. Pushing main was approved by Diogo but refused by this session's permissions, so Diogo pushes it.
