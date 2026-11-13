@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -13,6 +14,7 @@ import com.google.firebase.messaging.messaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
+import pt.isec.amov.cityfix.data.DebugSeed
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.User
@@ -56,6 +58,14 @@ class CityFixApplication : Application() {
     val storage: FirebaseStorage by lazy { Firebase.storage }
 
     val messaging: FirebaseMessaging by lazy { Firebase.messaging }
+
+    override fun onCreate() {
+        super.onCreate()
+        // DEBUG ONLY (F-011 Q5): sample data in an empty database. Remove before delivery (D-015).
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            DebugSeed.seedIfEmpty(firestore)
+        }
+    }
 
     companion object {
         const val DEV_CITIZEN_ID = "dev-citizen-1"
