@@ -997,3 +997,79 @@ Decision: [0015](../decisions/0015-media-preparation-and-uploads.md) (amends [00
 - Deploy the Storage rules (`image/*` under 10 MB, `video/*` under 100 MB, no uploads to CLOSED tickets), fixing the two gaps above.
 - Cloud Functions to make thumbnails on the server.
 - Unique work per document, if the same device could ever enqueue twice for one document.
+
+## D-010: Registration (citizen and operator)
+Decision: [0016](../decisions/0016-registration.md). It also amends [0015](../decisions/0015-session-role-navigation-mfa.md) (session) and suggests an amendment to [0010](../decisions/0010-firestore-schema.md). Code: `utils/Validation.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/AuthErrors.kt`, `data/ProfilePhotoUploader.kt`, `data/ProfilePhotoWorker.kt`, `viewmodel/Register{UiState,ViewModel,ViewModelFactory}.kt`, `ui/screens/RegisterScreen.kt`, `MainActivity.kt`, `firestore.rules` (one draft line). Overview: "Registration (D-010)", "Handover (D-010)".
+
+Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo, NIF unique for the role, formats validated, "pendente até validação", impact detection choice); I.3.A (operator: e-mail in the council's domain, "fica logo ativo").
+
+**Nothing has run on a device yet.** Build and lint pass (0 errors, 22 warnings, the baseline). Two review rounds: round 1 asked for changes (B1, S1-S3) and round 2 approved.
+
+### Technical solutions
+- **NIF check digit as a pure function.** 9 digits, the first not 0. `sum = d1*9 + d2*8 + ... + d8*2`, `r = sum % 11`, and the check digit is 0 when `r < 2`, else `11 - r`. It sits in `utils/Validation.kt` with no Android imports, so it can be explained and checked by hand at the defence (`123456789` is valid).
+- **One file of input rules.** E-mail, operator domain, phone (2/9 prefix), mobile (9 prefix, for MFA), NIF, password and name live in one pure file. Login, Forgot password, Account setup and Register share it, so the same e-mail is never accepted on one screen and refused on another.
+- **Real-time validation, P08 style.** One `@StringRes` error per field, recomputed as the user types once the field is not empty. Submit builds every error plus a summary and gates on a computed `isValid`. The ViewModel holds no text.
+- **Registration = Auth user + one Firestore transaction, with compensation.** The flow:
+  1. Create the Auth user.
+  2. In `runTransaction`, read `nifs/{ROLE}_{nif}`. If it exists, abort. Otherwise write it and `users/{uid}`.
+  3. If the transaction fails, delete the Auth user again. The delete runs under `withContext(NonCancellable)`, so leaving the screen cannot cut it off.
+- **Why a transaction and not a batch.** Uniqueness needs a read before the write, and a batch cannot read. Registration needs the network anyway (sign-up is online), so the transaction's online-only nature costs nothing.
+- **Keeping the form alive while Firebase signs the new user in.** `createUserWithEmailAndPassword` signs in at once, and the D-009 redirect would have moved to Account setup and destroyed the Register screen (and its running transaction). A `holdRedirect` flag in `rememberSaveable` stops the redirect while the form registers, and after a failure until the deleted account reaches the session. It survives rotation, and after process death it drops by itself. A good defence example of a race found in planning (R1) and tightened in review (B1, S1).
+- **A started registration always finishes.** The ViewModel calls `register` under `NonCancellable`, Back is swallowed by a `BackHandler` and the Up arrow is hidden. Without this, Back during sign-up left an orphan account, and Back during the transaction could reserve a NIF for good (review B1).
+- **`SavedStateHandle` for the form, never for passwords.** Role, name, e-mail, phone, NIF, the impact switch, both coordinates and the photo path survive process death; the passwords do not.
+- **Profile photo through WorkManager after the commit**, reusing F-013's `ImageCompression` (1600 px, JPEG, no EXIF). The worker uses a fixed file name so a retry overwrites, and it treats permission errors as final instead of retrying them five times (review S3).
+
+### Options chosen and why (Gate 1, 2026-11-14)
+- **The operator's `users/{uid}` at registration, not after verification (Q1).**
+  - Why: the NIF clash and the cleanup happen while the user is still on the form; there is one code path; and there is no local copy of a half-finished registration.
+  - Safety: the session checks e-mail verification and MFA before the profile, and `isOperator()` in the draft rules still needs `email_verified`.
+  - Cost: one line of the shared draft rules changed (not deployed).
+- **Role-prefixed NIF ids** (`CITIZEN_<nif>`, `OPERATOR_<nif>`): a citizen and an operator may share one NIF, as "unique for the role" reads.
+- **`photoPath` = the https download URL (Q4)**, as F-013 does for ticket media. Profile and validation screens load it with Coil directly.
+- **Council domain read from `municipality/main` (Q9)**, not a constant. The council's data stays in one document, as the domain model's `Municipio.dominioEmail` says.
+- **The impact switch is only stored** (`impactDetection`); D-014 uses it.
+- **Phone: mobile or landline (Q6)**; **password: 8 characters with a letter and a digit, plus a confirmation (Q7)**; **NIF: any valid check digit (Q5)**, not only individuals' prefixes.
+- **Rejected:** ViewModel orchestration of two repositories (Q13; the cleanup rule would depend on a screen's scope); an inline upload (blocks on a slow network, breaks "uploads through WorkManager"); a batch (no read, so no uniqueness); deferring the operator document (local store, two paths); the map pick (slice 6, skipped).
+
+### Class material vs beyond class
+- **As in class:** P08 form validation and `EditContactViewModel` (state, errors, `isValid`); P09 gallery picker and camera with FileProvider; P10 location with the permission at the point of use; slides 08 WorkManager (`CoroutineWorker`, network constraint, `Result.retry()`).
+- **Beyond class:** Firestore transactions, `NonCancellable` cleanup after a cancelled coroutine, the redirect hold, the NIF mod-11 algorithm, `BackHandler`, `StorageException` / `FirebaseFirestoreException` error codes to tell final failures from transient ones.
+
+### Limits to state honestly
+- **Orphan Auth users (Q11).** If the network drops or the app dies between sign-up and the transaction, an account without a profile can remain. It sees Account setup, then Account problem, and the e-mail cannot be used again until the user is deleted in the console.
+- **Registration needs a network.**
+- **The rules are not deployed** (test mode). NIF uniqueness and the domain rule rely on the app's transaction and checks.
+- **`nifs` documents reveal which uid owns a NIF** to any signed-in user.
+- **The photo is best effort and can be dropped silently.** This happens after 5 failures, for an undecodable file, after a logout before the upload, or when the rules refuse it. A refused Firestore update after a successful upload leaves `photo.jpg` in Storage without `photoPath`. A transient "unauthenticated" answer is treated as final. A process death right after Submit can delete the queued file (logged). There is no retry UI.
+- **The user cannot leave the screen while Firebase hangs** (the price of B1; the SDK timeouts bound it).
+- **After a missing council domain, Submit needs a second tap** once the domain loads.
+- **Testing operators needs a real inbox** in the configured `emailDomain`. For the defence the domain is a test domain, not the council's.
+- **Pending citizens are not gated** by the 10 km rule (Q12), and anyone can now register.
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` before every Kotlin commit and after both review rounds: 0 errors, 22 warnings, the baseline, none new. EN and PT key sets equal.
+- Checked by reading: the NIF weights and the `r < 2` rule, the order create -> transaction -> delete, the photo enqueued only after the commit, no passwords saved, and nothing personal readable by anonymous users.
+- **Not run yet (device, Diogo):**
+  - invalid e-mail, phone or NIF blocking Submit with no Auth user created;
+  - two citizens with one NIF (no Auth user left, no flash of Account setup), and a citizen and an operator sharing one NIF;
+  - an operator outside the domain;
+  - PENDING citizen and active operator homes after setup;
+  - rotation everywhere, including during Submit;
+  - Back right after Submit;
+  - an operator Submit offline on a fresh install, then online;
+  - "Use my location" and a denial;
+  - photo from the gallery and the camera (`photoPath` URL, `photo.jpg` in Storage);
+  - offline Submit;
+  - PT strings, TalkBack and landscape.
+
+  Never write test e-mails, NIFs of real people, phone numbers or UIDs here.
+
+### Improvement opportunities
+- A "delete my account and start again" action on the Account problem screen, for orphan accounts.
+- Prefill the MFA phone in Account setup with the registration phone.
+- Server-side registration (a Cloud Function) to make sign-up and the profile one atomic step, and to keep `nifs` unreadable by clients.
+- Stricter NIF prefixes for individuals; a password strength meter.
+- A retry button and a message for a dropped profile photo; delete the Storage object when the Firestore update is refused; retry a transient "unauthenticated" answer once.
+- Re-submit automatically when the council domain finishes loading.
+- A map pick to adjust the citizen's location (slice 6).
+- **Housekeeping:** two decision records share the number 0015 (`0015-media-preparation-and-uploads.md`, `0015-session-role-navigation-mfa.md`). D-010 used 0016, and the authors should renumber one.

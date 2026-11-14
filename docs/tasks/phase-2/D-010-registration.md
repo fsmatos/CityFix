@@ -1,6 +1,6 @@
 # D-010: Registration (citizen and operator)
 
-Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `viewmodel` · Phase 2 · Status: to do · Target: 2026-11-14
+Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `viewmodel` · Phase 2 · Status: code done, reviewed and approved, docs done (2026-11-14); device checks pending (Diogo); not pushed · Target: 2026-11-14
 Depends on: D-009 · Blocks: D-011, D-012, F-015
 
 ## Goal
@@ -28,6 +28,20 @@ New `ui/screens/RegisterScreen.kt`, `viewmodel/RegisterViewModel.kt`, `viewmodel
 - [ ] Operator with an email outside the domain is refused.
 - [ ] New citizen is PENDING; new operator is ACTIVE.
 - [ ] Rotation keeps the form.
+
+## Status notes (2026-11-14)
+- Work item: `docs/work/D-010-registration/` (plans, `state.md`, `review.md`); decision [0016](../../decisions/0016-registration.md); overview "Registration (D-010)".
+- **Deviation from "What to build" (Gate 1 Q1):** the operator's `users/{uid}` is created in the registration transaction, before the e-mail is verified, not after it. The draft `firestore.rules` `users` create rule lost its operator `email_verified` term (not deployed; Francisco to be told).
+- The map pick was skipped (Gate 1); only "Use my location" is built.
+- The acceptance boxes are not ticked: none has run on a device yet. Pending device checks (Diogo):
+  - invalid e-mail / phone / NIF errors in real time, with Submit creating no Auth user;
+  - same NIF twice for citizens (no Auth user left, no flash of Account setup); citizen + operator with one NIF;
+  - operator e-mail outside `municipality/main.emailDomain` refused (create the document in the console first);
+  - new citizen PENDING (waiting screen after setup); new operator active (Operations panel);
+  - rotation on the form and during Submit; Back right after Submit is ignored;
+  - operator Submit offline on a fresh install, then online (domain read again);
+  - "Use my location" and a denial; photo from the gallery and the camera (`photoPath` URL); offline Submit;
+  - PT strings, content descriptions and landscape.
 
 ## References
 Brief I.2.A, I.3.A; P08 (form validation); decision 0010; phase 1 risk 4.

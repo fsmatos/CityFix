@@ -9,7 +9,7 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-11-14 | Approved by Diogo; Q1-Q15 as recommended; slice 7 (draft rules edit, not deployed) approved; slice 6 (map pick) skipped |
 | Code | done | 2026-11-14 | Slices 1-5 and 7 committed (cdbcb8d..1760f28); slice 6 skipped (Gate 1); build + lint green, 22 warnings = baseline, none new; device checks pending (Diogo) |
 | Review | done | 2026-11-14 | Round 1: changes requested (B1, S1-S3, N1-N7). Round 2 (5be47fd..HEAD): approved; B1, S1-S3, N1, N2, N4-N6 resolved, N3/N7 deferred, 4 new nits (R2-N1..N4); build + lint 0 errors, 22 warnings = baseline; device checks pending |
-| Docs | pending | | |
+| Docs | done | 2026-11-14 | New decision 0016; 0015 (session) amended; overview, report notes, task file updated; N7 and the deferred nits documented; nothing committed |
 | Pushed | pending | | |
 | Merged | pending | | |
 
@@ -76,3 +76,20 @@ Append-only.
     - R2-N4: no way to leave the screen while Firebase hangs (intended).
   - Device checks from the fixes are still pending (Diogo).
   - No code edited, nothing committed by the reviewer.
+- 2026-11-14 Docs: docs-writer ran `03-docs-plan.md`. It worked from the plans, `state.md`, `review.md` and the current code files; it could not run `git diff` (no shell in the session), so it read the changed files directly.
+  - New `docs/decisions/0016-registration.md`. Number 0016 because 0015 is used twice (R8). The clash is noted in 0016, the overview and the report notes; Francisco's records are not renumbered or edited.
+  - `docs/decisions/0015-session-role-navigation-mfa.md` (Diogo's): status line plus one Decision bullet for the redirect hold and Register as an auth screen.
+  - `docs/architecture/overview.md`:
+    - Layers: `viewmodel/`, `data/`, `utils/` and `CityFixApplication`.
+    - `RegisterRoute` in the route table; `TopBarScreen.REGISTER` and the controls-by-role row.
+    - App shell: `holdRedirect` and `RegisterViewModel` rows, the redirect key, the gate row.
+    - Firebase: data-layout line, a D-010 rules note, and the console step for `municipality/main.emailDomain` (test domain with a real inbox; orphan users deleted in the console).
+    - Auth and session: repository line, redirect rule, the two `AuthError` rows and the shared `toAuthError()`, the e-mail rule, `isPortugueseMobile`, the gate exceptions.
+    - **N7:** the "Handover (F-010)" operator item (around line 505) and the "Handover (D-009)" D-010 item now record the Q1 deviation: both roles' `users/{uid}` are created in the registration transaction; the operator `email_verified` term was dropped from the draft `users` create rule; not deployed; Francisco must be told.
+    - New "Registration (D-010)" section: form, validation table, `register()` steps, document fields, operator timing, redirect hold, domain, georeferencing, photo, offline, privacy, known limits, and a failure-mode table. The table covers orphan Auth users (Q11, console cleanup), S3 (photo dropped after a logout or a refused write), N3 (queued photo lost after a process death right after Submit), R2-N3 (`photo.jpg` without `photoPath`; an unauthenticated answer treated as final), R2-N2 (tap Submit again once the domain loads), R2-N4 (Back blocked while Firebase hangs) and R2-N1.
+    - New "Handover (D-010)" for D-011, D-012, D-014 and Francisco (rules line, strings, `onCreateAccount`, the stricter e-mail regex), with the suggested amendment line for decision 0010 (not edited).
+    - Roles: registration as the way into PENDING_CITIZEN / OPERATOR; R3-N3 now reachable by anyone; Q12.
+  - `docs/report/notes.md`: new "D-010" section (technical solutions, options and why, class material vs beyond, limits, verification, improvements, the 0015 housekeeping note).
+  - `docs/tasks/phase-2/D-010-registration.md`: status line and a "Status notes" section (Q1 deviation, map pick skipped, pending device checks). No acceptance box is ticked.
+  - `CLAUDE.md` is unchanged (nothing there mentions the rule). No code, rules or decision records of Francisco were edited. Nothing was committed.
+  - Still open: tell Francisco about the `firestore.rules` edit and the suggested 0010 amendment; Diogo's console step (`municipality/main`) and the device checks.
