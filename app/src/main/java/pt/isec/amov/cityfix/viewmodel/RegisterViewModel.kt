@@ -5,11 +5,13 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AuthError
@@ -236,7 +238,7 @@ class RegisterViewModel(
 
         // Set before launch: the screen reports it to CityFixApp, which holds the redirect while
         // the sign-up (which signs the user in) and the NIF transaction run.
-        _uiState.update { it.copy(isRegistering = true, error = null, showErrorSummary = false) }
+        _uiState.update { it.copy(isRegistering = true, failed = false, error = null, showErrorSummary = false) }
         val citizen = state.role == RegistrationRole.CITIZEN
         val registration = Registration(
             role = state.role,
@@ -249,21 +251,30 @@ class RegisterViewModel(
             photoPath = state.photoPath,
         )
         viewModelScope.launch {
-            val result = users.register(registration, state.password)
+            // NonCancellable: once started, the sign-up and the transaction always finish and
+            // clean up in order, even if this ViewModel is cleared meanwhile. Cancelling half way
+            // could leave an Auth user without a profile, or a NIF reserved for a deleted user.
+            val result = withContext(NonCancellable) { users.register(registration, state.password) }
             _uiState.update {
                 when (result) {
                     // One update: isRegistering = false releases the hold, registered keeps
                     // Submit disabled until the redirect leaves this screen.
                     RegisterResult.Success -> it.copy(isRegistering = false, registered = true)
-                    RegisterResult.NifTaken ->
-                        it.copy(isRegistering = false, nifError = R.string.register_error_nif_taken)
-                    RegisterResult.DomainNotAllowed ->
-                        it.copy(isRegistering = false, emailError = R.string.register_error_email_domain)
+                    RegisterResult.NifTaken -> it.copy(
+                        isRegistering = false,
+                        failed = true,
+                        nifError = R.string.register_error_nif_taken,
+                    )
+                    RegisterResult.DomainNotAllowed -> it.copy(
+                        isRegistering = false,
+                        failed = true,
+                        emailError = R.string.register_error_email_domain,
+                    )
                     is RegisterResult.Failure ->
                         if (result.error == AuthError.EMAIL_IN_USE) {
-                            it.copy(isRegistering = false, emailError = R.string.auth_error_email_in_use)
+                            it.copy(isRegistering = false, failed = true, emailError = R.string.auth_error_email_in_use)
                         } else {
-                            it.copy(isRegistering = false, error = result.error.messageRes())
+                            it.copy(isRegistering = false, failed = true, error = result.error.messageRes())
                         }
                 }
             }

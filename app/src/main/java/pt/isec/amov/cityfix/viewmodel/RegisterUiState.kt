@@ -58,6 +58,13 @@ data class RegisterUiState(
     val isRegistering: Boolean = false,
     /** True once the account exists; keeps Submit disabled until the redirect leaves the screen. */
     val registered: Boolean = false,
+    /**
+     * True after a failed Submit. The new Auth user (if one was created) is deleted, but the
+     * session may still show it for a few frames; the screen keeps the redirect held until the
+     * session is anonymous again, so the form and its error stay. Not saved: after process death
+     * the redirect handles the account (D-010 Q11).
+     */
+    val failed: Boolean = false,
 ) {
     /** Every field rule for the role. Submit gates on this, so an invalid form never reaches Firebase. */
     val isValid: Boolean

@@ -2,6 +2,7 @@ package pt.isec.amov.cityfix.ui.screens
 
 import android.content.ActivityNotFoundException
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -73,9 +74,10 @@ import java.io.File
  * Stateful Register screen: collects [viewModel] and shows [RegisterContent].
  *
  * Firebase signs a new user in as soon as the account is created, which would trigger
- * CityFixApp's redirect before the NIF transaction ends. [onBusyChange] reports
- * [RegisterUiState.isRegistering] so CityFixApp holds the redirect meanwhile; leaving the screen
- * releases the hold.
+ * CityFixApp's redirect before the NIF transaction ends. [onBusyChange] asks CityFixApp to hold
+ * the redirect while Submit runs and, after a failure, until [accountSignedIn] is false again
+ * (the deleted account has reached the session), so the form keeps its error. Back is ignored
+ * while Submit runs; leaving the screen in any other way releases the hold (safety net).
  *
  * The location permission is asked when the citizen taps "Use my location", not before. The
  * photo is picked as on the report form (F-007): PickVisualMedia, or TakePicture into a
@@ -84,6 +86,7 @@ import java.io.File
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel,
+    accountSignedIn: Boolean,
     onBusyChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -120,12 +123,15 @@ fun RegisterScreen(
     }
 
     val currentOnBusyChange by rememberUpdatedState(onBusyChange)
-    LaunchedEffect(state.isRegistering) {
-        currentOnBusyChange(state.isRegistering)
+    val holdRedirect = state.isRegistering || (state.failed && accountSignedIn)
+    LaunchedEffect(holdRedirect) {
+        currentOnBusyChange(holdRedirect)
     }
     DisposableEffect(Unit) {
         onDispose { currentOnBusyChange(false) }
     }
+    // Back would clear the ViewModel mid-registration; the result is only a moment away.
+    BackHandler(enabled = state.isRegistering) {}
 
     RegisterContent(
         state = state,

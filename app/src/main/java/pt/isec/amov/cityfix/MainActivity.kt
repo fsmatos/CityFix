@@ -243,7 +243,8 @@ private fun CityFixApp(app: CityFixApplication) {
                     screen = screen,
                     // While the gate covers the app, no bar control stays reachable behind it
                     // (keyboard or switch focus); the gate has its own Log in.
-                    canNavigateBack = canNavigateBack && !showGate,
+                    // Nor while Register holds the redirect: leaving it mid-registration is not allowed.
+                    canNavigateBack = canNavigateBack && !showGate && !holdRedirect,
                     isExpanded = isExpanded,
                     showExpandToggle = canExpandCards,
                     showAddAction = session.canReport && screen != TopBarScreen.REPORT,
@@ -340,6 +341,7 @@ private fun CityFixApp(app: CityFixApplication) {
                         viewModel(factory = RegisterViewModelFactory(app.usersRepository, app.locationRepository, app.attachmentStorage))
                     RegisterScreen(
                         viewModel = registerViewModel,
+                        accountSignedIn = role != AccessRole.ANONYMOUS,
                         onBusyChange = { holdRedirect = it },
                     )
                 }
@@ -448,8 +450,9 @@ private fun CityFixApp(app: CityFixApplication) {
             // reached while the session is Loading. Rotation does not change the role, and process
             // recreation restores handledRole, so neither resets the back stack.
             // While Register holds the redirect, nothing moves: on success the hold is released and
-            // the new role (SETUP) opens Account setup; on failure the account is deleted, the role
-            // is ANONYMOUS again (= handledRole) and the form stays with its error.
+            // the new role (SETUP) opens Account setup; on failure the account is deleted and the
+            // hold lasts until the role is ANONYMOUS again (= handledRole), so the form stays with
+            // its error.
             LaunchedEffect(role, holdRedirect) {
                 if (holdRedirect) return@LaunchedEffect
                 if (role != handledRole) {
