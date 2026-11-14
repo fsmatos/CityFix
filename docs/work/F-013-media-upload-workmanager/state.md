@@ -8,7 +8,7 @@ Remote: origin/dev/Francisco
 | Plan | done | 2026-11-14 | 00-plan, 01-coding-plan (6 slices, D1-D12), 03-docs-plan; Q1-Q12 for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-14 | approved; Q1 and Q7 class approach, slice 5 dropped, rest defaults |
 | Code | done | 2026-11-14 | slices 1-4 and 6 (5 dropped); build + lint pass; device checks D1-D12 not run (Storage bucket test mode unconfirmed) |
-| Review | pending | | |
+| Review | done | 2026-11-14 | approve with should-fix: 0 blocking, 2 should-fix (S1 parallel workers make the Q1 overwrite likely; S2 stale KDocs, docs phase), 3 nits; build + lint pass (0 errors / 22 warnings); D1-D11 open |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -35,3 +35,8 @@ Append-only.
 - 2026-11-14 (Code, slice 5): dropped at Gate 1 (Q4); no `VideoMetadata.kt`. Videos upload as recorded and may carry their recording location (known limit).
 - 2026-11-14 (Code, slice 6): acf0168 `feat(F-013): show upload state on ticket media`. `MediaTile` shows `ticket_media_upload_pending` (PENDING/UPLOADING) or `ticket_media_upload_failed` (FAILED) as `bodySmall`/`onSurfaceVariant` only when the file is not blank; EN "Upload pending"/"Upload failed", PT "Envio pendente"/"Falha no envio". Small deviation: the failed preview attachment is added only in `ShowScreenFullPreview` (via `previewTicket.copy`), not to the shared `previewTicket`, so the PUBLIC preview does not show an upload line. Verify: OK; lint 0 / 22.
 - 2026-11-14 (Code): device checks D1-D11 **not run** (the person must first confirm the default Storage bucket exists and is in test mode, Q12); D12 (build + lint after each slice) done. Not changed (plan's do-not-touch list): rules files, `google-services.json`, `model/`. Leftover for Docs: the KDoc of `model/TicketPrivacy.kt` `toAnonymousView()` still says photo EXIF is removed by `FileUtils.removeImageLocation`, which no longer exists (now: re-encoding in `AttachmentUploader.prepare`; videos keep their metadata). Handover to D-013: call `app.attachmentUploader.prepare(attachment, operatorId)` for the RESOLUTION media, then after the batch `enqueue("tickets/<id>", id, it, false)` (resolution media do not go to `publicTickets`).
+- 2026-11-14 (Review): reviewer read `c52848d..HEAD` against the plans, the Gate 1 answers, the task file, brief IV/V, decision 0010, slides 08, T8 and P10. Ran `./gradlew assembleDebug lint`: success, 0 errors / 22 warnings (no new ones beyond the Log). Verdict **approve with should-fix**: 0 blocking, 2 should-fix, 3 nits (`review.md`).
+  - S1: one worker per attachment, all enqueued together, run in parallel, so the accepted get-then-update overwrite is likely with 2+ media. The losing entry stays PENDING pointing to a local file that is already deleted. Proposed fix: one worker per document (still no transaction, still a plain enqueue, 4 fewer inputData keys). Otherwise, correct the Q1 consequence and test D3 with 2 photos.
+  - S2 (docs phase): stale KDocs in `TicketPrivacy.kt` (`removeImageLocation`) and `Attachment.kt` (`id`/`file`); record which task-file items Gate 1 superseded.
+  - Nits: KDoc wrap in `AttachmentUploader`; `mediaFile` KDoc should say photos and videos; the worker's catch also catches cancellation.
+  - Device checks D1-D11 are still open (Storage bucket test mode unconfirmed, Q12). No code changed.
