@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.res.Configuration
 import android.net.Uri
@@ -73,7 +74,7 @@ import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
-import pt.isec.amov.cityfix.utils.hasLocationPermission
+import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
 import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.MAX_REPORT_ATTACHMENTS
 import pt.isec.amov.cityfix.viewmodel.ReportUiState
@@ -121,12 +122,15 @@ fun ReportScreen(
     }
     val askLocation = rememberLauncherForActivityResult(
         remember { RequestMultiplePermissions() },
-    ) { permissions -> viewModel.onLocationPermissionResult(permissions.values.any { it }) }
+    ) { permissions ->
+        // Precise only: an "Approximate" fix (~2 km off) would group unrelated reports.
+        viewModel.onLocationPermissionResult(permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true)
+    }
 
     // Only while there is no fix, so a rotation does not read the location again.
     LaunchedEffect(Unit) {
         if (viewModel.uiState.value.location == null) {
-            viewModel.onLocationPermissionResult(hasLocationPermission(context))
+            viewModel.onLocationPermissionResult(hasPreciseLocationPermission(context))
         }
     }
 
@@ -582,6 +586,7 @@ private fun LocationSection(
         )
         if (state.locationPermissionDenied) {
             LocationDeniedMessage(
+                message = R.string.report_location_precise_needed,
                 onTryAgainClick = onTryAgainClick,
                 onOpenSettingsClick = onOpenSettingsClick,
             )
@@ -668,7 +673,6 @@ private val noCategoriesState = ReportUiState(location = previewLocation)
 private val locationDeniedState = emptyState.copy(
     location = null,
     locationPermissionDenied = true,
-    locationError = R.string.location_permission_denied,
 )
 
 private val locatingState = emptyState.copy(location = null, isLocating = true)

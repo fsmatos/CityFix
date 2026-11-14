@@ -28,7 +28,7 @@ private const val COARSE_ZOOM = 14f
 private const val EXACT_ZOOM = 15f
 
 /** Radius of the circle drawn around a coarse location (F-012 Q9). */
-private const val COARSE_RADIUS_METERS = 600.0
+private const val COARSE_RADIUS_METERS = 750.0
 
 /**
  * A Google map of [location], as in Contacts_#3 (GoogleMap + rememberCameraPositionState).

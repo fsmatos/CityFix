@@ -16,7 +16,7 @@ Labels: (none)
 - While nobody is logged in (`app.currentUser == null`, the F-011 seam), the app starts with a location check: inside 10 km of Pr. Republica the normal app shows; outside, with location denied or with no fix, a blocking gate screen shows instead.
 - The report form gets the GPS fix, shows it, and cannot be submitted without one; the ticket, `ticketLocations` and `publicTickets` (rounded, decision 0006) store it.
 - Before creating a ticket, the repository looks for an active ticket with the same category and situation within 10 m (through `ticketLocations`). If one exists, the reporter joins it (one batch: `tickets/{id}/reports/{uid}` with the reporter's description and attachments, `arrayUnion` on `followerIds` and `participantIds`; the shared ticket's attachments are not touched) and the snackbar says so; no new ticket and no counter change.
-- `CoarseLocationMap` draws a real Google map (Maps Compose, changed after Gate 1): far zoom, no gestures, a ~600 m circle, never a pin. A reusable `TicketMap` also has an exact mode (marker, zoom 15, gestures) for D-013.
+- `CoarseLocationMap` draws a real Google map (Maps Compose, changed after Gate 1): far zoom, no gestures, a ~750 m circle (review N3), never a pin. A reusable `TicketMap` also has an exact mode (marker, zoom 15, gestures) for D-013.
 
 ## Acceptance checks
 Run on an emulator; locations are set with `adb emu geo fix <longitude> <latitude>` (P10 slide 30; longitude first) or the emulator's Extended Controls > Location. Full list (D1-D14) in `01-coding-plan.md`.
@@ -60,7 +60,7 @@ Follows class P10 ("GPS, Maps & Adaptive UI") and class 02 (runtime permissions)
 - Result: `reportTicket` returns `ReportOutcome?` (`enum class ReportOutcome { CREATED, JOINED, ALREADY_FOLLOWING }`, `null` = refused) instead of the id, which was only a success flag (D-006). `submit(onSuccess: (ReportOutcome) -> Unit)`; `MainActivity` shows "Report submitted." / "This issue was already reported nearby. You now follow it." / "You already follow this issue nearby.".
 - `ticketLocations.active` becomes `ticket.isActive` (OPEN, INFO_REQUESTED, IN_PROGRESS) instead of "not CLOSED", so a report next to a RESOLVED ticket creates a new one, as decision 0005 and `findNearby` say (Q6; amends decision 0010; D-013/F-014 must flip it on RESOLVED and on reopen).
 
-**Map (osmdroid).** Superseded after Gate 1: `ui/components/TicketMap.kt` with `GoogleMap` + `rememberCameraPositionState` as Contacts_#3 ShowScreen; coarse = zoom 14, `Circle` 600 m, no `Marker`, gestures off via `MapUiSettings`; exact = `Marker`, zoom 15; no osmdroid `Configuration`. Original text:
+**Map (osmdroid).** Superseded after Gate 1: `ui/components/TicketMap.kt` with `GoogleMap` + `rememberCameraPositionState` as Contacts_#3 ShowScreen; coarse = zoom 14, `Circle` 750 m, no `Marker`, gestures off via `MapUiSettings`; exact = `Marker`, zoom 15; no osmdroid `Configuration`. Original text:
 - `CityFixApplication.onCreate()` sets osmdroid's `Configuration.getInstance()`: `userAgentValue = packageName` (OSM tile policy) and `osmdroidBasePath` / `osmdroidTileCache` under `cacheDir` (osmdroid's default path is shared external storage, not writable on recent Android). **Beyond P10** (the slide shows only the `MapView`).
 - `ui/components/OsmMap.kt`: `OsmMap(location: Coordinates, exact: Boolean, modifier)`. P10 slide 32's `AndroidView(factory = { MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); controller.setZoom(..); controller.setCenter(GeoPoint(..)) } })`, plus `CopyrightOverlay` (attribution), the zoom buttons hidden, and `onRelease = { it.onDetach() }`. Coarse (`exact = false`): zoom 14, a `Polygon.pointsAsCircle(center, 600.0)` circle, and a transparent Compose cover over the map so touches never reach it (no pan, no zoom) while the page still scrolls. Exact: zoom 17, a `Marker`, multi-touch on (D-013). In previews (`LocalInspectionMode`) it draws the current placeholder box instead.
 - `CoarseLocationMap` keeps its signature, heading, caption and the "Location not available" case, and calls `OsmMap(location, exact = false)` in place of the box. `ShowScreen` does not change.
@@ -99,7 +99,7 @@ Open questions (recommended default first):
 - Q6 `ticketLocations.active`: **`isActive` (false once RESOLVED; D-013/F-014 flip it on resolve and reopen; amend decision 0010)** / keep "not CLOSED" and accept joining a RESOLVED ticket.
 - Q7 Show the reporter's coordinates on the form: **yes, 5 decimals** / only "Location captured".
 - Q8 Libraries: **play-services-location 21.3.0 (class) and osmdroid-android 6.1.20** / play-services-location 21.4.0 (newest).
-- Q9 Coarse map look: **zoom 14, 600 m circle, no gestures** / zoom 13, no circle.
+- Q9 Coarse map look: **zoom 14, 750 m circle (review N3), no gestures** / zoom 13, no circle.
 
 ## Out of scope
 - Background location, location updates, the 20 m geofence, foreground service (D-014).

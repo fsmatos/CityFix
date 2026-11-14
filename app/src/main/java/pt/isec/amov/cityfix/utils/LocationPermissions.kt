@@ -21,6 +21,14 @@ fun hasLocationPermission(context: Context): Boolean =
     }
 
 /**
+ * True when precise (fine) location is granted. The report form needs it: with "Approximate"
+ * (Android 12+) the fix is about 2 km off, which would break the 10 m grouping.
+ */
+fun hasPreciseLocationPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        PackageManager.PERMISSION_GRANTED
+
+/**
  * Opens this app's page in the system settings. After "don't ask again" Android no longer shows
  * the permission dialog, so this is the only way left to allow location.
  */

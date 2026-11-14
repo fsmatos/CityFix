@@ -93,10 +93,7 @@ class ReportViewModel(
             refreshLocation()
         } else {
             _uiState.update {
-                it.copy(
-                    locationPermissionDenied = true,
-                    locationError = R.string.location_permission_denied,
-                )
+                it.copy(locationPermissionDenied = true, locationError = null)
             }
         }
     }

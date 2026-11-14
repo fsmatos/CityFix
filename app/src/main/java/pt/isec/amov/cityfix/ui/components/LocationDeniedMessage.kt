@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,18 +21,19 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
- * Shown by the gate and the report form when location was denied. "Try again" asks for the
+ * Shown by the gate and the report form when location was denied, with the caller's [message]. "Try again" asks for the
  * permission again; "Open settings" is for "don't ask again", when Android shows no dialog.
  */
 @Composable
 fun LocationDeniedMessage(
+    @StringRes message: Int,
     onTryAgainClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringResource(R.string.location_permission_denied),
+            text = stringResource(message),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -51,6 +53,7 @@ fun LocationDeniedMessage(
 private fun LocationDeniedMessagePreview() {
     CityFixTheme {
         LocationDeniedMessage(
+            message = R.string.location_permission_denied,
             onTryAgainClick = {},
             onOpenSettingsClick = {},
             modifier = Modifier.padding(16.dp),

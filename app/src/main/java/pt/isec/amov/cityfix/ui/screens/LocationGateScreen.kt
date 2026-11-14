@@ -73,7 +73,7 @@ fun LocationGateContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -87,6 +87,7 @@ fun LocationGateContent(
                 CircularProgressIndicator()
             }
             GateStatus.DENIED -> LocationDeniedMessage(
+                message = R.string.location_permission_denied,
                 onTryAgainClick = onTryAgainClick,
                 onOpenSettingsClick = onOpenSettingsClick,
                 modifier = Modifier.fillMaxWidth(),

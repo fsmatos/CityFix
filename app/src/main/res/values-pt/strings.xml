@@ -68,6 +68,7 @@
     <string name="gate_outside">O CityFix sem conta só está disponível até 10 km da Praça da República.</string>
     <string name="gate_no_fix">Não foi possível obter a sua localização. Ative a localização e tente novamente.</string>
     <string name="gate_log_in">Iniciar sessão</string>
+    <string name="report_location_precise_needed">As ocorrências precisam da sua localização exata para serem agrupadas com outras próximas. Permita a localização exata. Se não aparecer nenhum pedido, permita-a nas definições da app.</string>
     <string name="location_permission_denied">O CityFix precisa da sua localização para verificar que está a menos de 10 km da Praça da República e para localizar as suas ocorrências. Se não aparecer nenhum pedido, permita a localização nas definições da app.</string>
     <string name="location_try_again">Tentar novamente</string>
     <string name="location_open_settings">Abrir definições</string>

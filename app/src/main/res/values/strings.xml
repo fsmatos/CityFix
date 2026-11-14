@@ -70,6 +70,7 @@
     <string name="gate_outside">CityFix without an account is only available within 10 km of Praça da República.</string>
     <string name="gate_no_fix">Your location could not be found. Turn on location and try again.</string>
     <string name="gate_log_in">Log in</string>
+    <string name="report_location_precise_needed">Reports need your precise location so they can be grouped with nearby reports. Allow precise location. If no dialog appears, allow it in the app settings.</string>
     <string name="location_permission_denied">CityFix needs your location to check that you are within 10 km of Praça da República and to place your reports. If no dialog appears, allow location in the app settings.</string>
     <string name="location_try_again">Try again</string>
     <string name="location_open_settings">Open settings</string>
