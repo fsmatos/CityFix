@@ -9,7 +9,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
-import androidx.compose.foundation.shape.CircleShape
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,14 +31,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -224,6 +225,7 @@ fun RegisterContent(
             error = state.nameError?.let { stringResource(it) },
             enabled = enabled,
             keyboardType = KeyboardType.Text,
+            capitalization = KeyboardCapitalization.Words,
         )
 
         if (isOperator) {
@@ -244,6 +246,7 @@ fun RegisterContent(
             error = emailError,
             enabled = enabled,
             keyboardType = KeyboardType.Email,
+            autoCorrect = false,
         )
         RegisterTextField(
             value = state.phone,
@@ -443,7 +446,12 @@ private fun ProfilePhoto(
             )
         }
         if (state.isCopyingPhoto) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            val copyingDescription = stringResource(R.string.cd_register_photo_copying)
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .semantics { contentDescription = copyingDescription },
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
@@ -510,6 +518,8 @@ private fun RegisterTextField(
     enabled: Boolean,
     keyboardType: KeyboardType,
     prefix: String? = null,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
+    autoCorrect: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
@@ -520,7 +530,12 @@ private fun RegisterTextField(
         enabled = enabled,
         isError = error != null,
         supportingText = error?.let { { Text(it) } },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+            capitalization = capitalization,
+            autoCorrectEnabled = autoCorrect,
+            keyboardType = keyboardType,
+            imeAction = ImeAction.Next,
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .semantics { if (error != null) error(error) },

@@ -241,4 +241,5 @@
     <string name="register_photo_remove">Remover fotografia</string>
     <string name="register_photo_copy_failed">Não foi possível adicionar a fotografia. Tente novamente.</string>
     <string name="cd_register_photo">A sua fotografia de perfil</string>
+    <string name="cd_register_photo_copying">A adicionar a fotografia</string>
 </resources>

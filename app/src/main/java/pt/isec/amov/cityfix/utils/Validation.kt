@@ -8,7 +8,8 @@ package pt.isec.amov.cityfix.utils
 /** Minimum password length for a new account (D-010 Q7; Firebase's own minimum is 6). */
 const val MIN_PASSWORD_LENGTH = 8
 
-private val EMAIL = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+// Dots only between characters, on both sides of the @ (Firebase refuses "a@b..pt" and ".a@b.pt").
+private val EMAIL = Regex("^[A-Za-z0-9_%+-]+(\\.[A-Za-z0-9_%+-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}$")
 private val PORTUGUESE_PHONE = Regex("[29][0-9]{8}")
 private val PORTUGUESE_MOBILE = Regex("9[0-9]{8}")
 private val NIF = Regex("[1-9][0-9]{8}")

@@ -122,7 +122,8 @@ class FirestoreUsersRepository(
         )
         when (registration.role) {
             RegistrationRole.CITIZEN -> {
-                val location = registration.georeferencing ?: Coordinates(0.0, 0.0)
+                // register() returns before this point when a citizen has no location.
+                val location = requireNotNull(registration.georeferencing) { "citizen without location" }
                 fields["role"] = ROLE_CITIZEN
                 fields["georeferencing"] = GeoPoint(location.latitude, location.longitude)
                 fields["registrationStatus"] = RegistrationStatus.PENDING.name
