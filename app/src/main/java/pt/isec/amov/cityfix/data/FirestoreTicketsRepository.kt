@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
-import pt.isec.amov.cityfix.model.AttachmentPhase
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
@@ -99,7 +98,7 @@ class FirestoreTicketsRepository(
      * ([joinTicket]). Otherwise one batch (decision 0010) creates tickets/{id},
      * ticketLocations/{id}, publicTickets/{id} for PUBLIC tickets, and adds the stats/summary
      * counters. Returns once the batch is queued. The media are prepared first
-     * (AttachmentUploader.prepare) and their uploads enqueued after the batch.
+     * (AttachmentUploader.prepare) and one upload worker for the ticket enqueued after the batch.
      */
     override suspend fun reportTicket(
         description: String,
@@ -176,11 +175,10 @@ class FirestoreTicketsRepository(
         // show the ticket immediately; failures (e.g. rules) are only logged.
         batch.commit().addOnFailureListener { Log.w(TAG, "report not saved", it) }
 
-        // One upload per prepared attachment, after the batch (F-013). Only the creator's REPORT
-        // media of a PUBLIC ticket add their thumbnail to publicTickets.
-        ticket.attachments.filter { it.uploadState == UploadState.PENDING }.forEach {
-            val public = scope == Scope.PUBLIC && it.phase == AttachmentPhase.REPORT
-            uploader.enqueue("$TICKETS/${ticket.id}", ticket.id, it, public)
+        // One upload worker for the ticket's media, after the batch (F-013). The creator's
+        // REPORT media of a PUBLIC ticket add their thumbnails to publicTickets.
+        if (ticket.attachments.any { it.uploadState == UploadState.PENDING }) {
+            uploader.enqueue("$TICKETS/${ticket.id}", ticket.id, scope == Scope.PUBLIC)
         }
         ReportOutcome.CREATED
     }
@@ -243,8 +241,8 @@ class FirestoreTicketsRepository(
         batch.commit().addOnFailureListener { Log.w(TAG, "join not saved", it) }
 
         // The joiner's media are uploaded into their report and never go to publicTickets.
-        prepared.filter { it.uploadState == UploadState.PENDING }.forEach {
-            uploader.enqueue("$TICKETS/$ticketId/$REPORTS/$creatorId", ticketId, it, false)
+        if (prepared.any { it.uploadState == UploadState.PENDING }) {
+            uploader.enqueue("$TICKETS/$ticketId/$REPORTS/$creatorId", ticketId, false)
         }
         return ReportOutcome.JOINED
     }

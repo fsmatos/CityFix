@@ -23,9 +23,10 @@ const val ANONYMOUS_COORDINATE_DECIMALS = 2
  * The result is a view, not a valid ticket (it has no history entry): never store it as a full
  * ticket and never compute stats, lifecycle rules or 10 m grouping from it.
  *
- * Media files are passed through: photo GPS EXIF tags are removed in
- * FirestoreTicketsRepository.reportTicket (FileUtils.removeImageLocation, F-009) before the
- * ticket is stored; video metadata and Storage paths without user ids are for the media-upload task.
+ * Media files are passed through: photos are re-encoded in AttachmentUploader.prepare (F-013),
+ * which drops all EXIF; videos are uploaded as recorded and may keep their recording metadata
+ * (known limit; the brief does not require removing it). Storage paths hold only the ticket id
+ * and a UUID (decision 0010).
  *
  * Update this when Ticket, Attachment or StatusHistory gains a field.
  */

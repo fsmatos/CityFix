@@ -165,7 +165,7 @@ internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
     creatorId = getString("creatorId") ?: "",
     followerIds = getStringList("followerIds"),
     statusHistory = getMapList("statusHistory").map { it.toStatusHistory() },
-    attachments = getMapList("attachments").map { it.toAttachment() },
+    attachments = attachments(),
 )
 
 /**
@@ -226,19 +226,16 @@ internal fun DocumentSnapshot.toDashboardStats(): DashboardStats {
     )
 }
 
+/** The `attachments` array of a ticket or report document. */
+internal fun DocumentSnapshot.attachments(): List<Attachment> =
+    getMapList("attachments").map { it.toAttachment() }
+
 /**
- * The `attachments` array of this ticket or report document with [change] applied to the entry
- * with [attachmentId], ready to write back with update(). Null when no entry has that id (the
- * upload worker then retries: the document may not be on the server yet).
+ * The `attachments` array of this ticket or report document with [change] applied to every
+ * entry, ready to write back with update(). [change] returns the entry itself to keep it.
  */
-internal fun DocumentSnapshot.attachmentsWith(
-    attachmentId: String,
-    change: (Attachment) -> Attachment,
-): List<Map<String, Any>>? {
-    val attachments = getMapList("attachments").map { it.toAttachment() }
-    if (attachments.none { it.id == attachmentId }) return null
-    return attachments.map { if (it.id == attachmentId) change(it).toDocument() else it.toDocument() }
-}
+internal fun DocumentSnapshot.attachmentsWith(change: (Attachment) -> Attachment): List<Map<String, Any>> =
+    attachments().map { change(it).toDocument() }
 
 /** One `statusHistory` entry; `dateTime` is a Long (decision 0003). */
 private fun Map<*, *>.toStatusHistory() = StatusHistory(

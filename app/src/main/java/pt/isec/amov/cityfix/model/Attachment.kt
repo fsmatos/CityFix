@@ -3,12 +3,12 @@ package pt.isec.amov.cityfix.model
 /** Image or video attached to a ticket ("Anexo" in the diagram). */
 data class Attachment(
     /**
-     * Unique per ticket; the local file name before upload (F-007), later the Storage/Firestore id.
-     * Sample data must set distinct ids.
+     * A random UUID set by AttachmentUploader.prepare (F-013), also the local and Storage file
+     * name. Sample data must set distinct ids.
      */
     val id: String = "",
     val type: AttachmentType = AttachmentType.IMAGE,
-    /** Absolute local path before upload, Storage path or URL after it. */
+    /** Absolute local path until uploaded, then the https download URL. Same for [thumbnail]. */
     val file: String = "",
     val thumbnail: String? = null,
     val uploadState: UploadState = UploadState.PENDING,

@@ -49,7 +49,7 @@ object FileUtils {
 
     fun isVideoPath(path: String): Boolean = File(path).name.startsWith(VIDEO_PREFIX)
 
-    /** The file called [name] in filesDir/images (compressed media and thumbnails, F-013). */
+    /** The file called [name] in filesDir/images (compressed photos, videos and thumbnails, F-013). */
     fun mediaFile(context: Context, name: String): File = File(mediaFolder(context), name)
 
     private fun mediaFolder(context: Context): File =
