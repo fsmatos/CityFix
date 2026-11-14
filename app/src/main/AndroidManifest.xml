@@ -40,7 +40,7 @@
         <!-- Google Maps key, as in class (P10). Paste the project's key here. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="PASTE_MAPS_API_KEY_HERE" />
+            android:value="AIzaSyB6SOf_tI69qmlHkvaYvA_rDD4D5VvZ2PE" />
     </application>
 
 </manifest>
