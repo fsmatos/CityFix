@@ -64,3 +64,48 @@ Build and lint (reviewer run, 2026-11-14): `./gradlew assembleDebug lint` succee
 - Worker: fixed target name, so retries overwrite. The thumbnail is deleted at once. The source and target are deleted on success, on an undecodable file and after the last attempt. `CancellationException` is rethrown.
 - Rules: only the `email_verified` term of the operator create branch is removed, with a comment, and `storage.rules` is unchanged. Nothing was deployed.
 - MVVM: stateless `RegisterContent` with previews (portrait, landscape 800x360, PT). Firebase is used only in `data/` and the worker. Errors are `@StringRes`. The switch row is `toggleable(Role.Switch)` and at least 48dp high. The segmented buttons are at least 48dp. The field errors are exposed through `semantics { error(...) }`.
+
+---
+
+# Round 2
+
+Scope: `git diff 5be47fd..HEAD` (29533cb, 25d6b02, 78c3cbb, f14bfb1, f09c041). N3 and N7 are deferred by the coordinator (N7 to the docs phase).
+
+Build and lint (reviewer run, 2026-11-14): `./gradlew assembleDebug lint` succeeded. Lint: 0 errors, 22 warnings, the baseline. None of the warnings is in a D-010 file. EN/PT parity holds: the one new key, `cd_register_photo_copying`, is in both files.
+
+## Verdict
+**Approved.** B1, S1, S2 and S3 are resolved, and so are N1, N2, N4, N5 and N6. The fixes add no blocking or should-fix problem. Four new nits are below; none has to be fixed before the docs phase. The device checks listed in `state.md` (Back right after Submit, NIF clash without a flash of Account setup, operator domain offline then online) are still to be done and are the real proof of B1 and S1.
+
+## Round 1 findings
+- **B1: resolved.**
+  - `RegisterViewModel.kt:282` runs `users.register` under `withContext(NonCancellable)`, so neither the sign-up nor the transaction can be cut half way.
+  - `RegisterScreen.kt:135` swallows Back while `isRegistering`, and `MainActivity.kt:246` hides Up while `holdRedirect`.
+  - The `onDispose` release is now only a safety net, and the `state.md` deviation text is corrected.
+- **S1: resolved.** The coordinator's approach differs from both of my suggestions; judged on its own:
+  - `RegisterScreen.kt:127` holds the redirect while `isRegistering || (failed && accountSignedIn)`, with `accountSignedIn = role != ANONYMOUS` (`MainActivity.kt:344`).
+  - **Correct.** The redirect is released only once the deleted or signed-out account has reached the session, whatever the order of the Firebase callbacks. When no Auth user was ever created (offline, e-mail in use, domain refused), `accountSignedIn` is already false and the redirect is not held at all.
+  - **Leans the safe way.** `LOADING` and `ACCOUNT_PROBLEM` also count as signed in, so a short Loading between states keeps the hold.
+  - **Cannot hold for good.** Every failure path that created a user ends in `delete()` (which signs out) or `signOut()`. The one exception is R2-N1. Back is enabled during the post-failure hold, and `onDispose` releases it.
+  - **Process death is unchanged.** `failed` is not saved, so after process death the Q11 path (Account setup, then Account problem) works as before. This is better than my `onRegistered` option, which would have stranded that user on Register.
+  - **Clear, with one subtlety.** `failed` is cleared only by the next Submit. That is harmless: once the role is ANONYMOUS the hold is false, and only another Submit can sign anyone in from this screen.
+- **S2: resolved.**
+  - `loadDomain()` runs from `init`, from `onRoleSelected(OPERATOR)` and from `submit()` when the domain is missing and no read is running.
+  - An operator `submit()` returns early while the read runs (`RegisterViewModel.kt:253-257`), and the loading hint explains why.
+  - No double read: `domainMissing()` requires `!isLoadingDomain`.
+- **S3: resolved.**
+  - `ProfilePhotoWorker.kt:45-49` gives up when the signed-in uid is not the photo's uid.
+  - `isRefused` (used at line 74) makes not-authorised and unauthenticated answers from Storage or Firestore final.
+  - The local files are deleted in every final case.
+  - `FirebaseAuth.currentUser` is restored from disk when the process starts, so the check also holds when WorkManager starts a fresh process.
+- **N1: resolved.** `requireNotNull` at `FirestoreUsersRepository.kt:126` sits inside the transaction `try` (via line 86). If it ever fired, the Auth user would be deleted and the result would be `Failure(UNKNOWN)`.
+- **N2: resolved.** The new regex rejects `a@b..pt`, `.a@b.pt` and `a.@b.pt`, and still accepts `ana.silva+x@cm-coimbra.pt`. There is no nested ambiguous quantifier, so no catastrophic backtracking. The change also tightens Login and Forgot password (Q15), which is intended.
+- **N4: resolved.** `cd_register_photo_copying` is in EN and PT and is set on the indicator.
+- **N5: resolved.** `KeyboardCapitalization.Words` on the name field and `autoCorrectEnabled = false` on the e-mail field.
+- **N6: resolved.** The `RegisterScreen` imports are sorted.
+- **N3 and N7: deferred**, as agreed. The worker now logs the missing file, which covers the diagnosis part of N3.
+
+## New nits (round 2)
+- **R2-N1** `FirestoreUsersRepository.kt:79`: if `AuthResult.user` were ever null, `?: return RegisterResult.Failure(AuthError.UNKNOWN)` returns while the new account may still be signed in. With S1's hold, the redirect then stays held until the user leaves the screen (Back works, and `onDispose` releases it). This was there before, and Firebase practically never does it. Fix: `?: run { auth.signOut(); return RegisterResult.Failure(AuthError.UNKNOWN) }`.
+- **R2-N2** `RegisterViewModel.kt:254-257`: when the domain is missing, Submit starts a new read and returns, so the user has to tap Submit again once the hint changes. Acceptable. Optional: call `submit()` again at the end of `loadDomain()` when the read was started by Submit, or say "tap again" in the docs.
+- **R2-N3** `ProfilePhotoWorker.kt:64-74`: if `putFile` succeeds and the Firestore `update` is then refused, `users/{uid}/photo.jpg` stays in Storage with no `photoPath`. `ERROR_NOT_AUTHENTICATED` can also be a token that failed to refresh while the network was flaky, and that is now final at once. Both are rare and fine for an optional photo. Note them next to the S3 case in the failure-mode table in the docs phase.
+- **R2-N4** `RegisterScreen.kt:135` with `RegisterViewModel.kt:282`: because of `NonCancellable` and the Back block, the user cannot leave while Firebase hangs on a bad network. The SDK timeouts bound the wait. This is the intended trade-off of B1; mention it in the docs.

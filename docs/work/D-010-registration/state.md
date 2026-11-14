@@ -8,7 +8,7 @@ Remote: not pushed
 | Plan | done | 2026-11-14 | 00-plan, 01-coding-plan, 03-docs-plan; 7 slices (6 map pick optional, 7 rules line conditional on Q1); Q1-Q15 for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-14 | Approved by Diogo; Q1-Q15 as recommended; slice 7 (draft rules edit, not deployed) approved; slice 6 (map pick) skipped |
 | Code | done | 2026-11-14 | Slices 1-5 and 7 committed (cdbcb8d..1760f28); slice 6 skipped (Gate 1); build + lint green, 22 warnings = baseline, none new; device checks pending (Diogo) |
-| Review | done | 2026-11-14 | Changes requested: 1 blocking (B1 Back/Up during Submit), 3 should-fix, 7 nits; build + lint green (0 errors, 22 warnings = baseline); see review.md |
+| Review | done | 2026-11-14 | Round 1: changes requested (B1, S1-S3, N1-N7). Round 2 (5be47fd..HEAD): approved; B1, S1-S3, N1, N2, N4-N6 resolved, N3/N7 deferred, 4 new nits (R2-N1..N4); build + lint 0 errors, 22 warnings = baseline; device checks pending |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -65,3 +65,14 @@ Append-only.
     - N7 is for the docs phase.
     - Add the S3 case (photo dropped after logout or refusal) to the failure-mode table in the docs.
   - Device checks added by the fixes: tap Submit, then Back at once (Back ignored, no Up arrow, result as normal). NIF clash: no flash of Account setup, and the form keeps "already registered". Operator Submit offline on a fresh install, then online: the domain is read again on Submit or on re-selecting Operator.
+- 2026-11-14 Review round 2: reviewer read `git diff 5be47fd..HEAD` (29533cb, 25d6b02, 78c3cbb, f14bfb1, f09c041) and ran `./gradlew assembleDebug lint`: success, 0 errors, 22 warnings (baseline). EN/PT parity holds. Verdict: approved.
+  - B1, S1, S2, S3, N1, N2, N4, N5 and N6 are resolved.
+  - The S1 `failed && role != ANONYMOUS` hold was judged on its own: correct whatever the callback order, it leans the safe way (LOADING counts as signed in), and process death is unchanged (Q11).
+  - N3 and N7 are deferred: N7 to the docs phase, N3 now logged by the worker.
+  - New nits for the docs phase or a later touch:
+    - R2-N1: `AuthResult.user == null` returns without `signOut()`.
+    - R2-N2: Submit after a missing domain needs a second tap.
+    - R2-N3: a Storage object can be orphaned when the Firestore update is refused, and an unauthenticated answer can be transient.
+    - R2-N4: no way to leave the screen while Firebase hangs (intended).
+  - Device checks from the fixes are still pending (Diogo).
+  - No code edited, nothing committed by the reviewer.
