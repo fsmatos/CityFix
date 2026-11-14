@@ -826,3 +826,57 @@ Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (
 - Thumbnails for the public list (F-013).
 - A loading state, so the first frame before the first snapshot does not show "no tickets".
 - Restart a listener after an error (for example when the user reopens the screen or the network returns) instead of waiting for a new collection.
+
+## F-012: Location, anonymous gate, 10 m grouping and map
+Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002](../decisions/0002-grouped-reports-single-ticket.md), [0010](../decisions/0010-firestore-schema.md), [0012](../decisions/0012-firebase-plan-notifications-close-maps.md) Q6). Code: `data/LocationRepository.kt`, `model/AnonymousArea.kt`, `utils/LocationPermissions.kt`, `viewmodel/LocationGateViewModel.kt`, `ui/screens/LocationGateScreen.kt`, `ui/components/TicketMap.kt`, `CoarseLocationMap.kt`, `LocationDeniedMessage.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `viewmodel/ReportViewModel.kt`, `ui/screens/ReportScreen.kt`, `MainActivity.kt`. Overview: "Location, gate and grouping (F-012)", "Handover (F-012)".
+
+**The device checks D1-D14 and D10b have not run yet** (no device or emulator), and the real Maps key is not pasted yet. Build passes; lint 0 errors, 21 warnings, none from F-012 code. The review approved with one should-fix (precise location in the form), applied with three nits.
+
+### Technical solutions
+- **One GPS fix.** `LocationRepository.currentLocation()` calls `FusedLocationProviderClient.getCurrentLocation(PRIORITY_HIGH_ACCURACY, null).await()` and returns `Coordinates?` (`null` = no permission or no fix). A report and the gate each need one position, so there are no continuous updates. The function checks the permission itself, so it cannot throw `SecurityException`.
+- **Permission at app start, as in class.** `MainActivity` requests FINE and COARSE with `RequestMultiplePermissions` from `LaunchedEffect(Unit)`. A denial never crashes: the gate and the form show a message with "Try again" and "Open settings" (the only way back after "don't ask again").
+- **The 10 km gate (brief I.1).** A pure rule in `model/` (`isInsideAnonymousArea`, Haversine to Pr. Republica, at most 10 000 m) and a small ViewModel with five states (checking, denied, no fix, outside, inside). `MainActivity` shows the gate instead of the app for anonymous users who are not inside. It is a client check only: security rules cannot know where the phone is (decision 0010). It runs at start and on "Try again".
+- **Precise location for reports.** On Android 12+ the user can grant "Approximate"; that fix is about 2 km off and snapped to a grid, so two unrelated reports in the same cell would get the same point and group (found in review, S1). The form asks for precise location and has its own message; the gate accepts either, because 10 km is far larger than the error.
+- **Grouping without geo queries (brief I.2 Obs.).** Firestore filters `ticketLocations` by category, situation and `active` (three equality filters, no composite index); the 10 m Haversine test (`findNearby`, D-002) runs in the app over those few documents, nearest wins. Offline the query answers from the local cache.
+- **Why `ticketLocations` exists.** Citizens cannot read other people's tickets, and `publicTickets` has only coarse locations, so the grouping reads a small collection with category, situation, exact location and `active`. Signed-in citizens can therefore see where every ticket is, but not who reported it, its description or its media (decision 0010).
+- **Joining a ticket.** A match first checks the reporter's own tickets (`participantIds`): if they already created or follow it, nothing is written ("You already follow this issue nearby"). Otherwise one batch writes their report to `tickets/{id}/reports/{uid}` and adds their uid with `FieldValue.arrayUnion` to `followerIds` and `participantIds`. The form shows one message per outcome (`ReportOutcome`: created, joined, already following).
+- **Scope and the joiner's media (the authors' reading).** The brief groups by category/situation and 10 m only and says nothing about PUBLIC/PRIVATE. Grouping ignores scope, so a PRIVATE report can join a PUBLIC ticket, whose photos anonymous users see (brief I.1.C). So the joiner's description and photos stay in their own `reports/{uid}` document, readable only by them and operators; the shared ticket gains only the follower.
+- **`active` follows `isActive`.** `ticketLocations.active` is true only for OPEN, INFO_REQUESTED and IN_PROGRESS, so a report next to a RESOLVED ticket creates a new one (decision 0005).
+- **The anonymous map never shows the exact place.** `publicTickets` stores the location rounded to 2 decimals (decision 0006). The map shows a 750 m circle (the rounding can move a point by up to about 700 m) at zoom 14, with no marker and every gesture off, so it cannot be zoomed in. No coordinates as text.
+- **Google Maps with the key in the manifest.** `maps-compose` 6.1.0, `GoogleMap` + `rememberCameraPositionState`, as in class. The key is the `com.google.android.geo.API_KEY` meta-data, so it is in the ZIP and the grader's build shows the map.
+
+### Class material vs beyond class
+- **As in Contacts_#3 / P10:** `play-services-location` 21.3.0 and the `FusedLocationProviderClient`; FINE + COARSE requested at start in `MainActivity` with `LaunchedEffect(Unit)` + `RequestMultiplePermissions`; `maps-compose` 6.1.0 with the key in the manifest; `GoogleMap` with a `Marker` at zoom 15 (our exact map, for operators); `checkSelfPermission` (class 02).
+- **Beyond class:** one-shot `getCurrentLocation` with `await()` (the class uses continuous `requestLocationUpdates` in `ProximityService`); the 10 km gate; the coarse map with `MapUiSettings` gestures off and a `Circle` instead of a marker; "Open settings" after "don't ask again"; the grouping query plus the pure `findNearby`; `FieldValue.arrayUnion`.
+
+### Options chosen and rejected
+- Gate 1 (2026-11-14): Q1 centre and radius as code constants (rejected: reading `municipality/main`, which does not exist and adds a listener and offline cases); Q2 check at start and on Try again (rejected: on every resume, continuous updates); Q3 "Log in" hidden until D-009; Q4 fix taken when the form opens and on Refresh (rejected: at the Submit tap, which makes Submit wait for GPS); Q5 joiner media in `reports/{uid}`; Q6 `active = isActive`; Q7 reporter's own coordinates shown with 5 decimals; Q8 play-services-location 21.3.0 (class version, not 21.4.0); Q9 zoom 14, circle (600 m, later 750 m), no gestures.
+- Q5 alternatives rejected: appending the joiner's media to the shared ticket (publishes private photos); appending except PRIVATE-into-PUBLIC (needs scope in `ticketLocations` and a second rule); grouping only same-scope reports (a condition the brief does not have, two tickets for one problem).
+- Query alternatives rejected: geohash (a new field and hand code or a library) and a latitude/longitude bounding box (range filters on two fields need a composite index). With only active tickets of one category and situation the candidate list is small.
+- Changed by the person after Gate 1, to follow the class practical: Google Maps Compose instead of osmdroid (no key, but archived in Nov 2024, a View library in `AndroidView`, and not what the class uses); the key in the manifest instead of `local.properties` (the ZIP excludes it); the permission requested at start instead of a rationale panel at the point of use. Also no try/catch around the grouping query (Firestore answers from the cache offline).
+- Review: precise location required in the form (S1), the dead denied error removed (N2), circle 600 -> 750 m (N3), the gate's ineffective vertical centring removed (N4). N1 (relaunch on rotation) skipped: same as Contacts_#3.
+
+### Known limits
+- Device checks D1-D14 and D10b, and the "grant Approximate, open the form" check, not run yet (no device).
+- The real Maps key is not pasted yet: until then the map shows grey tiles. The ZIP must contain the real key, and the key must not have an Android-app (package + SHA-1) restriction, because the grader's build is signed with a different debug key and the map would be blank. Anyone with the ZIP can use the key; an API restriction (Maps SDK for Android only) and the billing budget alert limit the cost.
+- Offline, the grouping sees only tickets in the local cache: a report next to a ticket this device never loaded creates a second ticket. Two citizens reporting the same spot offline at the same time also make two tickets.
+- Users who grant only approximate location cannot submit reports (they can still use the app as anonymous users).
+- A rotation re-asks the permission, as in class; Android answers at once when already granted. A rotation while the first dialog is open can show "denied" for a moment.
+- Without a try/catch, a failing grouping query (for example once rules are deployed) would crash the app instead of keeping the form open.
+- Other followers do not see a joiner's description or photos; only the joiner and operators can.
+- GPS accuracy (about 3-10 m) is of the same order as the 10 m rule, so two reports of the same problem can miss each other, or two close problems can group.
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and after the review fixes: 0 errors; 21 warnings at the end (the F-012 additions are the accepted newer-version warnings for play-services-location and maps-compose).
+- The merged manifest was checked in slice 1, while osmdroid was in (it added no storage permissions).
+- Review: gate maths and constants, anonymous privacy (map coarse, no coordinates text, `publicTickets` rounded), the grouping query and join batch, the outcome per case, denial without a crash, MVVM split, EN + PT strings.
+
+### Improvement opportunities
+- Re-check the gate on resume or with location updates, so leaving the area during use is noticed.
+- A map of all public issues for anonymous users, with clustered coarse circles.
+- Server-side grouping (a Cloud Function) to avoid duplicate tickets created offline.
+- Read the centre and radius from `municipality/main` once several municipalities exist.
+- Geohash queries if the number of tickets grows.
+- Show the joiner's reports (description, media) to the other participants, with the joiner's consent for private ones.
+- A rationale screen before the system dialog, and asking for location at the point of use.
+- Ask once per process (`rememberSaveable` flag) so a rotation does not re-ask.
