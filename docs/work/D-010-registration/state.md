@@ -8,7 +8,7 @@ Remote: not pushed
 | Plan | done | 2026-11-14 | 00-plan, 01-coding-plan, 03-docs-plan; 7 slices (6 map pick optional, 7 rules line conditional on Q1); Q1-Q15 for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-14 | Approved by Diogo; Q1-Q15 as recommended; slice 7 (draft rules edit, not deployed) approved; slice 6 (map pick) skipped |
 | Code | done | 2026-11-14 | Slices 1-5 and 7 committed (cdbcb8d..1760f28); slice 6 skipped (Gate 1); build + lint green, 22 warnings = baseline, none new; device checks pending (Diogo) |
-| Review | pending | | |
+| Review | done | 2026-11-14 | Changes requested: 1 blocking (B1 Back/Up during Submit), 3 should-fix, 7 nits; build + lint green (0 errors, 22 warnings = baseline); see review.md |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -36,3 +36,8 @@ Append-only.
   - Slice 4: reuses the generic `report_location_locating` and `report_location_value` (5 decimals) strings; new `register_location_use`, `register_location_unavailable`, `register_location_denied`.
   - Slice 5: the worker compresses into a fixed name `profile_<uid>.jpg` (not a new UUID per attempt), so a retry overwrites instead of leaving files, and keeps the picked source until the final outcome so each retry can compress again; every final case (success, undecodable, 5 failed attempts) deletes the local files. The ViewModel has `isCopyingPhoto` (photo buttons and Submit wait for a gallery copy) and `photoNotice` (new `register_photo_copy_failed`; camera failure reuses `report_camera_failed`). A copy that finishes after Submit is deleted.
   - Process: `core.hooksPath` is not set in this clone (the commit-msg hook did not run); the six commit messages were checked by hand: no attribution lines.
+- 2026-11-14 Review: reviewer read `git diff e7cfdf4..HEAD` (cdbcb8d..fab62c6) against the plans, the Gate 1 decisions, the task file, the overview, decisions 0010 / 0015 and kotlin-conventions. Reviewer ran `./gradlew assembleDebug lint`: success, 0 errors, 22 warnings (baseline; none in D-010 files). EN/PT key sets equal (only the existing `translatable="false"` keys differ). Verdict: changes requested.
+  - Blocking: B1. Back or Up during Submit cancels `register()`. During sign-up this leaves an orphan Auth user. During the transaction the commit can still land, and the Auth user is then deleted, so `nifs/{ROLE}_{nif}` is reserved for good. The slice 3 deviation above ("the Auth user is deleted in NonCancellable") covers only the second case, and there the delete makes things worse. Fix: `BackHandler` while registering, no Up arrow while `holdRedirect`, and `withContext(NonCancellable)` around `users.register` in the ViewModel.
+  - Should-fix: S1, the failure path depends on the session being ANONYMOUS before the hold drops (device check, or a defensive wait). S2, operator domain: no field error while it loads, and no re-read after a failed read. S3, the photo worker retries permission errors and then drops the photo without a message.
+  - Nits N1-N7: listed in review.md (the `Coordinates(0.0, 0.0)` fallback, the e-mail regex, a process-death photo edge case, a content description, keyboard options, import order, overview / decision updates in the docs phase).
+  - No code edited, nothing committed by the reviewer.
