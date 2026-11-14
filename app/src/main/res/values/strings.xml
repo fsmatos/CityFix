@@ -55,6 +55,12 @@
     <string name="scope_private">Private</string>
     <string name="report_error_summary">Some required fields are missing.</string>
     <string name="report_submit">Submit report</string>
+    <string name="report_location_title">Location</string>
+    <string name="report_location_value">Latitude %1$.5f, longitude %2$.5f</string>
+    <string name="report_location_locating">Getting your location…</string>
+    <string name="report_location_refresh">Refresh location</string>
+    <string name="report_location_unavailable">Your location could not be found. Turn on location and refresh.</string>
+    <string name="report_error_location">The report needs your location.</string>
     <string name="report_submitted">Report submitted.</string>
 
     <!-- Location and the 10 km gate (F-012) -->

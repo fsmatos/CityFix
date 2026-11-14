@@ -193,6 +193,7 @@ private fun CityFixApp(app: CityFixApplication) {
                         factory = ReportViewModelFactory(
                             app.ticketsRepository,
                             app.attachmentStorage,
+                            app.locationRepository,
                             app.reporterId,
                         ),
                     )

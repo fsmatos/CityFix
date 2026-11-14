@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
@@ -80,9 +81,9 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             }
 
     /**
-     * Opens a new ticket from the report form. Returns its id, or null when description,
-     * categoryId or categoryName is blank (all three are trimmed) or attachments is empty.
-     * [creatorId] is the reporter. No location yet (F-012), so no 10 m grouping.
+     * Opens a new ticket from the report form at [location] (the reporter's GPS fix). Returns its
+     * id, or null when description, categoryId or categoryName is blank (all three are trimmed),
+     * attachments is empty or location is the unset (0, 0). [creatorId] is the reporter.
      *
      * Writes one batch (decision 0010): tickets/{id}, ticketLocations/{id}, publicTickets/{id}
      * for PUBLIC tickets, and the stats/summary counters. Returns once the batch is queued.
@@ -94,13 +95,14 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
         situation: Situation,
         scope: Scope,
         attachments: List<Attachment>,
+        location: Coordinates,
         creatorId: String,
     ): String? = withContext(Dispatchers.IO) {
         val text = description.trim()
         val cleanCategoryId = categoryId.trim()
         val cleanCategoryName = categoryName.trim()
         if (text.isBlank() || cleanCategoryId.isBlank() || cleanCategoryName.isBlank() ||
-            attachments.isEmpty()
+            attachments.isEmpty() || location == Coordinates()
         ) {
             return@withContext null
         }
@@ -119,6 +121,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             description = text,
             situation = situation,
             scope = scope,
+            location = location,
             currentStatus = TicketStatus.OPEN,
             createdAt = now,
             categoryId = cleanCategoryId,
