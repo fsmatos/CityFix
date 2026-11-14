@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-14 | approve with should-fix: 0 blocking, 1 should-fix (S1 precise location in the form), 4 nits; build + lint 0 errors / 20 warnings; D1-D14 open |
 | Docs | done | 2026-11-14 | decision 0014 new; 0002, 0010, 0012 amended; overview (F-012 section + handover); report notes F-012; not committed |
 | Pushed | done | 2026-11-14 | b8b085c to origin/dev/Francisco; not merged into main |
-| Merged | pending | | |
+| Merged | done | 2026-11-14 | 0c17cb0 in origin/main (merge: dev/Francisco into main) |
 
 ## Log
 Append-only.
@@ -53,3 +53,4 @@ Append-only.
   - Not run: D4 (no fix), D5 (citizen outside, no gate), D7 (form denied), D8 (rotate form). Temporary `currentUser` edits for D10-D11 reverted (`git checkout`), never committed. Test data in the shared database: tickets "F012 D9/D11a-c" and reports from `dev-citizen-2`/`dev-citizen-3`.
 - 2026-11-14: Remaining device checks run (emulator `Medium_Phone`): D4: anonymous with device location off -> gate "Your location could not be found. Turn on location and try again."; after turning location on, Try again opens the dashboard. D5: citizen stand-in (temporary `currentUser` edit, reverted) at (40.15, -8.86), outside 10 km -> dashboard, no gate. D8: half-filled form (category, description, location) kept after rotating to landscape and back. D7 / review S1: citizen stand-in with only Approximate granted -> the form shows `report_location_precise_needed` with Try again (no coordinates); with location denied -> the same message; Submit without a location is refused; no crash. All F-012 device checks (D1-D14, D10b and the Approximate check) have now run and passed. The app on the emulator is back to the committed anonymous build.
 - 2026-11-14: Pushed dev/Francisco to origin at b8b085c (build and lint passed after the last code change; all device checks passed). Not merged into main. Tell Diogo: "Handover (F-012)" in the overview (MainActivity permission request and gate, report factory parameter, snackbars, Maps key in the manifest, `ticketLocations.active` on resolve/reopen, `TicketMap(exact = true)`, `LocationRepository` for D-014).
+- 2026-11-14: The person asked to merge into main. dev/Francisco already contained origin/main; merged with --no-ff into local main (0c17cb0, no conflicts; assembleDebug and lint pass, 0 errors). The session cannot push main, so the person pushed it; 0c17cb0 confirmed in origin/main. dev/Francisco fast-forwarded to main. Merged: done.

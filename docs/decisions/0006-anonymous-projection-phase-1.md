@@ -2,6 +2,8 @@
 
 Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009. Amended on 2026-11-10 by D-007: the projection also drops `description` and `statusHistory`, the expand toggle is hidden for anonymous users, and the public projection contract for F-011 is recorded (see "Amended 2026-11-10 (D-007)"). Amended on 2026-11-11 by D-009: `canExpandCards` stays `false` for every session, not set by role (see "Amended 2026-11-11 (D-009)" and [decision 0015](0015-session-role-navigation-mfa.md)).
 
+Pointer (F-013, 2026-11-14): the media items are now handled by [decision 0015](0015-media-preparation-and-uploads.md): files get UUID names (no `CAPTURE_` time), photos are re-encoded with no EXIF at all (make, model, capture time and GPS gone; `FileUtils.removeImageLocation` was removed), videos keep their recording metadata (known limit).
+
 ## Context
 Phase 1 has no login, so every viewer of the app is an anonymous citizen. The brief limits what anonymous users see: the list of "ocorrências públicas ativas" (I.1.B), and a detail with images/videos and a coarse map zoom, "ocultando dados pessoais do autor" (I.1.C). CLAUDE.md makes this non-negotiable: anonymous users must never see the author's personal data or exact coordinates, and the rule is enforced below the UI, not only in the screens.
 

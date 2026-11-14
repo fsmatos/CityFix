@@ -27,6 +27,8 @@
     <string name="ticket_media_photo">Photo</string>
     <string name="ticket_media_video">Video</string>
     <string name="ticket_media_unavailable">Not available yet</string>
+    <string name="ticket_media_upload_pending">Upload pending</string>
+    <string name="ticket_media_upload_failed">Upload failed</string>
     <string name="ticket_map_title">Approximate location</string>
     <string name="ticket_map_caption">Approximate area (about 1 km)</string>
     <string name="ticket_map_unavailable">Location not available</string>
