@@ -1,9 +1,9 @@
 package pt.isec.amov.cityfix.viewmodel
 
-import android.util.Patterns
 import androidx.annotation.StringRes
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AuthError
+import pt.isec.amov.cityfix.utils.isValidEmail
 
 /** The message for each [AuthError], shared by the login, password reset and account setup screens. */
 @StringRes
@@ -24,6 +24,6 @@ fun AuthError.messageRes(): Int = when (this) {
 @StringRes
 fun emailErrorFor(email: String): Int? = when {
     email.isBlank() -> R.string.login_error_email_blank
-    !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> R.string.login_error_email_invalid
+    !isValidEmail(email) -> R.string.login_error_email_invalid
     else -> null
 }
