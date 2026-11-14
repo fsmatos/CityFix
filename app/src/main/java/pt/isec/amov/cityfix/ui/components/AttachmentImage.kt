@@ -26,8 +26,10 @@ import pt.isec.amov.cityfix.model.AttachmentType
 
 /**
  * Photo, or first video frame with a play badge, cropped to fill [modifier]'s bounds. Shared by
- * the report gallery, the ticket card and the detail (like `ContactAvatar` in Contacts_#3). A
- * blank file (sample tickets) or one that fails to decode shows the placeholder.
+ * the report gallery, the ticket card and the detail (like `ContactAvatar` in Contacts_#3). It
+ * draws the thumbnail when there is one (F-013: a local JPEG before upload, a URL after it), so
+ * lists load small images. A blank file without a thumbnail (sample tickets) or one that fails to
+ * decode shows the placeholder.
  */
 @Composable
 fun AttachmentImage(
@@ -37,9 +39,12 @@ fun AttachmentImage(
 ) {
     val isVideo = attachment.type == AttachmentType.VIDEO
     val context = LocalContext.current
+    val thumbnail = attachment.thumbnail
     // Coil decodes images from the path alone; a video needs the frame decoder for this request.
-    val model: Any = remember(attachment.file, isVideo) {
-        if (isVideo) {
+    val model: Any = remember(attachment.file, thumbnail, isVideo) {
+        if (thumbnail != null) {
+            thumbnail
+        } else if (isVideo) {
             ImageRequest.Builder(context)
                 .data(attachment.file)
                 .decoderFactory(VideoFrameDecoder.Factory())
@@ -50,7 +55,7 @@ fun AttachmentImage(
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        if (attachment.file.isBlank()) {
+        if (attachment.file.isBlank() && thumbnail == null) {
             PlaceholderIcon(contentDescription)
         } else {
             // Loading and error slots draw the same small tinted icon as a blank file; a painter

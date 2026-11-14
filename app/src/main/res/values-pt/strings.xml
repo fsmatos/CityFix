@@ -25,6 +25,8 @@
     <string name="ticket_media_photo">Fotografia</string>
     <string name="ticket_media_video">Vídeo</string>
     <string name="ticket_media_unavailable">Ainda não disponível</string>
+    <string name="ticket_media_upload_pending">Envio pendente</string>
+    <string name="ticket_media_upload_failed">Falha no envio</string>
     <string name="ticket_map_title">Localização aproximada</string>
     <string name="ticket_map_caption">Área aproximada (cerca de 1 km)</string>
     <string name="ticket_map_unavailable">Localização indisponível</string>

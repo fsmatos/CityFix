@@ -880,3 +880,54 @@ Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002]
 - Show the joiner's reports (description, media) to the other participants, with the joiner's consent for private ones.
 - A rationale screen before the system dialog, and asking for location at the point of use.
 - Ask once per process (`rememberSaveable` flag) so a rotation does not re-ask.
+
+## F-013: Image compression, thumbnails and WorkManager uploads
+Decision: [0015](../decisions/0015-media-preparation-and-uploads.md) (amends [0010](../decisions/0010-firestore-schema.md)). Code: `utils/ImageCompression.kt`, `data/AttachmentUploader.kt`, `data/UploadWorker.kt`, `data/FirestoreMapping.kt`, `data/FirestoreTicketsRepository.kt`, `CityFixApplication.kt`, `ui/components/AttachmentImage.kt`, `ui/screens/ShowScreen.kt`. Overview: "Media upload (F-013)", "Handover (F-013)".
+
+**The device checks D1-D11 have not run yet.** The default Storage bucket must first be confirmed in test mode. Build and lint pass (0 errors, 22 warnings). The review approved with two should-fix items, both applied: one worker per document (S1) and stale KDocs (S2).
+
+### Technical solutions
+- **Compress on the device at submit (brief IV, V).** Before the ticket is saved, each photo is decoded, turned upright from its EXIF rotation, scaled to a long side of at most 1600 px and saved as JPEG quality 80, plus a 256 px thumbnail (JPEG 70). Re-encoding writes a new file with no EXIF at all, so the stored photo carries no GPS position, camera model or capture time. Videos get a thumbnail from one frame (`MediaMetadataRetriever`) and are uploaded as recorded, without compression.
+- **Large photos without running out of memory.** The size is read first (`inJustDecodeBounds`), then the photo is decoded at a smaller size (`inSampleSize`, a power of 2) before the exact scaling. A 12 MP photo is never fully decoded.
+- **Neutral names.** Every file is renamed to a random UUID, so neither the local name nor the Storage path (`tickets/{ticketId}/{uuid}.jpg`, `{uuid}_thumb.jpg`) holds a user id or the capture time.
+- **Background upload with WorkManager, as in class 08.** After the Firestore batch, one `OneTimeWorkRequest` for the document (ticket or the joiner's report) is enqueued with a network constraint and exponential backoff from 30 s. The `CoroutineWorker` uploads each pending file and its thumbnail to Firebase Storage (`putFile`, `downloadUrl`), writes the download URLs and UPLOADED into the entry, and deletes the local copies. The work survives the app being closed and the phone restarting. A report made in airplane mode shows "Upload pending" and is uploaded when the network returns, without opening the app.
+- **One worker per document, so writes never overlap.** Firestore cannot change one element of an array, so the worker reads the document, replaces the entry and writes the list back (a plain `get()` then `update()`, as in the class demo). The worker handles the entries one at a time, so its writes for a document never overlap.
+- **Failure.** An exception makes the worker return `Result.retry()`; the next run continues with the entries still pending. After 5 attempts the remaining entries are marked FAILED and the detail says "Upload failed".
+- **Each device uploads only its own files.** The worker uploads entries that are PENDING and whose file exists on this device, so an operator's device adding resolution proof (D-013) never touches the citizen's pending entries.
+- **Public thumbnails.** For a PUBLIC ticket, each uploaded thumbnail URL is added to `publicTickets.thumbnails` with `FieldValue.arrayUnion` in the same batch as the entry update. Anonymous users load them with Coil (`coil-network-okhttp`, as in P09). A joiner's media stay in their own report and never reach `publicTickets` (decision 0014).
+- **Upload state in the detail.** Each media tile shows "Upload pending" or "Upload failed" (EN and PT) until it is uploaded. Lists draw the thumbnail, so they load small images.
+
+### Class material vs beyond class
+- **As in class:** slides 08 (`CoroutineWorker`, `inputData`, `Result.retry()`, `Constraints.Builder()`, `WorkManager.getInstance(context).enqueue`); T8 AMOVStorageDemo (`bitmap.compress(JPEG, quality, stream)`, plain `get()` then `update()`); P10 Challenge I (`BitmapFactory.decodeFile`, `Bitmap.createScaledBitmap`, reading the app container from `applicationContext`); P09 (`coil-network-okhttp`).
+- **Beyond class:** `inSampleSize`, the EXIF rotation, `MediaMetadataRetriever`, Firebase Storage `putFile` + `downloadUrl` (09_Storage only names Storage), exponential backoff, `FieldValue.arrayUnion`.
+
+### Options chosen and rejected
+- Gate 1 (2026-11-14): Q1 plain get-then-update, no transaction (the class approach; rejected: `runTransaction`, not taught); Q2 download URLs in the entries (rejected: Storage paths, which need a `getDownloadUrl()` call before drawing); Q3 delete local copies after upload; Q4 no video metadata removal (rejected: an MP4 remux with `MediaExtractor`/`MediaMuxer`, beyond class, not asked by the brief); Q5 `removeImageLocation` removed (re-encoding drops EXIF); Q6 no UPLOADING state; Q7 plain `enqueue` as on slides 08 (rejected: unique work); Q8 indicator in the detail tiles (the form's gallery shows only the draft); Q9 no video size check; Q10 `work-runtime-ktx` 2.12.0; Q11 drafted rules left unchanged; Q12 Storage bucket in test mode.
+- Compress at submit, rejected: compress inside the worker or in a chain of workers (the ticket would first store the large original with its GPS EXIF, and the paths would change after the batch).
+- Review S1 changed one worker per attachment to one worker per document: with 2-3 photos the per-attachment workers ran in parallel and one write overwrote the other's entry, leaving it pending forever. Also rejected for this: a transaction (not taught), and a map keyed by attachment id (a schema change for every reader).
+- The task file asked for reuse of `removeImageLocation`, the UPLOADING state, unique work per attachment and the indicator in `AttachmentGallery`; Gate 1 (Q5-Q8) and review S1 replaced these.
+
+### Known limits
+- Device checks D1-D11 not run yet; typical sizes (camera original vs uploaded photo vs thumbnail) to fill in after D1.
+- Videos are not compressed and keep their recording metadata, which may include the place where they were recorded. The brief asks to hide the author's data on screen (I.1.C), not to clean files; photos lose it anyway when re-encoded.
+- WorkManager stops a worker after about 10 minutes, so a very large video on a slow connection may never finish uploading.
+- Settings > Force stop pauses the uploads until the app is opened again (swiping it away or rebooting does not).
+- Download URLs are readable by anyone who has the link, whatever the Storage rules say.
+- Until the reporter's device uploads, other devices show a placeholder; if that device loses the files first, the entry stays pending.
+- The earlier overwrite risk (two workers writing the same array) is fixed by the per-document worker.
+- If the drafted rules were ever deployed: a joiner's `reports/{uid}` update would be refused (that rule allows no update), and a retry that re-uploads a file already in Storage would be refused (create-only). The rules are not deployed (test mode).
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and after the review fixes: 0 errors, 22 warnings (new and accepted: `UseKtx` on `createScaledBitmap`, kept because P10 uses it; `NewerVersionAvailable` for `coil-network-okhttp`, same version as the other Coil artifacts).
+- Review: compression order and sizes, Storage paths without user ids, the document each upload writes, public thumbnails only for the creator's media of PUBLIC tickets, anonymous privacy, EN + PT strings.
+- To run: D1 (sizes, upright), D2 (URLs and public thumbnail), D3 (airplane mode, 2 photos, app swiped away), D4 (big video, app killed while running), D5 (no EXIF, no uid in paths), D7 (joiner), D8 (FAILED), D9 (anonymous), D10 (portrait/landscape, PT), D11 (local copies deleted).
+
+### Improvement opportunities
+- A retry button for FAILED uploads.
+- Upload progress in the UI (`setProgress`).
+- A long-running foreground worker or resumable upload sessions for large videos.
+- Video transcoding to a lower bitrate, which would also remove the recording metadata.
+- Full media (not only thumbnails) for anonymous users.
+- Deploy the Storage rules (`image/*` under 10 MB, `video/*` under 100 MB, no uploads to CLOSED tickets), fixing the two gaps above.
+- Cloud Functions to make thumbnails on the server.
+- Unique work per document, if the same device could ever enqueue twice for one document.

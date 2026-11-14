@@ -67,7 +67,8 @@ internal fun Ticket.toTicketDocument(): Map<String, Any?> = hashMapOf(
  * The `publicTickets/{id}` document, the only one anonymous users read (decisions 0006, 0010).
  * This is the only builder of a public document: it calls toAnonymousView() first and copies
  * just the 7 allowed keys from the projected view, so no author id, description or exact
- * location can reach it. `thumbnails` = REPORT-phase thumbnails (empty until F-013 uploads them).
+ * location can reach it. `thumbnails` = the URLs of the REPORT-phase thumbnails already UPLOADED,
+ * so a local path never reaches it; at creation this is empty and the upload worker adds each URL.
  */
 internal fun Ticket.toPublicTicketDocument(): Map<String, Any?> {
     val view = toAnonymousView()
@@ -78,7 +79,7 @@ internal fun Ticket.toPublicTicketDocument(): Map<String, Any?> {
         "currentStatus" to view.currentStatus.name,
         "coarseLocation" to view.location.toGeoPoint(),
         "thumbnails" to view.attachments
-            .filter { it.phase == AttachmentPhase.REPORT }
+            .filter { it.phase == AttachmentPhase.REPORT && it.uploadState == UploadState.UPLOADED }
             .mapNotNull { it.thumbnail },
         "createdAt" to view.createdAt,
     )
@@ -164,7 +165,7 @@ internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
     creatorId = getString("creatorId") ?: "",
     followerIds = getStringList("followerIds"),
     statusHistory = getMapList("statusHistory").map { it.toStatusHistory() },
-    attachments = getMapList("attachments").map { it.toAttachment() },
+    attachments = attachments(),
 )
 
 /**
@@ -224,6 +225,17 @@ internal fun DocumentSnapshot.toDashboardStats(): DashboardStats {
         averageRepairTimeMillis = if (resolved > 0) repairSum / resolved else null,
     )
 }
+
+/** The `attachments` array of a ticket or report document. */
+internal fun DocumentSnapshot.attachments(): List<Attachment> =
+    getMapList("attachments").map { it.toAttachment() }
+
+/**
+ * The `attachments` array of this ticket or report document with [change] applied to every
+ * entry, ready to write back with update(). [change] returns the entry itself to keep it.
+ */
+internal fun DocumentSnapshot.attachmentsWith(change: (Attachment) -> Attachment): List<Map<String, Any>> =
+    attachments().map { change(it).toDocument() }
 
 /** One `statusHistory` entry; `dateTime` is a Long (decision 0003). */
 private fun Map<*, *>.toStatusHistory() = StatusHistory(
