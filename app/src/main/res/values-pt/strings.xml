@@ -55,6 +55,15 @@
     <string name="report_submit">Enviar ocorrência</string>
     <string name="report_submitted">Ocorrência enviada.</string>
 
+    <!-- Location and the 10 km gate (F-012) -->
+    <string name="gate_checking">A verificar a sua localização…</string>
+    <string name="gate_outside">O CityFix sem conta só está disponível até 10 km da Praça da República.</string>
+    <string name="gate_no_fix">Não foi possível obter a sua localização. Ative a localização e tente novamente.</string>
+    <string name="gate_log_in">Iniciar sessão</string>
+    <string name="location_permission_denied">O CityFix precisa da sua localização para verificar que está a menos de 10 km da Praça da República e para localizar as suas ocorrências. Se não aparecer nenhum pedido, permita a localização nas definições da app.</string>
+    <string name="location_try_again">Tentar novamente</string>
+    <string name="location_open_settings">Abrir definições</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Dano</string>
     <string name="situation_breakdown">Avaria</string>

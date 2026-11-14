@@ -2,7 +2,10 @@ package pt.isec.amov.cityfix.utils
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 
 /** The two location permissions requested together, as in P10 (RequestMultiplePermissions). */
@@ -16,3 +19,15 @@ fun hasLocationPermission(context: Context): Boolean =
     LOCATION_PERMISSIONS.any {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
+
+/**
+ * Opens this app's page in the system settings. After "don't ask again" Android no longer shows
+ * the permission dialog, so this is the only way left to allow location.
+ */
+fun openAppSettings(context: Context) {
+    val intent = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", context.packageName, null),
+    )
+    context.startActivity(intent)
+}

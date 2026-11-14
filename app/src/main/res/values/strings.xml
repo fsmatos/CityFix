@@ -57,6 +57,15 @@
     <string name="report_submit">Submit report</string>
     <string name="report_submitted">Report submitted.</string>
 
+    <!-- Location and the 10 km gate (F-012) -->
+    <string name="gate_checking">Checking your location…</string>
+    <string name="gate_outside">CityFix without an account is only available within 10 km of Praça da República.</string>
+    <string name="gate_no_fix">Your location could not be found. Turn on location and try again.</string>
+    <string name="gate_log_in">Log in</string>
+    <string name="location_permission_denied">CityFix needs your location to check that you are within 10 km of Praça da República and to place your reports. If no dialog appears, allow location in the app settings.</string>
+    <string name="location_try_again">Try again</string>
+    <string name="location_open_settings">Open settings</string>
+
     <!-- Situation labels -->
     <string name="situation_damage">Damage</string>
     <string name="situation_breakdown">Breakdown</string>
