@@ -5,6 +5,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.storage.StorageException
 import com.google.firebase.storage.storageMetadata
 import kotlinx.coroutines.tasks.await
 import pt.isec.amov.cityfix.CityFixApplication
@@ -21,17 +23,30 @@ import kotlin.coroutines.cancellation.CancellationException
  * Each attempt compresses the picked file with ImageCompression (long side 1600 px, JPEG, no EXIF;
  * the thumbnail it also writes is not needed and is deleted), uploads, then updates the document.
  * An exception means Result.retry() (exponential backoff); after [MAX_ATTEMPTS] the photo is given
- * up: the account is fine without it. The local files are deleted in every final case.
+ * up: the account is fine without it. Some failures are final at once, because a retry cannot
+ * succeed: the signed-in user is no longer [KEY_UID] (logged out before the upload ran; the rules
+ * let only the owner write the photo and the document), or Storage / Firestore refuse the write.
+ * The photo is then dropped without a message (optional; noted in the docs). The local files are
+ * deleted in every final case.
  */
 class ProfilePhotoWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val uid = inputData.getString(KEY_UID) ?: return Result.failure()
         val source = inputData.getString(KEY_PATH) ?: return Result.failure()
-        if (!File(source).exists()) return Result.failure()
+        if (!File(source).exists()) {
+            // Deleted before the upload ran (for example a process death right after Submit).
+            Log.w(TAG, "profile photo file is gone, nothing to upload")
+            return Result.failure()
+        }
 
         // The app container, as UploadWorker reads it.
         val app = applicationContext as CityFixApplication
+        if (app.auth.currentUser?.uid != uid) {
+            Log.w(TAG, "the photo's user is not signed in any more, giving up")
+            File(source).delete()
+            return Result.failure()
+        }
         val target = FileUtils.mediaFile(applicationContext, "profile_$uid.jpg")
         val thumbnail = FileUtils.mediaFile(applicationContext, "profile_${uid}_thumb.jpg")
 
@@ -56,7 +71,7 @@ class ProfilePhotoWorker(context: Context, params: WorkerParameters) : Coroutine
             throw e // WorkManager stopped the worker (e.g. no network): it runs again later.
         } catch (e: Exception) {
             Log.w(TAG, "profile photo upload failed (attempt $runAttemptCount)", e)
-            if (runAttemptCount + 1 >= MAX_ATTEMPTS) {
+            if (isRefused(e) || runAttemptCount + 1 >= MAX_ATTEMPTS) {
                 File(source).delete()
                 target.delete()
                 Result.failure()
@@ -64,6 +79,17 @@ class ProfilePhotoWorker(context: Context, params: WorkerParameters) : Coroutine
                 Result.retry()
             }
         }
+    }
+
+    /** The rules refused the write: retrying with the same account cannot help. */
+    private fun isRefused(e: Exception): Boolean = when (e) {
+        is StorageException ->
+            e.errorCode == StorageException.ERROR_NOT_AUTHORIZED ||
+                e.errorCode == StorageException.ERROR_NOT_AUTHENTICATED
+        is FirebaseFirestoreException ->
+            e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED ||
+                e.code == FirebaseFirestoreException.Code.UNAUTHENTICATED
+        else -> false
     }
 
     companion object {
