@@ -226,6 +226,20 @@ internal fun DocumentSnapshot.toDashboardStats(): DashboardStats {
     )
 }
 
+/**
+ * The `attachments` array of this ticket or report document with [change] applied to the entry
+ * with [attachmentId], ready to write back with update(). Null when no entry has that id (the
+ * upload worker then retries: the document may not be on the server yet).
+ */
+internal fun DocumentSnapshot.attachmentsWith(
+    attachmentId: String,
+    change: (Attachment) -> Attachment,
+): List<Map<String, Any>>? {
+    val attachments = getMapList("attachments").map { it.toAttachment() }
+    if (attachments.none { it.id == attachmentId }) return null
+    return attachments.map { if (it.id == attachmentId) change(it).toDocument() else it.toDocument() }
+}
+
 /** One `statusHistory` entry; `dateTime` is a Long (decision 0003). */
 private fun Map<*, *>.toStatusHistory() = StatusHistory(
     status = enumOrDefault(this["status"] as? String, TicketStatus.OPEN),
