@@ -41,3 +41,27 @@ Append-only.
   - Should-fix: S1, the failure path depends on the session being ANONYMOUS before the hold drops (device check, or a defensive wait). S2, operator domain: no field error while it loads, and no re-read after a failed read. S3, the photo worker retries permission errors and then drops the photo without a message.
   - Nits N1-N7: listed in review.md (the `Coordinates(0.0, 0.0)` fallback, the e-mail regex, a process-death photo edge case, a content description, keyboard options, import order, overview / decision updates in the docs phase).
   - No code edited, nothing committed by the reviewer.
+- 2026-11-14 Review fixes (round 1): five `fix(D-010)` commits on dev/Diogo, verify before each (`assembleDebug`, then `lint`: 0 errors, 22 warnings, the same list as the baseline, no new warning; no Kotlin compiler warnings).
+  - 29533cb `fix(D-010): finish a started registration and keep the form on failure` (B1 + S1).
+    - B1: `BackHandler(enabled = state.isRegistering) {}` in `RegisterScreen`; `canNavigateBack` is also false while `holdRedirect` in `MainActivity`; `users.register(...)` runs under `withContext(NonCancellable)`.
+    - The slice 3 deviation is corrected: the `onDispose` release stays, but only as a safety net. Back and Up cannot leave the screen during Submit any more, and a cleared ViewModel no longer cancels the registration. The earlier text ("the account is deleted in NonCancellable") was true only for the transaction phase.
+    - S1, fix chosen: a non-saved `RegisterUiState.failed` flag, set on every failed result and cleared on the next Submit. `RegisterScreen` gets `accountSignedIn = role != ANONYMOUS` and holds the redirect while `isRegistering || (failed && accountSignedIn)`. After a failure, the hold lasts until the deleted (or signed-out) account reaches the session, so Account setup can never open over the form. Why this fix and not the reviewer's two options:
+      - Waiting in `deleteNewUser` for the auth listener still leaves the session flow and the compose hops to race.
+      - An `onRegistered` gate in `CityFixApp` would strand a user on Register after process death (Q11).
+      - With this fix, after process death `failed` is false, so the hold drops and the Q11 path (Account setup, then Account problem) is unchanged.
+  - 25d6b02 `fix(D-010): read the council domain again when it is missing` (S2): `loadDomain()` runs from init, from `onRoleSelected(OPERATOR)` and from `submit()` while the domain is null and no read is running. An operator `submit()` returns early while the read is running; the "Checking the council's e-mail domain" hint is shown meanwhile.
+  - 78c3cbb `fix(D-010): give up a profile photo upload that cannot succeed` (S3 + N3 log).
+    - These cases are final at once, with the local files deleted and `Result.failure()`: the signed-in uid is not the photo's uid, Storage answers `ERROR_NOT_AUTHORIZED` / `ERROR_NOT_AUTHENTICATED`, or Firestore answers `PERMISSION_DENIED` / `UNAUTHENTICATED`.
+    - Consequence: a user who logs out before the upload runs loses the photo, even if they log in again later (optional photo, as the coordinator asked).
+    - A missing source file is now logged (N3).
+  - f14bfb1 `fix(D-010): tidy the registration form and its validation`:
+    - N1: `requireNotNull(registration.georeferencing)` instead of the (0, 0) fallback.
+    - N2: the e-mail regex now allows dots only between characters, on both sides of the @. This also tightens Login and Forgot password, which share it (Q15).
+    - N4: new `cd_register_photo_copying` (EN/PT) on the copy progress.
+    - N5: `KeyboardCapitalization.Words` on the name field and `autoCorrectEnabled = false` on the e-mail field, through new `RegisterTextField` parameters.
+    - N6: the `RegisterScreen` imports are sorted.
+  - Left open:
+    - N3, the process-death photo edge, is left (rare). The worker now logs the missing file. The docs phase should mention it.
+    - N7 is for the docs phase.
+    - Add the S3 case (photo dropped after logout or refusal) to the failure-mode table in the docs.
+  - Device checks added by the fixes: tap Submit, then Back at once (Back ignored, no Up arrow, result as normal). NIF clash: no flash of Account setup, and the form keeps "already registered". Operator Submit offline on a fresh install, then online: the domain is read again on Submit or on re-selecting Operator.
