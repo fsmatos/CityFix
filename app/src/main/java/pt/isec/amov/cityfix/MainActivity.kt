@@ -145,10 +145,12 @@ private fun CityFixApp(app: CityFixApplication) {
         ticketsViewModel.setUser(ticketsUser)
     }
 
-    // Nobody gets the expand toggle (D-009 Gate Q7). `tickets` is always the projected public
-    // list, so an expanded card would add only the date; brief I.1.B lists category, situation and
-    // thumbnail, and I.2.D gives citizens the anonymous features. The operator's full view
-    // (coordinates, author, history) is D-013's operations panel (brief I.3.E), not this list.
+    // Nobody gets the expand toggle (D-009 Gate Q7). Since F-011 an active citizen's list holds
+    // their own tickets plus the public ones and an operator's holds all, but the cards and the
+    // detail still render only the public fields for every role, so an expanded card would add
+    // only the date; brief I.1.B lists category, situation and thumbnail, and I.2.D gives citizens
+    // the anonymous features. The full views are F-014 (my tickets) and D-013's operations panel
+    // (coordinates, author, history; brief I.3.E), not this list.
     // The flag and the `canExpandCards && isExpanded` below stay for that later decision.
     val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -178,6 +180,14 @@ private fun CityFixApp(app: CityFixApplication) {
     // The last role the redirect (after the NavHost below) has handled. Saveable: null means a
     // fresh start; a restored value means process recreation, whose back stack is kept.
     var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
+
+    // Every Log out path (top bar, account setup, account problem). The list is cleared first,
+    // synchronously, so the next frame never shows the previous user's tickets to an anonymous
+    // user; the LaunchedEffect(ticketsUser) that follows with null is then a no-op.
+    val logOut = {
+        ticketsViewModel.setUser(null)
+        sessionViewModel.signOut()
+    }
 
     val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD ||
         screen == TopBarScreen.ACCOUNT_SETUP
@@ -221,11 +231,13 @@ private fun CityFixApp(app: CityFixApplication) {
             topBar = {
                 MainTopAppBar(
                     screen = screen,
-                    canNavigateBack = canNavigateBack,
+                    // While the gate covers the app, no bar control stays reachable behind it
+                    // (keyboard or switch focus); the gate has its own Log in.
+                    canNavigateBack = canNavigateBack && !showGate,
                     isExpanded = isExpanded,
                     showExpandToggle = canExpandCards,
                     showAddAction = session.canReport && screen != TopBarScreen.REPORT,
-                    accountAction = accountAction,
+                    accountAction = if (showGate) AccountAction.NONE else accountAction,
                     // The auth screens show neither the add button nor the menu.
                     menuItems = if (onAuthScreen) emptyList() else menuItemsFor(role),
                     onBackClick = { navController.navigateUp() },
@@ -239,7 +251,7 @@ private fun CityFixApp(app: CityFixApplication) {
                     onAccountClick = {
                         if (accountAction == AccountAction.LOG_OUT) {
                             // The session becomes Anonymous and the redirect goes to the dashboard.
-                            sessionViewModel.signOut()
+                            logOut()
                         } else {
                             navController.navigate(LoginRoute) { launchSingleTop = true }
                         }
@@ -292,8 +304,9 @@ private fun CityFixApp(app: CityFixApplication) {
                     val id = entry.toRoute<TicketDetailRoute>().ticketId
                     ShowScreen(
                         ticket = tickets.firstOrNull { it.id == id },
-                        // `tickets` is still the projected public list, so every session gets the
-                        // PUBLIC detail (decision 0006; F-011/F-014/D-013 add the other sources).
+                        // The detail still renders only the public fields for every role (decision
+                        // 0006), even when `tickets` holds a citizen's own or an operator's full
+                        // tickets (F-011); F-014 / D-013 add the role-specific views.
                         audience = DetailAudience.PUBLIC,
                     )
                 }
@@ -353,7 +366,7 @@ private fun CityFixApp(app: CityFixApplication) {
                     RequireAccess(role = role, allowed = setOf(AccessRole.SETUP), onDenied = goHome) {
                         val setupViewModel: AccountSetupViewModel =
                             viewModel(factory = AccountSetupViewModelFactory(app.authRepository))
-                        AccountSetupScreen(viewModel = setupViewModel, onLogOut = sessionViewModel::signOut)
+                        AccountSetupScreen(viewModel = setupViewModel, onLogOut = logOut)
                     }
                 }
                 composable<PendingValidationRoute> {
@@ -370,7 +383,7 @@ private fun CityFixApp(app: CityFixApplication) {
                         AccountProblemScreen(
                             canRetry = session == Session.ProfileUnavailable,
                             onRetry = sessionViewModel::retry,
-                            onLogOut = sessionViewModel::signOut,
+                            onLogOut = logOut,
                         )
                     }
                 }
