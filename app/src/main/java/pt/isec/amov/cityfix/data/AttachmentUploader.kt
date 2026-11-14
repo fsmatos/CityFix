@@ -1,6 +1,12 @@
 package pt.isec.amov.cityfix.data
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
@@ -10,10 +16,11 @@ import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.ImageCompression
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * Prepares report media for upload (brief IV): compressed copy and thumbnail in filesDir/images,
- * named by a new UUID. One entry point for the citizen's report (F-013) and the operator's
+ * named by a new UUID; then enqueues one UploadWorker per attachment. One entry point for the citizen's report (F-013) and the operator's
  * resolution proof (D-013). Create one per app (CityFixApplication); it keeps the application
  * context only.
  */
@@ -58,4 +65,30 @@ class AttachmentUploader(context: Context) {
                 attachment.copy(uploadState = UploadState.FAILED, uploadedById = uploadedById)
             }
         }
+
+    /**
+     * One OneTimeWorkRequest for [attachment] (slides 08: inputData, Constraints, enqueue): it runs
+     * only with a network connection and, after a failed attempt, waits 30 s, then longer each
+     * time (exponential backoff). Call after the batch that stores [attachment] in
+     * [documentPath] (the ticket, or the joiner's report). [addPublicThumbnail] = the thumbnail
+     * also goes to publicTickets/{ticketId} (creator's REPORT media of a PUBLIC ticket).
+     */
+    fun enqueue(documentPath: String, ticketId: String, attachment: Attachment, addPublicThumbnail: Boolean) {
+        val request = OneTimeWorkRequestBuilder<UploadWorker>()
+            .setInputData(
+                workDataOf(
+                    UploadWorker.KEY_DOCUMENT to documentPath,
+                    UploadWorker.KEY_TICKET_ID to ticketId,
+                    UploadWorker.KEY_ATTACHMENT_ID to attachment.id,
+                    UploadWorker.KEY_IS_VIDEO to (attachment.type == AttachmentType.VIDEO),
+                    UploadWorker.KEY_FILE to attachment.file,
+                    UploadWorker.KEY_THUMBNAIL to attachment.thumbnail,
+                    UploadWorker.KEY_PUBLIC_THUMBNAIL to addPublicThumbnail,
+                ),
+            )
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(appContext).enqueue(request)
+    }
 }

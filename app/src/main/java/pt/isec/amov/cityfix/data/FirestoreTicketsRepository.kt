@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentPhase
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
@@ -24,6 +25,7 @@ import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
+import pt.isec.amov.cityfix.model.UploadState
 import pt.isec.amov.cityfix.model.isActive
 import java.text.Collator
 
@@ -96,7 +98,8 @@ class FirestoreTicketsRepository(
      * An active ticket with the same category and situation within 10 m is joined instead
      * ([joinTicket]). Otherwise one batch (decision 0010) creates tickets/{id},
      * ticketLocations/{id}, publicTickets/{id} for PUBLIC tickets, and adds the stats/summary
-     * counters. Returns once the batch is queued.
+     * counters. Returns once the batch is queued. The media are prepared first
+     * (AttachmentUploader.prepare) and their uploads enqueued after the batch.
      */
     override suspend fun reportTicket(
         description: String,
@@ -172,6 +175,13 @@ class FirestoreTicketsRepository(
         // the form open. The local cache applies the batch at once, so this device's listeners
         // show the ticket immediately; failures (e.g. rules) are only logged.
         batch.commit().addOnFailureListener { Log.w(TAG, "report not saved", it) }
+
+        // One upload per prepared attachment, after the batch (F-013). Only the creator's REPORT
+        // media of a PUBLIC ticket add their thumbnail to publicTickets.
+        ticket.attachments.filter { it.uploadState == UploadState.PENDING }.forEach {
+            val public = scope == Scope.PUBLIC && it.phase == AttachmentPhase.REPORT
+            uploader.enqueue("$TICKETS/${ticket.id}", ticket.id, it, public)
+        }
         ReportOutcome.CREATED
     }
 
@@ -231,6 +241,11 @@ class FirestoreTicketsRepository(
         )
         // Not awaited, as in reportTicket: offline the form would wait for the server.
         batch.commit().addOnFailureListener { Log.w(TAG, "join not saved", it) }
+
+        // The joiner's media are uploaded into their report and never go to publicTickets.
+        prepared.filter { it.uploadState == UploadState.PENDING }.forEach {
+            uploader.enqueue("$TICKETS/$ticketId/$REPORTS/$creatorId", ticketId, it, false)
+        }
         return ReportOutcome.JOINED
     }
 
