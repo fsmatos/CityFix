@@ -1,5 +1,9 @@
 # F-012 coding plan
 
+> **Changed after Gate 1 (2026-11-14, the person's choice; see state.md):** (1) Google Maps Compose `maps-compose` 6.1.0 as in Contacts_#3 instead of osmdroid (removed); (2) the Maps API key in `AndroidManifest.xml` as `com.google.android.geo.API_KEY` meta-data, like class (placeholder committed, the person pastes the key); (3) location requested at app start in `MainActivity` (`LaunchedEffect(Unit)` + `RequestMultiplePermissions`), no rationale panel; denial still shows a message with Try again and Open settings. Text below that contradicts these is superseded.
+
+Effect on the steps: slice 1 got a follow-up commit (osmdroid out, `maps-compose` 6.1.0 and the manifest meta-data in). Slice 3: no `LocationPermissionPanel` and no `NEEDS_PERMISSION`; `MainActivity` owns the start-up launcher and passes the answer to `LocationGateViewModel.onPermissionResult`; the gate's Try again relaunches it; a shared `LocationDeniedMessage` (Try again + Open settings) is used by the gate and the form. Slice 4: the form checks the permission when it opens and has its own launcher only for Try again. Slice 6: `TicketMap` (Google Maps) replaces `OsmMap`; no change in `CityFixApplication`.
+
 ## Files
 | Path | Change | Why |
 | --- | --- | --- |
@@ -148,9 +152,9 @@ fun submit(onSuccess: (ReportOutcome) -> Unit)
 Locations: `adb emu geo fix <lon> <lat>` (P10 slide 30). Inside: ISEC `-8.4115 40.1925`. Outside: Figueira da Foz `-8.8600 40.1500` (about 38 km). Set the fix **before** the check (the emulator has no fix after a cold boot, which is D4).
 | # | Setup | Expected |
 | --- | --- | --- |
-| D1 | fresh install, `currentUser = null`, fix inside | panel with reason; Allow -> system dialog -> allow -> dashboard |
+| D1 | fresh install, `currentUser = null`, fix inside | system dialog at start -> allow -> "Checking your location" -> dashboard |
 | D2 | fix outside, restart app | gate "only within 10 km", no Log in button; Try again after setting an inside fix -> dashboard |
-| D3 | deny in the dialog (twice, "don't ask again") | denied text, Try again, Open settings; Open settings opens the app page; no crash |
+| D3 | deny in the dialog at start (then again, "don't ask again") | denied text, Try again (shows the dialog again until "don't ask again"), Open settings opens the app page; no crash |
 | D4 | permission granted, location off in the emulator / no fix | NO_FIX text; no crash |
 | D5 | `currentUser = Citizen(DEV_CITIZEN_ID, registrationStatus = ACTIVE)`, fix outside | no gate, dashboard |
 | D6 | report form with permission | "Getting your location..." then coordinates; Refresh after a new geo fix shows the new values |
@@ -160,9 +164,9 @@ Locations: `adb emu geo fix <lon> <lat>` (P10 slide 30). Inside: ISEC `-8.4115 4
 | D10 | rebuild with `currentUser = Citizen("dev-citizen-2", registrationStatus = ACTIVE)`, fix `-8.4115 40.192545` (about 5 m), same X and S | snackbar "already reported nearby"; console: no new ticket; ticket A `followerIds = [dev-citizen-2]`, `participantIds` has both, `reports/dev-citizen-2` exists with its description and attachments; ticket A's `attachments` and `publicTickets/A` unchanged; dashboard total unchanged |
 | D10b | as D10 but the second report chosen PRIVATE while ticket A is PUBLIC | joins A; `reports/dev-citizen-2` has the photo; ticket A's `attachments` and `publicTickets/A.thumbnails` unchanged; anonymous detail of A unchanged |
 | D11 | D10 again with the same id; then a different situation at the same spot; then the same X+S 50 m away (`40.192950`) | "already follow"; new ticket; new ticket |
-| D12 | anonymous detail of ticket A (scope PUBLIC) | map tiles, circle around (40.19, -8.41), far zoom, no pin, no coordinates text, "© OpenStreetMap contributors" visible; drag/pinch do not move it; the page scrolls when dragging over it |
+| D12 | anonymous detail of ticket A (scope PUBLIC), real Maps key pasted | Google map, circle around (40.19, -8.41), far zoom (14), no marker, no zoom buttons, no coordinates text; drag/pinch do not move it; the page scrolls when dragging over it. With the placeholder key: grey map with the Google logo, no crash |
 | D13 | rotate the detail; landscape | map redraws in the right pane, no crash |
-| D14 | airplane mode, detail | cached tiles or grey grid; no crash |
+| D14 | airplane mode, detail | cached tiles or a grey map; no crash |
 
 ## Conventions
 - Kotlin conventions skill and `.claude/rules/kotlin.md`: MVVM, stateful/stateless split, strings EN + PT in the same commit, 48dp targets, content descriptions, portrait and landscape.
