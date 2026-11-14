@@ -38,7 +38,8 @@ Status of the checks (2026-11-11): none ticked, because each needs the device or
 - logout from an operator placeholder (Back leaves the app);
 - rotation and process death on each step; R2 (reCAPTCHA) and R3 (rotation during the send);
 - PT strings, TalkBack labels, keyboard Next on Login, `enrolledFactors` after enrolment;
-- after the rules deploy (with Diogo's OK): the test users still work.
+- since 2026-11-14 (session wiring, review round 3): the 10 km gate only for anonymous users (Log in opens Login), citizen own + public and operator all tickets, no stale list after Log out, a new report's `creatorId` = the citizen's uid;
+- no rules deploy: the rules stay undeployed drafts (decision 0012 Q5, amended 2026-11-13).
 
 Decision: [0015](../../decisions/0015-session-role-navigation-mfa.md). Work item: `docs/work/D-009-auth-mfa-role-navigation/`.
 
