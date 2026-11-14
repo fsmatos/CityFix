@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-14 | Round 1: 1 blocking, 3 should-fix, 7 nits; round 2: fixed, approved; round 3 (merge + session wiring): approved, 1 should-fix (stale frame on logout), 3 nits; build + lint 0 errors, 20 warnings |
 | Docs | done | 2026-11-14 | Second pass 2026-11-14: 0015 (session wiring, gate, R3-N3, logout, MFA app-only per 0012 Q5), overview, notes, task file; Francisco's 0010/0012/0013/0014 not edited (handover text). First pass 2026-11-11: new decision (now 0015); amended 0006 (Q7) and the lifecycle record (now 0011, brief I checks); overview, report notes, D-009 and D-010 task files. Deviations: Francisco's records not edited (text as handover); no acceptance box ticked (device checks pending) |
 | Pushed | done | 2026-11-14 | ddff9d3 to origin/dev/Diogo |
-| Merged | done | 2026-11-14 | main at e345744; push of main by Diogo |
+| Merged | done | 2026-11-14 | main at e345744, pushed by Diogo |
 
 ## Log
 Append-only.
@@ -100,3 +100,4 @@ Append-only.
 - 2026-11-14 Confirmed by Diogo in the console and the inbox: the new ticket's `creatorId` is the active citizen's UID, and the password reset e-mail arrives (sent twice; the second time after a Log out from the pending/now-active citizen). Observation for Francisco (F-012): after Log out the gate used the last location read (Lisbon) although the emulator had been moved back to Coimbra; it refreshes on "Tentar novamente" or a relaunch.
 - 2026-11-14 Push: approved by Diogo; `git push origin dev/Diogo` at ddff9d3. Before merging into main, origin/main had 16 new commits (F-013 media compression and WorkManager uploads), so origin/main was merged into dev/Diogo first: conflicts only in `CityFixApplication.kt` imports (union: `AttachmentUploader` + D-009 auth imports) and two `docs/architecture/overview.md` hunks (both sides kept line by line: D-009 and F-013 additions to the `data/` and `CityFixApplication` lines, F-013's `utils/` line, D-009's rules bullet, both additions to "Not enforceable"). Also fixed a missing line break left by the 93efeae overview resolution (the `model/` line was glued to the `CityFixApplication` line). assembleDebug and lint pass: 0 errors, 22 warnings (+1 newer-version, +1 `UseKtx` at `utils/ImageCompression.kt:87`, F-013, for Francisco).
 - 2026-11-14 Merge: dev/Diogo into main (asked by Diogo) as e345744, after fast-forwarding local main to origin/main (f37c67e); no conflicts; assembleDebug and lint pass on main, 0 errors, 22 warnings. main merged back into dev/Diogo. Pushing main is left to Diogo (refused by this session's permissions before).
+- 2026-11-14 Push of main: Diogo ran `git push origin main`; origin/main at e345744. D-009 is on origin/main.
