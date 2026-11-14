@@ -86,6 +86,9 @@ object FileUtils {
 
     fun isVideoPath(path: String): Boolean = File(path).name.startsWith(VIDEO_PREFIX)
 
+    /** The file called [name] in filesDir/images (compressed media and thumbnails, F-013). */
+    fun mediaFile(context: Context, name: String): File = File(mediaFolder(context), name)
+
     /**
      * Blocking. Clears the GPS IFD of the image at [path] in place, so the file does not carry
      * the place it was taken; make, model and capture time stay. False when the format cannot
