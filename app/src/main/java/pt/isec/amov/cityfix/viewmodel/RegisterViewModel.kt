@@ -64,7 +64,16 @@ class RegisterViewModel(
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     init {
-        // Read once: the operator e-mail must be in this domain (brief I.3.A).
+        loadDomain()
+    }
+
+    /**
+     * Reads the council's domain: the operator e-mail must be in it (brief I.3.A). Called from
+     * init and again from onRoleSelected(OPERATOR) and submit() while it is missing (offline on a
+     * first install, or no municipality/main yet), so coming back online is enough.
+     */
+    private fun loadDomain() {
+        _uiState.update { it.copy(isLoadingDomain = true) }
         viewModelScope.launch {
             val domain = users.operatorEmailDomain()
             update {
@@ -74,8 +83,15 @@ class RegisterViewModel(
         }
     }
 
+    /** True when the domain is missing and no read is running. */
+    private fun domainMissing(): Boolean {
+        val state = _uiState.value
+        return state.operatorDomain == null && !state.isLoadingDomain
+    }
+
     fun onRoleSelected(role: RegistrationRole) {
         savedState[KEY_ROLE] = role.name
+        if (role == RegistrationRole.OPERATOR && domainMissing()) loadDomain()
         // The e-mail rule depends on the role; the location is a citizen field.
         update {
             val changed = copy(role = role, locationError = null, error = null)
@@ -231,6 +247,15 @@ class RegisterViewModel(
     fun submit() {
         val state = _uiState.value
         if (state.isRegistering || state.registered || state.isCopyingPhoto) return
+        if (state.role == RegistrationRole.OPERATOR) {
+            // The operator e-mail is checked against the domain: wait for it (the screen shows
+            // "Checking the council's e-mail domain"), or read it again when it is missing.
+            if (state.isLoadingDomain) return
+            if (domainMissing()) {
+                loadDomain()
+                return
+            }
+        }
         if (!state.isValid) {
             _uiState.update { it.withAllErrors().copy(showErrorSummary = true) }
             return
