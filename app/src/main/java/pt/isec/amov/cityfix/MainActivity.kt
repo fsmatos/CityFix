@@ -337,7 +337,7 @@ private fun CityFixApp(app: CityFixApplication) {
                     // No RequireAccess: reached only from Login, which only anonymous users see, and
                     // the user it creates is signed in while this screen is still showing.
                     val registerViewModel: RegisterViewModel =
-                        viewModel(factory = RegisterViewModelFactory(app.usersRepository, app.locationRepository))
+                        viewModel(factory = RegisterViewModelFactory(app.usersRepository, app.locationRepository, app.attachmentStorage))
                     RegisterScreen(
                         viewModel = registerViewModel,
                         onBusyChange = { holdRedirect = it },

@@ -33,6 +33,12 @@ data class RegisterUiState(
     val locationPermissionDenied: Boolean = false,
     /** Citizen only; off by default. */
     val impactDetection: Boolean = false,
+    /** The optional photo: a local copy in filesDir/images, uploaded after the registration. */
+    val photoPath: String? = null,
+    /** True while a gallery pick is copied; the photo buttons and Submit wait for it. */
+    val isCopyingPhoto: Boolean = false,
+    /** A photo problem (copy failed, camera unavailable). */
+    @StringRes val photoNotice: Int? = null,
     /** The council's e-mail domain (lowercase, no '@'); null when missing or unreadable. */
     val operatorDomain: String? = null,
     /** True until the domain read in the ViewModel's init has answered. */

@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.viewmodel
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AuthError
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.RegisterResult
@@ -23,6 +25,7 @@ import pt.isec.amov.cityfix.utils.isPortuguesePhone
 import pt.isec.amov.cityfix.utils.isValidName
 import pt.isec.amov.cityfix.utils.isValidNif
 import pt.isec.amov.cityfix.utils.passwordProblem
+import java.io.File
 
 /**
  * Register screen ViewModel, created per route (inside composable<RegisterRoute>).
@@ -32,11 +35,14 @@ import pt.isec.amov.cityfix.utils.passwordProblem
  * once it is not empty, D-010 Q10); Submit shows every error. A successful registration signs the
  * new user in; CityFixApp holds its redirect while [RegisterUiState.isRegistering] is true, then
  * moves to Account setup. A citizen's location comes from [locationRepository] (F-012), asked
- * for at the point of use; its two coordinates are saved as Doubles.
+ * for at the point of use; its two coordinates are saved as Doubles. The optional photo is a local
+ * copy ([attachmentStorage] copies a gallery pick off the main thread); it is deleted when the
+ * form is left without registering, and otherwise handed to the upload worker.
  */
 class RegisterViewModel(
     private val users: UsersRepository,
     private val locationRepository: LocationRepository,
+    private val attachmentStorage: AttachmentStorage,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -50,6 +56,7 @@ class RegisterViewModel(
             nif = savedState[KEY_NIF] ?: "",
             impactDetection = savedState[KEY_IMPACT] ?: false,
             location = savedLocation(),
+            photoPath = savedState.get<String>(KEY_PHOTO)?.takeIf { File(it).exists() },
         ),
     )
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
@@ -168,9 +175,60 @@ class RegisterViewModel(
         }
     }
 
+    /** Gallery pick: copied into filesDir/images in viewModelScope, then it replaces the previous photo. */
+    fun onPhotoPicked(uri: Uri) {
+        if (_uiState.value.isCopyingPhoto) return
+        _uiState.update { it.copy(isCopyingPhoto = true, photoNotice = null) }
+        viewModelScope.launch {
+            val path = attachmentStorage.copyToInternalStorage(listOf(uri)).firstOrNull()
+            val state = _uiState.value
+            when {
+                path == null -> _uiState.update {
+                    it.copy(isCopyingPhoto = false, photoNotice = R.string.register_photo_copy_failed)
+                }
+                // Submitted meanwhile: the copy is not part of this registration.
+                state.isRegistering || state.registered -> {
+                    File(path).delete()
+                    _uiState.update { it.copy(isCopyingPhoto = false) }
+                }
+                else -> {
+                    setPhoto(path)
+                    _uiState.update { it.copy(isCopyingPhoto = false) }
+                }
+            }
+        }
+    }
+
+    /** [path] is the camera's file in filesDir/images, already written. */
+    fun onPhotoCaptured(path: String) {
+        setPhoto(path)
+    }
+
+    fun onRemovePhoto() {
+        setPhoto(null)
+    }
+
+    fun onCameraUnavailable() {
+        _uiState.update { it.copy(photoNotice = R.string.report_camera_failed) }
+    }
+
+    /** Replaces the photo, deleting the previous local copy. */
+    private fun setPhoto(path: String?) {
+        val previous = _uiState.value.photoPath
+        if (previous != null && previous != path) File(previous).delete()
+        savedState[KEY_PHOTO] = path
+        _uiState.update { it.copy(photoPath = path, photoNotice = null) }
+    }
+
+    /** Leaving the form without an account: the photo copy is not needed any more. */
+    override fun onCleared() {
+        val state = _uiState.value
+        if (!state.registered) state.photoPath?.let { File(it).delete() }
+    }
+
     fun submit() {
         val state = _uiState.value
-        if (state.isRegistering || state.registered) return
+        if (state.isRegistering || state.registered || state.isCopyingPhoto) return
         if (!state.isValid) {
             _uiState.update { it.withAllErrors().copy(showErrorSummary = true) }
             return
@@ -188,7 +246,7 @@ class RegisterViewModel(
             nif = state.nif,
             georeferencing = if (citizen) state.location else null,
             impactDetection = citizen && state.impactDetection,
-            photoPath = null,
+            photoPath = state.photoPath,
         )
         viewModelScope.launch {
             val result = users.register(registration, state.password)
@@ -287,5 +345,6 @@ class RegisterViewModel(
         const val KEY_IMPACT = "impactDetection"
         const val KEY_LATITUDE = "latitude"
         const val KEY_LONGITUDE = "longitude"
+        const val KEY_PHOTO = "photoPath"
     }
 }

@@ -21,6 +21,7 @@ import pt.isec.amov.cityfix.data.FirebaseAuthRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
+import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 
@@ -42,6 +43,9 @@ class CityFixApplication : Application() {
 
     /** Compresses report media and enqueues their uploads (F-013; D-013 reuses it). */
     val attachmentUploader: AttachmentUploader by lazy { AttachmentUploader(this) }
+
+    /** Enqueues the upload of the photo chosen at registration (D-010). */
+    val profilePhotoUploader: ProfilePhotoUploader by lazy { ProfilePhotoUploader(this) }
 
     /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
     val locationRepository: LocationRepository by lazy { LocationRepository(this) }
@@ -66,9 +70,11 @@ class CityFixApplication : Application() {
 
     /**
      * `users/{uid}` profiles (D-009 reads them, D-010 registers), built from [firestore] so the
-     * cache settings apply, and [auth] for the sign-up.
+     * cache settings apply, [auth] for the sign-up and [profilePhotoUploader] for the photo.
      */
-    val usersRepository: UsersRepository by lazy { FirestoreUsersRepository(firestore, auth) }
+    val usersRepository: UsersRepository by lazy {
+        FirestoreUsersRepository(firestore, auth, profilePhotoUploader)
+    }
 
     override fun onCreate() {
         super.onCreate()

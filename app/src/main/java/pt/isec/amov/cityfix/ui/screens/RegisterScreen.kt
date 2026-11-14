@@ -1,7 +1,14 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.net.Uri
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.TakePicture
+import androidx.compose.foundation.shape.CircleShape
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,9 +33,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,16 +55,19 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.RegistrationRole
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasLocationPermission
 import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.RegisterUiState
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
+import java.io.File
 
 /**
  * Stateful Register screen: collects [viewModel] and shows [RegisterContent].
@@ -61,8 +77,9 @@ import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
  * [RegisterUiState.isRegistering] so CityFixApp holds the redirect meanwhile; leaving the screen
  * releases the hold.
  *
- * The location permission is asked when the citizen taps "Use my location", not before; the
- * launcher sits here, above the content.
+ * The location permission is asked when the citizen taps "Use my location", not before. The
+ * photo is picked as on the report form (F-007): PickVisualMedia, or TakePicture into a
+ * FileProvider file (no CAMERA permission). Every launcher sits here, above the content.
  */
 @Composable
 fun RegisterScreen(
@@ -72,6 +89,28 @@ fun RegisterScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // The pending camera file survives rotation and process death while the camera app is open.
+    var tempCameraPath by rememberSaveable { mutableStateOf<String?>(null) }
+    val pickPhoto = rememberLauncherForActivityResult(
+        remember { PickVisualMedia() },
+    ) { uri -> if (uri != null) viewModel.onPhotoPicked(uri) }
+    val takePhoto = rememberLauncherForActivityResult(
+        remember { TakePicture() },
+    ) { success ->
+        val path = tempCameraPath
+        tempCameraPath = null
+        if (path != null) {
+            val file = File(path)
+            if (success && file.length() > 0) {
+                viewModel.onPhotoCaptured(path)
+            } else {
+                // Cancelled (silently) or an empty "success" (with the notice).
+                file.delete()
+                if (success) viewModel.onCameraUnavailable()
+            }
+        }
+    }
 
     val askLocation = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -108,9 +147,36 @@ fun RegisterScreen(
         },
         onLocationTryAgain = { askLocation.launch(LOCATION_PERMISSIONS) },
         onOpenSettings = { openAppSettings(context) },
+        onPickPhoto = { pickPhoto.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
+        onTakePhoto = {
+            // A second tap before the camera opens would overwrite the path and orphan its file.
+            if (tempCameraPath == null) {
+                val (file, uri) = FileUtils.createTempImageFile(context)
+                tempCameraPath = file.absolutePath
+                if (!launchCamera(takePhoto, uri)) {
+                    tempCameraPath = null
+                    file.delete()
+                    viewModel.onCameraUnavailable()
+                }
+            }
+        },
+        onRemovePhoto = viewModel::onRemovePhoto,
         onSubmit = viewModel::submit,
         modifier = modifier,
     )
+}
+
+/** False when there is no camera app, or Android refuses the launch (as on the report form). */
+private fun launchCamera(
+    takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
+    uri: Uri,
+): Boolean = try {
+    takePhoto.launch(uri)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
+} catch (_: SecurityException) {
+    false
 }
 
 /** Registration form for both roles (brief I.2.A, I.3.A). Stateless and previewable. */
@@ -129,6 +195,9 @@ fun RegisterContent(
     onUseMyLocation: () -> Unit,
     onLocationTryAgain: () -> Unit,
     onOpenSettings: () -> Unit,
+    onPickPhoto: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onRemovePhoto: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -225,6 +294,14 @@ fun RegisterContent(
             )
         }
 
+        ProfilePhoto(
+            state = state,
+            enabled = enabled && !state.isCopyingPhoto,
+            onPickPhoto = onPickPhoto,
+            onTakePhoto = onTakePhoto,
+            onRemovePhoto = onRemovePhoto,
+        )
+
         FormMessage(state.error, isError = true)
         if (state.showErrorSummary) {
             FormMessage(R.string.register_error_summary, isError = true)
@@ -232,7 +309,7 @@ fun RegisterContent(
         val progressDescription = stringResource(R.string.cd_register_progress)
         Button(
             onClick = onSubmit,
-            enabled = enabled,
+            enabled = enabled && !state.isCopyingPhoto,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.isRegistering) {
@@ -331,6 +408,55 @@ private fun CitizenLocation(
         ) {
             Text(stringResource(R.string.register_location_use))
         }
+    }
+}
+
+/** The optional photo (brief I.2.A, I.3.A): a preview of the local copy, Gallery, Camera and Remove. */
+@Composable
+private fun ProfilePhoto(
+    state: RegisterUiState,
+    enabled: Boolean,
+    onPickPhoto: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onRemovePhoto: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.register_photo_label),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        if (state.photoPath != null) {
+            AsyncImage(
+                model = File(state.photoPath),
+                contentDescription = stringResource(R.string.cd_register_photo),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .align(Alignment.CenterHorizontally),
+            )
+        }
+        if (state.isCopyingPhoto) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.register_photo_gallery))
+            }
+            OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.register_photo_camera))
+            }
+        }
+        if (state.photoPath != null) {
+            TextButton(
+                onClick = onRemovePhoto,
+                enabled = enabled,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text(stringResource(R.string.register_photo_remove))
+            }
+        }
+        FormMessage(state.photoNotice, isError = true)
     }
 }
 
@@ -459,6 +585,9 @@ private fun RegisterPreview(state: RegisterUiState) {
             onUseMyLocation = {},
             onLocationTryAgain = {},
             onOpenSettings = {},
+            onPickPhoto = {},
+            onTakePhoto = {},
+            onRemovePhoto = {},
             onSubmit = {},
         )
     }

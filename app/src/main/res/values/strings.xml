@@ -235,4 +235,10 @@
     <string name="register_error_location">Set your location to register as a citizen.</string>
     <string name="register_error_summary">Some fields need your attention.</string>
     <string name="cd_register_progress">Creating the account</string>
+    <string name="register_photo_label">Photo (optional)</string>
+    <string name="register_photo_gallery">Gallery</string>
+    <string name="register_photo_camera">Camera</string>
+    <string name="register_photo_remove">Remove photo</string>
+    <string name="register_photo_copy_failed">The photo could not be added. Try again.</string>
+    <string name="cd_register_photo">Your profile photo</string>
 </resources>

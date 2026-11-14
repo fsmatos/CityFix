@@ -235,4 +235,10 @@
     <string name="register_error_location">Defina a sua localização para se registar como cidadão.</string>
     <string name="register_error_summary">Alguns campos precisam da sua atenção.</string>
     <string name="cd_register_progress">A criar a conta</string>
+    <string name="register_photo_label">Fotografia (opcional)</string>
+    <string name="register_photo_gallery">Galeria</string>
+    <string name="register_photo_camera">Câmara</string>
+    <string name="register_photo_remove">Remover fotografia</string>
+    <string name="register_photo_copy_failed">Não foi possível adicionar a fotografia. Tente novamente.</string>
+    <string name="cd_register_photo">A sua fotografia de perfil</string>
 </resources>

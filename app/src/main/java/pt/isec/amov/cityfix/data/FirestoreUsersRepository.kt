@@ -24,7 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * [UsersRepository] over the `users/{uid}` documents (fields in decision 0010). [firestore] is the
  * instance from CityFixApplication, which has the persistent cache on, so a profile read once
  * online is still served offline. [auth] creates (and, on failure, deletes) the account at
- * registration.
+ * registration; [photoUploader] queues the optional photo once the profile exists.
  *
  * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException, as in
  * FirebaseAuthRepository.
@@ -32,6 +32,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class FirestoreUsersRepository(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
+    private val photoUploader: ProfilePhotoUploader,
 ) : UsersRepository {
 
     override fun observeUser(uid: String): Flow<UserProfile> =
@@ -100,6 +101,8 @@ class FirestoreUsersRepository(
                 else -> RegisterResult.Failure(AuthError.UNKNOWN)
             }
         }
+        // Only after the commit: the worker updates users/{uid}, which now exists.
+        registration.photoPath?.let { photoUploader.enqueue(user.uid, it) }
         return RegisterResult.Success
     }
 

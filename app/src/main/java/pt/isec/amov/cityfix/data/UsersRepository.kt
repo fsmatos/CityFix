@@ -32,7 +32,7 @@ data class Registration(
     val georeferencing: Coordinates?,
     /** Citizen only. */
     val impactDetection: Boolean,
-    /** A local image file, optional; uploaded after the registration (D-010 slice 5). */
+    /** A local image file in filesDir/images, optional; uploaded by ProfilePhotoWorker after the registration. */
     val photoPath: String?,
 )
 
