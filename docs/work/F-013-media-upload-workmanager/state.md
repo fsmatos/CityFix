@@ -9,7 +9,7 @@ Remote: origin/dev/Francisco
 | Gate 1: plan approved | done | 2026-11-14 | approved; Q1 and Q7 class approach, slice 5 dropped, rest defaults |
 | Code | done | 2026-11-14 | slices 1-4 and 6 (5 dropped); build + lint pass; device checks D1-D12 not run (Storage bucket test mode unconfirmed) |
 | Review | done | 2026-11-14 | approve with should-fix: 0 blocking, 2 should-fix (S1 parallel workers make the Q1 overwrite likely; S2 stale KDocs, docs phase), 3 nits; build + lint pass (0 errors / 22 warnings); D1-D11 open |
-| Docs | pending | | |
+| Docs | done | 2026-11-14 | decision 0015; 0010 amended; 0013 consequence closed; 0006 pointer line; overview "Media upload (F-013)" + "Handover (F-013)"; report notes F-013 |
 | Pushed | pending | | |
 | Merged | pending | | |
 
@@ -49,3 +49,11 @@ Append-only.
   - `01-coding-plan.md`: revision note at the top for the per-document worker; files table updated.
   - Handover to D-013 changed: after the batch call `app.attachmentUploader.enqueue("tickets/<id>", id, false)` (no attachment argument); prepare is unchanged.
   - Verify: assembleDebug OK; lint 0 errors / 22 warnings (unchanged). Device checks D1-D11 still open (Q12).
+- 2026-11-14 (Docs): executed `03-docs-plan.md` with the Gate 1 answers and review S1 overriding it. No code, rules, Gradle or `google-services.json` touched; not committed.
+  - New `docs/decisions/0015-media-preparation-and-uploads.md` (0015 still free in `docs/decisions/`; confirmed free on origin/dev/Diogo at Gate 1). Records what Gate 1 confirmed: prepare at submit (sizes, UUID names, no EXIF), one worker per document with plain `enqueue`, no transaction, download URLs, local copies deleted, PENDING -> UPLOADED / FAILED after 5 attempts, indicator in the detail, no video metadata removal, no video size check; rejected options and consequences (bearer URLs, 10-minute limit, Force stop pauses, placeholders while PENDING, rules gaps, Storage test mode).
+  - Deviations from the docs plan: 0015 describes one worker per document (plan: per attachment + transaction) and no slice 5; `VideoMetadata` is not listed in the overview layers. Decision 0006 (Diogo's record) got only a pointer line under the status, not edits to its items (caller's instruction). Decision 0009 not touched (not in the plan).
+  - `docs/decisions/0010-firestore-schema.md`: amendment "by F-013": download URLs in `storagePath`/`thumbnailPath`, `publicTickets.thumbnails` = uploaded REPORT thumbnails of the creator's media on PUBLIC tickets, joiner media uploaded into `reports/{uid}`, no transaction, video location not removed, the Q11 `reports/{uid}` update gap and the Storage create-only retry gap; short pointers on the F-011 `storagePath` line and the old "F-013 must remove video location" consequence.
+  - `docs/decisions/0013-...`: the "Until F-013" consequence marked done.
+  - `docs/architecture/overview.md`: layers (`AttachmentUploader`, `UploadWorker`, `ImageCompression`, container `attachmentUploader`), "Media is outside the projection" (F-009 steps replaced), F-007 storage names, dependencies (`work-runtime-ktx` 2.12.0, `coil-network-okhttp` 3.0.4, 22 warnings), `AttachmentImage` thumbnail, `MediaTile` upload line, F-011 report batch and join flow, the F-010/F-011/F-012 F-013 handover items marked done, the F-011 "thumbnails empty" known limit removed. New "Media upload (F-013)" (flow, preparation, worker, states table, public thumbnails, privacy, class vs beyond, known limits, device-check notes for D3/D8) and "Handover (F-013)" (D-013 `prepare` before the batch and `enqueue("tickets/<id>", id, false)` once after commit; D-009; D-015 bucket test mode and report wording, no new ZIP exclusions; rules; task file items superseded by Gate 1 Q5-Q8 and S1; Diogo's files changed, KDoc only).
+  - `docs/report/notes.md`: F-013 section (technical solutions, class vs beyond, options and rejected ones, known limits, verification, improvement opportunities).
+  - Tell Diogo: the D-013 handover; the KDoc-only changes in `model/TicketPrivacy.kt` and `model/Attachment.kt`; the 0006 pointer line.
