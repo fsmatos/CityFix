@@ -2,6 +2,8 @@
 
 Defaults of the Q list in `00-plan.md` are assumed. If Gate 1 changes one, adapt the step it touches and record the change in `state.md`.
 
+**Revised after review S1 (2026-11-14): one worker per Firestore document, not per attachment.** `enqueue(documentPath, ticketId, addPublicThumbnail)` has only those 3 inputData keys. The worker reads the document and, one entry at a time, uploads each PENDING entry whose local file exists on this device, then does the plain get-then-update for that entry (plus `arrayUnion` when `addPublicThumbnail`) and deletes its local files. Sequential writes for one document, so no overwrite (still no transaction, still a plain `enqueue`, Gate 1 Q1/Q7). A retry resumes with the entries still PENDING; after 5 attempts they become FAILED. `attachmentsWith(change)` applies `change` to every entry; `attachments()` reads the list. `reportTicket` / `joinTicket` enqueue once per document after `commit()`. Slices 3 and 4 below show the original per-attachment design.
+
 ## Files
 | Path | Change | Why |
 | --- | --- | --- |
@@ -10,7 +12,7 @@ Defaults of the Q list in `00-plan.md` are assumed. If Gate 1 changes one, adapt
 | `utils/ImageCompression.kt` (new) | `object ImageCompression { compressImage(...); videoThumbnail(...) }` + private `scaleDown`, `writeJpeg` | brief IV/V compression and thumbnails |
 | `utils/VideoMetadata.kt` (new, slice 5) | `object VideoMetadata { removeLocation(source, target): Boolean }` | decision 0010 (video location) |
 | `utils/FileUtils.kt` | add `mediaFile(context, name): File`; delete `removeImageLocation` and `GPS_TAGS` (Q5) | new file names; EXIF strip replaced by re-encoding |
-| `data/AttachmentUploader.kt` (new) | `prepare(attachment, uploadedById)` and `enqueue(documentPath, ticketId, attachment, addPublicThumbnail)` | one entry point for F-013 and D-013 |
+| `data/AttachmentUploader.kt` (new) | `prepare(attachment, uploadedById)` and `enqueue(documentPath, ticketId, addPublicThumbnail)` (after S1) | one entry point for F-013 and D-013 |
 | `data/UploadWorker.kt` (new) | `CoroutineWorker`: putFile + downloadUrl, transaction, delete local files, retry / FAILED | brief IV, class 08 slide |
 | `data/FirestoreMapping.kt` | `toAttachment()` / `toDocument()` internal; `DocumentSnapshot.attachmentsWith(id, change)`; `toPublicTicketDocument()` keeps only UPLOADED thumbnails | worker update; no local path in `publicTickets` |
 | `data/FirestoreTicketsRepository.kt` | constructor `(firestore, uploader)`; participant check before prepare; `prepare` instead of the EXIF loop; `enqueue` after each `commit()` | wiring |
