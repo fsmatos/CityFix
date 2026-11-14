@@ -123,3 +123,63 @@ Everything in "Needs the device or the console" above, plus:
 - process death on an operator placeholder ("Don't keep activities");
 - `enrolledFactors` after enrolment without the reload (S2);
 - keyboard Next on Login.
+
+## Round 3
+
+Reviewed:
+- the merge `93efeae` (origin/main: F-011, F-012), resolution in `MainActivity.kt` and `CityFixApplication.kt`;
+- the follow-up slice `46ee41f` (session wiring for tickets, reports and the 10 km gate; Diogo approved it, but it was not in the plan; state.md 2026-11-14).
+
+The reviewer re-ran `./gradlew assembleDebug lint`: build OK, lint 0 errors / 20 warnings, the post-merge baseline (1 AndroidGradlePluginVersion, 5 GradleDependency, 6 NewerVersionAvailable, 1 RedundantLabel, 7 UnusedResources). EN and PT string keys match (apart from `app_name` and the two `translatable="false"` +351 strings). No Firebase import outside `data/` and `CityFixApplication.kt`. No code references `app.currentUser`, `reporterId`, `DEV_CITIZEN_ID` or `DEV_OPERATOR_ID` any more (only Firebase's own `auth.currentUser` remains).
+
+**Verdict: approved.** No blocking findings. One should-fix (a stale frame on logout, with a one-line fix) and three nits.
+
+### Merge resolution, checked
+- **`CityFixApplication.kt`:** has both sides' properties (D-009 auth/users repositories; F-011 `FirestoreTicketsRepository(firestore)`, the `DebugSeed` call in `onCreate`; F-012 `locationRepository`). The stand-ins are gone after 46ee41f.
+- **`MainActivity.kt`:** D-009 behaviour is intact:
+  - the Loading gate (`return@Scaffold`);
+  - every `RequireAccess`;
+  - the redirect `LaunchedEffect(role)` after the `NavHost`, with the B1 logic unchanged;
+  - F-012's report body (location, grouping outcomes) inside D-009's `RequireAccess(CITIZEN)`.
+
+  The merge's early `return` for the gate before the Scaffold is replaced in 46ee41f (see below). Dropping `ticketsViewModel.refresh()` is correct: F-011's listeners are live.
+
+### Session wiring, checked
+- **Can a signed-in user see the gate?** No. `showGate = role == ANONYMOUS && !onAuthScreen && status != INSIDE` (`MainActivity.kt:207`), so it is false for LOADING and for every signed-in state. This matches brief I.1: only the non-authenticated user is limited to 10 km.
+- **Can an anonymous user outside 10 km reach anything?**
+  - Touch: the gate is an M3 `Surface` over the Scaffold, and a non-clickable M3 `Surface` consumes pointer input.
+  - TalkBack: the Scaffold, top bar included, gets `clearAndSetSemantics {}` while gated.
+  - First frame: `GateStatus` starts at `CHECKING` (not INSIDE), so the gate covers the app before the location is known.
+  - Login screens: on Login / Forgot password the gate is lifted. Back from there returns to a destination where `showGate` is true again, in the same recomposition as the back-stack change.
+  - Behind the gate, only the public projection is loaded (`setUser(null)` -> `publicTickets()`).
+  - System Back acting behind the gate is noted in state.md; it only matters mid-session. Hardware keyboard focus: see R3-N2.
+- **setUser guard (`TicketsViewModel.kt:58-87`):**
+  - Rotation: same ViewModel and key, so no restart.
+  - Profile-only changes (`fcmTokens`): same key, so no restart.
+  - Process death: the new ViewModel starts with "anonymous"; `ticketsUser` is null while Loading (a no-op); then "citizen:<uid>" restarts the listener. The NavHost is hidden while Loading, so nothing is shown in between.
+  - Sign-out then sign-in of a different user: anonymous -> new key, and the list is cleared on each change.
+  - The old job is cancelled on the main thread before the new one starts, so a late emission from the old listener cannot overwrite the new list.
+- **Report creator id:** `session.ticketsUser?.id` inside `RequireAccess(CITIZEN)` (`MainActivity.kt:320`). For CITIZEN this is always the `Citizen` whose `id` is the `users/{uid}` document id, that is, the Auth uid that the `tickets` create rule compares with `creatorId`. The entry-scoped `ReportViewModel` cannot outlive a user change, because every role change clears the back stack.
+
+### Should-fix
+- **R3-S1. One stale frame of the previous user's list after Log out** (`MainActivity.kt:143-146`, `:242`, `:356`, `:373`). `signOut()` makes the session Anonymous. The next composition still renders `tickets` (the citizen's own + public tickets, or the operator's `allTickets()`, PRIVATE ones included) on the List or Detail screen, under the anonymous top bar. Only after that frame do `LaunchedEffect(ticketsUser)` -> `setUser(null)` clear it and the redirect go to the dashboard. The cards are the anonymous-style cards and the person is the one who just pressed Log out, so the real exposure is close to nil. But it breaks the literal rule ("anonymous users never see..."), and TalkBack could announce it. Fix (plain): clear the list synchronously before signing out, in one helper used by all three Log out paths:
+  ```kotlin
+  val logOut = {
+      ticketsViewModel.setUser(null)   // clears now; the later LaunchedEffect call is then a no-op
+      sessionViewModel.signOut()
+  }
+  ```
+  Use it in `onAccountClick`, `AccountSetupScreen(onLogOut = logOut)` and `AccountProblemScreen(onLogOut = logOut)`. An involuntary sign-out (revoked token) keeps the one-frame gap; note that in 0015.
+
+### Nits
+- **R3-N1. Stale comments about the list:** `MainActivity.kt:148-152` (Q7: "`tickets` is always the projected public list") and `:295-296` ("`tickets` is still the projected public list"). Since F-011 plus this slice, an active citizen gets own + public tickets and an operator gets all tickets. The cards and `DetailAudience.PUBLIC` still show only public fields, so the Q7 reason now is "the list and detail still render the public fields for every role; the full views are F-014 / D-013". Reword both comments.
+- **R3-N2. Hardware-keyboard / switch-access focus can still move to the controls behind the gate.** `clearAndSetSemantics` removes them from TalkBack, not from focus traversal. Optional, simple fix: when `showGate` is true, pass `menuItems = emptyList()`, `accountAction = NONE` and `showAddAction = false` to the top bar (the gate has its own Log in), which leaves only the NavHost content behind it. Low priority; mention it at the defence if asked.
+- **R3-N3. Pending citizens are not gated.** A PENDING_CITIZEN (authenticated, not yet validated) outside 10 km can use "Browse public issues" anywhere. That follows brief I.1 (the limit is for non-authenticated users), but it means a password-only registration (D-010) lifts the 10 km limit before an operator validates it. SETUP and ACCOUNT_PROBLEM cannot reach the public screens, so they do not matter. Record the choice in decision 0015 (Docs), or gate PENDING_CITIZEN too if Diogo prefers the stricter reading.
+
+### Still needs the device
+- Anonymous outside 10 km: the gate shows, touches and TalkBack do not reach the app, and Log in opens Login. After login the gate never returns. Back from Login brings the gate back.
+- Signed-in citizen and operator outside 10 km: not gated.
+- Citizen sees own + public tickets, operator sees all. After Log out on the List screen the list is public (check for R3-S1 with a screen recording).
+- Rotation on the list does not blank it. Process death while signed in restores the right list.
+- A new report has `creatorId` = the citizen's Auth uid (Firestore console).
+- Sign-out, then sign-in as a different citizen: no tickets of the first one.
