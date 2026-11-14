@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
-import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
@@ -25,9 +24,7 @@ import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
-import pt.isec.amov.cityfix.model.UploadState
 import pt.isec.amov.cityfix.model.isActive
-import pt.isec.amov.cityfix.utils.FileUtils
 import java.text.Collator
 
 /**
@@ -48,7 +45,10 @@ import java.text.Collator
  * or `ticketLocations`, so the anonymous code path never receives author data or exact
  * coordinates.
  */
-class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : TicketsRepository {
+class FirestoreTicketsRepository(
+    private val firestore: FirebaseFirestore,
+    private val uploader: AttachmentUploader,
+) : TicketsRepository {
 
     /** Active publicTickets (anonymous projection), newest first. Never reads tickets/. */
     override fun publicTickets(): Flow<List<Ticket>> =
@@ -117,24 +117,18 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             return@withContext null
         }
 
-        // Photos lose their GPS EXIF tags before the ticket is stored (decision 0006, F-009).
-        // Result ignored on purpose (F-009 Q2): if a format cannot be written, e.g. HEIC, the
-        // attachment and the report are kept and the file keeps its tags.
-        attachments.filter { it.type == AttachmentType.IMAGE }
-            .forEach { FileUtils.removeImageLocation(it.file) }
-
         val now = System.currentTimeMillis()
-        val pendingAttachments = attachments.map {
-            it.copy(uploadState = UploadState.PENDING, uploadedById = creatorId)
-        }
 
         val match = findMatch(location, cleanCategoryId, situation)
         if (match != null) {
-            val report = reportDocument(
-                cleanCategoryId, situation, location, text, now, pendingAttachments,
+            return@withContext joinTicket(
+                match.id, cleanCategoryId, situation, location, text, now, attachments, creatorId,
             )
-            return@withContext joinTicket(match.id, report, creatorId)
         }
+
+        // Compressed copies and thumbnails (F-013); re-encoding also drops the photos' EXIF,
+        // so they no longer carry the place they were taken (decision 0006).
+        val prepared = attachments.map { uploader.prepare(it, creatorId) }
 
         // document() with no argument creates a new auto id locally, so it works offline.
         val ref = firestore.collection(TICKETS).document()
@@ -150,7 +144,7 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             categoryName = cleanCategoryName,
             creatorId = creatorId,
             statusHistory = listOf(StatusHistory(TicketStatus.OPEN, now, null, creatorId)),
-            attachments = pendingAttachments,
+            attachments = prepared,
         )
 
         // One batch, like the demo's "clear all": every document changes together or none does.
@@ -198,15 +192,22 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
     }
 
     /**
-     * Makes [creatorId] follow ticket [ticketId] (decision 0010): one batch writes their [report]
-     * to tickets/{id}/reports/{uid} and adds their uid to followerIds and participantIds
+     * Makes [creatorId] follow ticket [ticketId] (decision 0010): one batch writes their report
+     * (the form fields and their [attachments], prepared by the uploader) to
+     * tickets/{id}/reports/{uid} and adds their uid to followerIds and participantIds
      * (FieldValue.arrayUnion, beyond class: adds to the array only if missing). The ticket's own
      * attachments, publicTickets and stats/summary do not change. If the reporter already
-     * created or follows the ticket (the F-011 participant query), nothing is written.
+     * created or follows the ticket (the F-011 participant query), nothing is written and the
+     * media are not prepared.
      */
     private suspend fun joinTicket(
         ticketId: String,
-        report: Map<String, Any?>,
+        categoryId: String,
+        situation: Situation,
+        location: Coordinates,
+        description: String,
+        createdAt: Long,
+        attachments: List<Attachment>,
         creatorId: String,
     ): ReportOutcome {
         val mine = firestore.collection(TICKETS)
@@ -214,6 +215,9 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             .get()
             .await()
         if (mine.documents.any { it.id == ticketId }) return ReportOutcome.ALREADY_FOLLOWING
+
+        val prepared = attachments.map { uploader.prepare(it, creatorId) }
+        val report = reportDocument(categoryId, situation, location, description, createdAt, prepared)
 
         val ticketRef = firestore.collection(TICKETS).document(ticketId)
         val batch = firestore.batch()

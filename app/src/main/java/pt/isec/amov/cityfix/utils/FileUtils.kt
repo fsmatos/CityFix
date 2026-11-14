@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
-import androidx.exifinterface.media.ExifInterface
 import java.io.File
 import java.util.UUID
 
@@ -21,42 +20,6 @@ object FileUtils {
     private const val CAPTURE_PREFIX = "CAPTURE_"
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
-
-    /** Every tag of the EXIF GPS IFD (EXIF 2.32), not only the latitude/longitude pair. */
-    private val GPS_TAGS = listOf(
-        ExifInterface.TAG_GPS_VERSION_ID,
-        ExifInterface.TAG_GPS_LATITUDE_REF,
-        ExifInterface.TAG_GPS_LATITUDE,
-        ExifInterface.TAG_GPS_LONGITUDE_REF,
-        ExifInterface.TAG_GPS_LONGITUDE,
-        ExifInterface.TAG_GPS_ALTITUDE_REF,
-        ExifInterface.TAG_GPS_ALTITUDE,
-        ExifInterface.TAG_GPS_TIMESTAMP,
-        ExifInterface.TAG_GPS_SATELLITES,
-        ExifInterface.TAG_GPS_STATUS,
-        ExifInterface.TAG_GPS_MEASURE_MODE,
-        ExifInterface.TAG_GPS_DOP,
-        ExifInterface.TAG_GPS_SPEED_REF,
-        ExifInterface.TAG_GPS_SPEED,
-        ExifInterface.TAG_GPS_TRACK_REF,
-        ExifInterface.TAG_GPS_TRACK,
-        ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
-        ExifInterface.TAG_GPS_IMG_DIRECTION,
-        ExifInterface.TAG_GPS_MAP_DATUM,
-        ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
-        ExifInterface.TAG_GPS_DEST_LATITUDE,
-        ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
-        ExifInterface.TAG_GPS_DEST_LONGITUDE,
-        ExifInterface.TAG_GPS_DEST_BEARING_REF,
-        ExifInterface.TAG_GPS_DEST_BEARING,
-        ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
-        ExifInterface.TAG_GPS_DEST_DISTANCE,
-        ExifInterface.TAG_GPS_PROCESSING_METHOD,
-        ExifInterface.TAG_GPS_AREA_INFORMATION,
-        ExifInterface.TAG_GPS_DATESTAMP,
-        ExifInterface.TAG_GPS_DIFFERENTIAL,
-        ExifInterface.TAG_GPS_H_POSITIONING_ERROR,
-    )
 
     /**
      * Blocking: call off the main thread (AttachmentStorage does). Null on any failure, including
@@ -88,20 +51,6 @@ object FileUtils {
 
     /** The file called [name] in filesDir/images (compressed media and thumbnails, F-013). */
     fun mediaFile(context: Context, name: String): File = File(mediaFolder(context), name)
-
-    /**
-     * Blocking. Clears the GPS IFD of the image at [path] in place, so the file does not carry
-     * the place it was taken; make, model and capture time stay. False when the format cannot
-     * be written (e.g. HEIC) or IO fails.
-     */
-    fun removeImageLocation(path: String): Boolean = try {
-        val exif = ExifInterface(path)
-        GPS_TAGS.forEach { exif.setAttribute(it, null) }
-        exif.saveAttributes()
-        true
-    } catch (_: Exception) {
-        false
-    }
 
     private fun mediaFolder(context: Context): File =
         File(context.filesDir, MEDIA_FOLDER).apply { mkdirs() }

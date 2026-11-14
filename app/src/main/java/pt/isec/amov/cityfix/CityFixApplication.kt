@@ -14,6 +14,7 @@ import com.google.firebase.messaging.messaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
+import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.DebugSeed
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.LocationRepository
@@ -29,7 +30,9 @@ import pt.isec.amov.cityfix.model.User
  * before any other Firestore call, so they are applied here, once, when [firestore] is first read.
  */
 class CityFixApplication : Application() {
-    val ticketsRepository: TicketsRepository by lazy { FirestoreTicketsRepository(firestore) }
+    val ticketsRepository: TicketsRepository by lazy {
+        FirestoreTicketsRepository(firestore, attachmentUploader)
+    }
 
     /**
      * F-011 stand-in until D-009 (login): null = anonymous. To test another audience, change this
@@ -44,6 +47,9 @@ class CityFixApplication : Application() {
 
     /** Copies picked media off the main thread (report form). */
     val attachmentStorage: AttachmentStorage by lazy { AttachmentStorage(this) }
+
+    /** Compresses report media and enqueues their uploads (F-013; D-013 reuses it). */
+    val attachmentUploader: AttachmentUploader by lazy { AttachmentUploader(this) }
 
     /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
     val locationRepository: LocationRepository by lazy { LocationRepository(this) }
