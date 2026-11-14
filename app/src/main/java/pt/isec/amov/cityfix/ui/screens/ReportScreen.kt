@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.res.Configuration
 import android.net.Uri
@@ -8,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,15 +61,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
+import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
+import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
+import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.MAX_REPORT_ATTACHMENTS
 import pt.isec.amov.cityfix.viewmodel.ReportUiState
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
@@ -80,13 +89,14 @@ fun scopeLabelRes(scope: Scope): Int = when (scope) {
 
 /**
  * Stateful half of the report form (brief I.2.E): collects [viewModel], which validates and saves
- * the ticket. [onSubmitted] runs once the ticket is saved; a refused save keeps the form open and
- * shows an error.
+ * the ticket. [onSubmitted] runs once the report is saved, with what it did; a refused save keeps the form open and
+ * shows an error. Location was requested at app start (MainActivity); here the form only checks
+ * the answer when it opens, and "Try again" asks again.
  */
 @Composable
 fun ReportScreen(
     viewModel: ReportViewModel,
-    onSubmitted: () -> Unit,
+    onSubmitted: (ReportOutcome) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -109,6 +119,19 @@ fun ReportScreen(
         val path = tempCameraPath
         tempCameraPath = null
         if (path != null) attachCaptured(viewModel, path, success)
+    }
+    val askLocation = rememberLauncherForActivityResult(
+        remember { RequestMultiplePermissions() },
+    ) { permissions ->
+        // Precise only: an "Approximate" fix (~2 km off) would group unrelated reports.
+        viewModel.onLocationPermissionResult(permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true)
+    }
+
+    // Only while there is no fix, so a rotation does not read the location again.
+    LaunchedEffect(Unit) {
+        if (viewModel.uiState.value.location == null) {
+            viewModel.onLocationPermissionResult(hasPreciseLocationPermission(context))
+        }
     }
 
     ReportContent(
@@ -142,6 +165,9 @@ fun ReportScreen(
             }
         },
         onRemoveAttachment = viewModel::onRemoveAttachment,
+        onLocationTryAgainClick = { askLocation.launch(LOCATION_PERMISSIONS) },
+        onOpenSettingsClick = { openAppSettings(context) },
+        onRefreshLocationClick = viewModel::refreshLocation,
         onSubmitClick = { viewModel.submit(onSuccess = onSubmitted) },
         modifier = modifier,
     )
@@ -192,6 +218,9 @@ fun ReportContent(
     onAddFromGalleryClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
     onRemoveAttachment: (Attachment) -> Unit,
+    onLocationTryAgainClick: () -> Unit,
+    onOpenSettingsClick: () -> Unit,
+    onRefreshLocationClick: () -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -225,6 +254,9 @@ fun ReportContent(
                 onAddFromGalleryClick = onAddFromGalleryClick,
                 onTakePhotoClick = onTakePhotoClick,
                 onRemoveAttachment = onRemoveAttachment,
+                onLocationTryAgainClick = onLocationTryAgainClick,
+                onOpenSettingsClick = onOpenSettingsClick,
+                onRefreshLocationClick = onRefreshLocationClick,
                 onSubmitClick = onSubmitClick,
                 modifier = Modifier
                     .weight(1f)
@@ -254,6 +286,9 @@ fun ReportContent(
                 onAddFromGalleryClick = onAddFromGalleryClick,
                 onTakePhotoClick = onTakePhotoClick,
                 onRemoveAttachment = onRemoveAttachment,
+                onLocationTryAgainClick = onLocationTryAgainClick,
+                onOpenSettingsClick = onOpenSettingsClick,
+                onRefreshLocationClick = onRefreshLocationClick,
                 onSubmitClick = onSubmitClick,
             )
         }
@@ -290,7 +325,7 @@ private fun ChoicesPane(
     }
 }
 
-/** Description, attachments, visibility, errors and Submit: the right pane in landscape. */
+/** Description, attachments, location, visibility, errors and Submit: the right pane in landscape. */
 @Composable
 private fun DetailsPane(
     state: ReportUiState,
@@ -299,6 +334,9 @@ private fun DetailsPane(
     onAddFromGalleryClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
     onRemoveAttachment: (Attachment) -> Unit,
+    onLocationTryAgainClick: () -> Unit,
+    onOpenSettingsClick: () -> Unit,
+    onRefreshLocationClick: () -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -313,6 +351,12 @@ private fun DetailsPane(
             onAddFromGalleryClick = onAddFromGalleryClick,
             onTakePhotoClick = onTakePhotoClick,
             onRemoveAttachment = onRemoveAttachment,
+        )
+        LocationSection(
+            state = state,
+            onTryAgainClick = onLocationTryAgainClick,
+            onOpenSettingsClick = onOpenSettingsClick,
+            onRefreshClick = onRefreshLocationClick,
         )
         RadioGroupSection(
             title = stringResource(R.string.report_scope_title),
@@ -522,6 +566,61 @@ private fun AttachmentsSection(
     }
 }
 
+/**
+ * The reporter's GPS fix: their own position, so it is shown with 5 decimals (about 1 m).
+ * Denied location shows the denied message instead.
+ */
+@Composable
+private fun LocationSection(
+    state: ReportUiState,
+    onTryAgainClick: () -> Unit,
+    onOpenSettingsClick: () -> Unit,
+    onRefreshClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.report_location_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (state.locationPermissionDenied) {
+            LocationDeniedMessage(
+                message = R.string.report_location_precise_needed,
+                onTryAgainClick = onTryAgainClick,
+                onOpenSettingsClick = onOpenSettingsClick,
+            )
+        } else {
+            if (state.isLocating) {
+                Text(
+                    text = stringResource(R.string.report_location_locating),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            if (state.location != null) {
+                Text(
+                    text = stringResource(
+                        R.string.report_location_value,
+                        state.location.latitude,
+                        state.location.longitude,
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            OutlinedButton(
+                onClick = onRefreshClick,
+                enabled = !state.isLocating && !state.submitted,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.report_location_refresh))
+            }
+            if (state.locationError != null) {
+                ErrorText(state.locationError)
+            }
+        }
+    }
+}
+
 /** Form-level error, announced by TalkBack when it appears. */
 @Composable
 private fun ErrorText(@StringRes text: Int, modifier: Modifier = Modifier) {
@@ -545,7 +644,9 @@ private val previewAttachments = listOf(
     Attachment(id = "IMG_3.jpg", file = "IMG_3.jpg"),
 )
 
-private val emptyState = ReportUiState(categories = previewCategories)
+private val previewLocation = Coordinates(40.19250, -8.41150)
+
+private val emptyState = ReportUiState(categories = previewCategories, location = previewLocation)
 
 private val filledState = emptyState.copy(
     categoryId = "lighting",
@@ -557,6 +658,8 @@ private val filledState = emptyState.copy(
 )
 
 private val errorState = emptyState.copy(
+    location = null,
+    locationError = R.string.report_error_location,
     categoryError = R.string.report_error_category,
     situationError = R.string.report_error_situation,
     descriptionError = R.string.report_error_description,
@@ -565,7 +668,14 @@ private val errorState = emptyState.copy(
     showErrorSummary = true,
 )
 
-private val noCategoriesState = ReportUiState()
+private val noCategoriesState = ReportUiState(location = previewLocation)
+
+private val locationDeniedState = emptyState.copy(
+    location = null,
+    locationPermissionDenied = true,
+)
+
+private val locatingState = emptyState.copy(location = null, isLocating = true)
 
 private val noCategoriesSubmittedState = noCategoriesState.copy(
     categoryError = R.string.report_error_category,
@@ -594,6 +704,9 @@ private fun ReportPreview(state: ReportUiState) {
             onAddFromGalleryClick = {},
             onTakePhotoClick = {},
             onRemoveAttachment = {},
+            onLocationTryAgainClick = {},
+            onOpenSettingsClick = {},
+            onRefreshLocationClick = {},
             onSubmitClick = {},
         )
     }
@@ -667,4 +780,18 @@ private fun ReportAttachmentsFullPreview() {
 @Composable
 private fun ReportAttachmentsNoticePreview() {
     ReportPreview(attachmentsNoticeState)
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ReportLocationDeniedPreview() {
+    ReportPreview(locationDeniedState)
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ReportLocatingPreview() {
+    ReportPreview(locatingState)
 }

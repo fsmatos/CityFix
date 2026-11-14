@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-13 | `review.md`: approve with should-fix; 0 blocking, 2 should-fix (S1 clear list in `setUser`, S2 listener-error KDoc), 6 nits; D1-D10 open |
 | Docs | done | 2026-11-13 | new decision 0013; 0009 and 0010 amended; overview (new "Firestore repository (F-011)" and "Handover (F-011)"); report notes F-011 section; task file not touched (ask the person) |
 | Pushed | done | 2026-11-13 | abe707f to origin/dev/Francisco; not merged into main |
-| Merged | pending | | |
+| Merged | done | 2026-11-13 | fa40a0c in origin/main (merge: dev/Francisco into main) |
 
 ## Log
 Append-only.
@@ -44,3 +44,4 @@ Append-only.
   - D10: rotation keeps the list and a half-filled form; no crash. The duplicate-listener log was not checked (design: `setUser` cancels the old job).
   - Known: thumbnails stay empty in the anonymous list/detail until F-013 uploads media. Test tickets from D3, D4 and D6 (creator `dev-citizen-1`) remain in the shared database.
 - 2026-11-13: Pushed dev/Francisco to origin at abe707f (build and lint passed after the last code change; device checks D1-D10 passed). Not merged into main. Tell Diogo: "Handover (F-011)" in the overview, the TicketsViewModel/TicketsRepository changes, and the `TicketsList.kt` comment.
+- 2026-11-13: The person asked to merge into main. dev/Francisco already contained origin/main; merged with --no-ff into local main (fa40a0c, no conflicts; assembleDebug and lint pass, 0 errors). The session cannot push main, so the person pushed it; fa40a0c confirmed in origin/main. dev/Francisco fast-forwarded to main. Merged: done.

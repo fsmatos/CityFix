@@ -16,6 +16,7 @@ import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.DebugSeed
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
+import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.User
 
@@ -43,6 +44,9 @@ class CityFixApplication : Application() {
 
     /** Copies picked media off the main thread (report form). */
     val attachmentStorage: AttachmentStorage by lazy { AttachmentStorage(this) }
+
+    /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
+    val locationRepository: LocationRepository by lazy { LocationRepository(this) }
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 

@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AttachmentStorage
+import pt.isec.amov.cityfix.data.LocationRepository
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
@@ -25,11 +27,13 @@ import java.io.File
  * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
  * in Contacts_#3) as reported by [creatorId]; categories come from it too, active ones only, and
  * follow changes while the form is open. Picked media are copied off the main thread by
- * [attachmentStorage].
+ * [attachmentStorage]. The ticket's location is the reporter's GPS fix from [locationRepository],
+ * read when the form opens and on "Refresh location", so Submit does not wait for GPS.
  */
 class ReportViewModel(
     private val repository: TicketsRepository,
     private val attachmentStorage: AttachmentStorage,
+    private val locationRepository: LocationRepository,
     private val creatorId: String,
 ) : ViewModel() {
 
@@ -79,6 +83,35 @@ class ReportViewModel(
     fun onScopeSelected(scope: Scope) {
         _uiState.update {
             it.copy(scope = scope, scopeError = null, submitError = null).withSummaryRefreshed()
+        }
+    }
+
+    /** Called when the form opens (permission already decided at app start) and after Try again. */
+    fun onLocationPermissionResult(granted: Boolean) {
+        if (granted) {
+            _uiState.update { it.copy(locationPermissionDenied = false, locationError = null) }
+            refreshLocation()
+        } else {
+            _uiState.update {
+                it.copy(locationPermissionDenied = true, locationError = null)
+            }
+        }
+    }
+
+    /** Reads one fix; without one the previous fix (if any) is kept and an error is shown. */
+    fun refreshLocation() {
+        if (_uiState.value.isLocating) return
+        _uiState.update { it.copy(isLocating = true) }
+        viewModelScope.launch {
+            val fix = locationRepository.currentLocation()
+            _uiState.update {
+                it.copy(
+                    location = fix ?: it.location,
+                    locationError = if (fix == null) R.string.report_location_unavailable else null,
+                    isLocating = false,
+                    submitError = null,
+                ).withSummaryRefreshed()
+            }
         }
     }
 
@@ -159,17 +192,19 @@ class ReportViewModel(
     /**
      * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
      * so isValid is the one rule that decides. When valid, locks the form (submitted) before the
-     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved ticket calls
-     * [onSuccess] (no id: a PRIVATE ticket must not be opened, D-006); a refused one unlocks the
-     * form and sets submitError = R.string.report_error_not_created.
+     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved report calls
+     * [onSuccess] with its [ReportOutcome] (no id: a PRIVATE ticket must not be opened, D-006); a
+     * refused one unlocks the form and sets submitError = R.string.report_error_not_created.
+     * ALREADY_FOLLOWING wrote nothing, so the draft's local files are deleted.
      */
-    fun submit(onSuccess: () -> Unit) {
+    fun submit(onSuccess: (ReportOutcome) -> Unit) {
         val state = _uiState.value
         if (state.submitted || state.isSaving || state.isCopyingAttachments) return
 
         // Locals so the null checks below smart-cast (no !!).
         val situation = state.situation
         val scope = state.scope
+        val location = state.location
         val categoryMissing = state.categoryId.isBlank() ||
             state.categories.none { it.id == state.categoryId }
 
@@ -181,8 +216,10 @@ class ReportViewModel(
             scopeError = if (scope == null) R.string.report_error_scope else null,
             attachmentsError =
                 if (state.attachments.isEmpty()) R.string.report_error_attachments else null,
+            locationError =
+                if (location == null) state.locationError ?: R.string.report_error_location else null,
         )
-        if (!checked.isValid || situation == null || scope == null) {
+        if (!checked.isValid || situation == null || scope == null || location == null) {
             _uiState.value = checked.copy(showErrorSummary = true)
             return
         }
@@ -194,18 +231,22 @@ class ReportViewModel(
             submitError = null,
         )
         viewModelScope.launch {
-            val id = repository.reportTicket(
+            val outcome = repository.reportTicket(
                 description = checked.description.trim(),
                 categoryId = checked.categoryId,
                 categoryName = checked.categoryName,
                 situation = situation,
                 scope = scope,
                 attachments = checked.attachments,
+                location = location,
                 creatorId = creatorId,
             )
-            if (id != null) {
+            if (outcome != null) {
                 _uiState.update { it.copy(isSaving = false) }
-                onSuccess()
+                if (outcome == ReportOutcome.ALREADY_FOLLOWING) {
+                    checked.attachments.forEach { File(it.file).delete() }
+                }
+                onSuccess(outcome)
             } else {
                 _uiState.update {
                     it.copy(

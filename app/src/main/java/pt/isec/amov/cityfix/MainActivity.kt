@@ -4,17 +4,21 @@ import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
 import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
@@ -42,9 +47,14 @@ import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ListScreen
+import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.viewmodel.GateStatus
+import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
+import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
@@ -90,6 +100,8 @@ private fun CityFixApp(app: CityFixApplication) {
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
     val reportSubmittedMessage = stringResource(R.string.report_submitted)
+    val reportJoinedMessage = stringResource(R.string.report_joined)
+    val reportAlreadyFollowingMessage = stringResource(R.string.report_already_following)
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -97,6 +109,34 @@ private fun CityFixApp(app: CityFixApplication) {
     // previousBackStackEntry is not Compose state: read it here, in the same scope as
     // backStackEntry, so a back-stack change recomposes this line too (D-005 review N4).
     val canNavigateBack = navController.previousBackStackEntry != null
+
+    // Location is requested when the app starts, as in Contacts_#3 (P10). The answer goes to the
+    // 10 km gate; the report form checks the permission again when it opens.
+    val gateViewModel: LocationGateViewModel =
+        viewModel(factory = LocationGateViewModelFactory(app.locationRepository))
+    val gateState by gateViewModel.uiState.collectAsStateWithLifecycle()
+    val locationPermissionRequest = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        gateViewModel.onPermissionResult(permissions.values.any { it })
+    }
+    LaunchedEffect(Unit) {
+        locationPermissionRequest.launch(LOCATION_PERMISSIONS)
+    }
+
+    // No login yet (D-009): a null user is anonymous, and brief I.1 limits anonymous use to
+    // 10 km around Pr. Republica. "Log in" is hidden (null) until D-009 adds the login route.
+    if (app.currentUser == null && gateState.status != GateStatus.INSIDE) {
+        LocationGateScreen(
+            viewModel = gateViewModel,
+            onTryAgainClick = { locationPermissionRequest.launch(LOCATION_PERMISSIONS) },
+            onLoginClick = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .safeDrawingPadding(),
+        )
+        return
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -156,6 +196,7 @@ private fun CityFixApp(app: CityFixApplication) {
                         factory = ReportViewModelFactory(
                             app.ticketsRepository,
                             app.attachmentStorage,
+                            app.locationRepository,
                             app.reporterId,
                         ),
                     )
@@ -165,9 +206,15 @@ private fun CityFixApp(app: CityFixApplication) {
                     // the tickets listener shows the new ticket from the local cache.
                     // No id here: never navigate to the new ticket, a PRIVATE one is not
                     // visible (decision 0006).
-                    onSubmitted = {
+                    // One message per outcome of the 10 m grouping (F-012).
+                    onSubmitted = { outcome ->
+                        val message = when (outcome) {
+                            ReportOutcome.CREATED -> reportSubmittedMessage
+                            ReportOutcome.JOINED -> reportJoinedMessage
+                            ReportOutcome.ALREADY_FOLLOWING -> reportAlreadyFollowingMessage
+                        }
                         snackbarScope.launch {
-                            snackbarHostState.showSnackbar(reportSubmittedMessage)
+                            snackbarHostState.showSnackbar(message)
                         }
                         navController.navigateUp()
                     },

@@ -3,6 +3,7 @@ package pt.isec.amov.cityfix.data
 import android.util.Log
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
@@ -11,10 +12,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
@@ -34,6 +37,12 @@ import java.text.Collator
  * Reads are live: each one is a snapshot listener (beyond class: the demo uses one-shot get())
  * turned into a Flow, so a change on another device, or a report on this one, reaches the
  * ViewModel without a refresh. Offline, the listeners are served from the local cache.
+ *
+ * 10 m grouping (brief I.2 Obs., decision 0002): before a new ticket is created, [reportTicket]
+ * reads the `ticketLocations` with the same category and situation that are active (three
+ * equality filters, served by Firestore's automatic single-field indexes, so no composite index)
+ * and runs TicketsList.findNearby on them in the app, because Firestore has no geo query.
+ * Offline, the query answers from the local cache.
  *
  * Privacy (CLAUDE.md, decision 0006): [publicTickets] reads only `publicTickets`, never `tickets`
  * or `ticketLocations`, so the anonymous code path never receives author data or exact
@@ -80,12 +89,14 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
             }
 
     /**
-     * Opens a new ticket from the report form. Returns its id, or null when description,
-     * categoryId or categoryName is blank (all three are trimmed) or attachments is empty.
-     * [creatorId] is the reporter. No location yet (F-012), so no 10 m grouping.
+     * Saves a report from the form at [location] (the reporter's GPS fix). Returns null when
+     * description, categoryId or categoryName is blank (all three are trimmed), attachments is
+     * empty or location is the unset (0, 0). [creatorId] is the reporter.
      *
-     * Writes one batch (decision 0010): tickets/{id}, ticketLocations/{id}, publicTickets/{id}
-     * for PUBLIC tickets, and the stats/summary counters. Returns once the batch is queued.
+     * An active ticket with the same category and situation within 10 m is joined instead
+     * ([joinTicket]). Otherwise one batch (decision 0010) creates tickets/{id},
+     * ticketLocations/{id}, publicTickets/{id} for PUBLIC tickets, and adds the stats/summary
+     * counters. Returns once the batch is queued.
      */
     override suspend fun reportTicket(
         description: String,
@@ -94,13 +105,14 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
         situation: Situation,
         scope: Scope,
         attachments: List<Attachment>,
+        location: Coordinates,
         creatorId: String,
-    ): String? = withContext(Dispatchers.IO) {
+    ): ReportOutcome? = withContext(Dispatchers.IO) {
         val text = description.trim()
         val cleanCategoryId = categoryId.trim()
         val cleanCategoryName = categoryName.trim()
         if (text.isBlank() || cleanCategoryId.isBlank() || cleanCategoryName.isBlank() ||
-            attachments.isEmpty()
+            attachments.isEmpty() || location == Coordinates()
         ) {
             return@withContext null
         }
@@ -111,23 +123,34 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
         attachments.filter { it.type == AttachmentType.IMAGE }
             .forEach { FileUtils.removeImageLocation(it.file) }
 
+        val now = System.currentTimeMillis()
+        val pendingAttachments = attachments.map {
+            it.copy(uploadState = UploadState.PENDING, uploadedById = creatorId)
+        }
+
+        val match = findMatch(location, cleanCategoryId, situation)
+        if (match != null) {
+            val report = reportDocument(
+                cleanCategoryId, situation, location, text, now, pendingAttachments,
+            )
+            return@withContext joinTicket(match.id, report, creatorId)
+        }
+
         // document() with no argument creates a new auto id locally, so it works offline.
         val ref = firestore.collection(TICKETS).document()
-        val now = System.currentTimeMillis()
         val ticket = Ticket(
             id = ref.id,
             description = text,
             situation = situation,
             scope = scope,
+            location = location,
             currentStatus = TicketStatus.OPEN,
             createdAt = now,
             categoryId = cleanCategoryId,
             categoryName = cleanCategoryName,
             creatorId = creatorId,
             statusHistory = listOf(StatusHistory(TicketStatus.OPEN, now, null, creatorId)),
-            attachments = attachments.map {
-                it.copy(uploadState = UploadState.PENDING, uploadedById = creatorId)
-            },
+            attachments = pendingAttachments,
         )
 
         // One batch, like the demo's "clear all": every document changes together or none does.
@@ -155,7 +178,56 @@ class FirestoreTicketsRepository(private val firestore: FirebaseFirestore) : Tic
         // the form open. The local cache applies the batch at once, so this device's listeners
         // show the ticket immediately; failures (e.g. rules) are only logged.
         batch.commit().addOnFailureListener { Log.w(TAG, "report not saved", it) }
-        ticket.id
+        ReportOutcome.CREATED
+    }
+
+    /** The nearest active ticket with this category and situation within 10 m, or null. */
+    private suspend fun findMatch(
+        location: Coordinates,
+        categoryId: String,
+        situation: Situation,
+    ): Ticket? {
+        val snapshot = firestore.collection(TICKET_LOCATIONS)
+            .whereEqualTo("categoryId", categoryId)
+            .whereEqualTo("situation", situation.name)
+            .whereEqualTo("active", true)
+            .get()
+            .await()
+        val candidates = snapshot.documents.map { it.toTicketLocation() }
+        return TicketsList(candidates).findNearby(location, categoryId, situation)
+    }
+
+    /**
+     * Makes [creatorId] follow ticket [ticketId] (decision 0010): one batch writes their [report]
+     * to tickets/{id}/reports/{uid} and adds their uid to followerIds and participantIds
+     * (FieldValue.arrayUnion, beyond class: adds to the array only if missing). The ticket's own
+     * attachments, publicTickets and stats/summary do not change. If the reporter already
+     * created or follows the ticket (the F-011 participant query), nothing is written.
+     */
+    private suspend fun joinTicket(
+        ticketId: String,
+        report: Map<String, Any?>,
+        creatorId: String,
+    ): ReportOutcome {
+        val mine = firestore.collection(TICKETS)
+            .whereArrayContains("participantIds", creatorId)
+            .get()
+            .await()
+        if (mine.documents.any { it.id == ticketId }) return ReportOutcome.ALREADY_FOLLOWING
+
+        val ticketRef = firestore.collection(TICKETS).document(ticketId)
+        val batch = firestore.batch()
+        batch.set(ticketRef.collection(REPORTS).document(creatorId), report)
+        batch.update(
+            ticketRef,
+            mapOf(
+                "followerIds" to FieldValue.arrayUnion(creatorId),
+                "participantIds" to FieldValue.arrayUnion(creatorId),
+            ),
+        )
+        // Not awaited, as in reportTicket: offline the form would wait for the server.
+        batch.commit().addOnFailureListener { Log.w(TAG, "join not saved", it) }
+        return ReportOutcome.JOINED
     }
 
     /**
