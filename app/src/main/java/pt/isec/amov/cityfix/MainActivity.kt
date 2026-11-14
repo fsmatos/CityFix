@@ -37,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
 import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
@@ -99,6 +100,8 @@ private fun CityFixApp(app: CityFixApplication) {
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
     val reportSubmittedMessage = stringResource(R.string.report_submitted)
+    val reportJoinedMessage = stringResource(R.string.report_joined)
+    val reportAlreadyFollowingMessage = stringResource(R.string.report_already_following)
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -203,9 +206,15 @@ private fun CityFixApp(app: CityFixApplication) {
                     // the tickets listener shows the new ticket from the local cache.
                     // No id here: never navigate to the new ticket, a PRIVATE one is not
                     // visible (decision 0006).
-                    onSubmitted = {
+                    // One message per outcome of the 10 m grouping (F-012).
+                    onSubmitted = { outcome ->
+                        val message = when (outcome) {
+                            ReportOutcome.CREATED -> reportSubmittedMessage
+                            ReportOutcome.JOINED -> reportJoinedMessage
+                            ReportOutcome.ALREADY_FOLLOWING -> reportAlreadyFollowingMessage
+                        }
                         snackbarScope.launch {
-                            snackbarHostState.showSnackbar(reportSubmittedMessage)
+                            snackbarHostState.showSnackbar(message)
                         }
                         navController.navigateUp()
                     },

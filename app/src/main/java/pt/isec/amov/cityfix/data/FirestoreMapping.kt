@@ -16,6 +16,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.isActive
 import pt.isec.amov.cityfix.model.toAnonymousView
 
 /*
@@ -33,6 +34,9 @@ import pt.isec.amov.cityfix.model.toAnonymousView
 internal const val TICKETS = "tickets"
 internal const val PUBLIC_TICKETS = "publicTickets"
 internal const val TICKET_LOCATIONS = "ticketLocations"
+
+/** Subcollection of a ticket: one report per citizen who joined it by grouping. */
+internal const val REPORTS = "reports"
 internal const val CATEGORIES = "categories"
 internal const val STATS_SUMMARY = "stats/summary"
 
@@ -85,7 +89,30 @@ internal fun Ticket.toTicketLocationDocument(): Map<String, Any?> = hashMapOf(
     "categoryId" to categoryId,
     "situation" to situation.name,
     "location" to location.toGeoPoint(),
-    "active" to (currentStatus != TicketStatus.CLOSED),
+    // Same rule as findNearby (decision 0005): RESOLVED and CLOSED tickets do not group (amends
+    // decision 0010). D-013/F-014 must update it when a ticket is resolved or reopened.
+    "active" to isActive,
+)
+
+/**
+ * The `tickets/{id}/reports/{uid}` document of a citizen who joined the ticket (decision 0010).
+ * Their attachments stay here, never on the shared ticket, so a PRIVATE reporter's photos never
+ * reach a PUBLIC ticket (F-012 Q5).
+ */
+internal fun reportDocument(
+    categoryId: String,
+    situation: Situation,
+    location: Coordinates,
+    description: String,
+    createdAt: Long,
+    attachments: List<Attachment>,
+): Map<String, Any?> = hashMapOf(
+    "categoryId" to categoryId,
+    "situation" to situation.name,
+    "location" to location.toGeoPoint(),
+    "description" to description,
+    "createdAt" to createdAt,
+    "attachments" to attachments.map { it.toDocument() },
 )
 
 /** The `categories/{id}` document (debug seed only; operators manage categories in D-012). */
@@ -166,6 +193,18 @@ internal fun DocumentSnapshot.toPublicTicket(): Ticket {
         },
     )
 }
+
+/**
+ * A `ticketLocations/{id}` document as a minimal ticket (id, category, situation, location, OPEN
+ * when active), so TicketsList.findNearby can be reused. Not a real ticket: never store or show it.
+ */
+internal fun DocumentSnapshot.toTicketLocation(): Ticket = Ticket(
+    id = id,
+    categoryId = getString("categoryId") ?: "",
+    situation = enumOrDefault(getString("situation"), Situation.DAMAGE),
+    location = getGeoPoint("location").toCoordinates(),
+    currentStatus = if (getBoolean("active") == true) TicketStatus.OPEN else TicketStatus.CLOSED,
+)
 
 internal fun DocumentSnapshot.toCategory(): Category = Category(
     id = id,

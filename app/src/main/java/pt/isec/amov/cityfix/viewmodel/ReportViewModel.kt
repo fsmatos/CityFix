@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.LocationRepository
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
@@ -194,11 +195,12 @@ class ReportViewModel(
     /**
      * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
      * so isValid is the one rule that decides. When valid, locks the form (submitted) before the
-     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved ticket calls
-     * [onSuccess] (no id: a PRIVATE ticket must not be opened, D-006); a refused one unlocks the
-     * form and sets submitError = R.string.report_error_not_created.
+     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved report calls
+     * [onSuccess] with its [ReportOutcome] (no id: a PRIVATE ticket must not be opened, D-006); a
+     * refused one unlocks the form and sets submitError = R.string.report_error_not_created.
+     * ALREADY_FOLLOWING wrote nothing, so the draft's local files are deleted.
      */
-    fun submit(onSuccess: () -> Unit) {
+    fun submit(onSuccess: (ReportOutcome) -> Unit) {
         val state = _uiState.value
         if (state.submitted || state.isSaving || state.isCopyingAttachments) return
 
@@ -232,7 +234,7 @@ class ReportViewModel(
             submitError = null,
         )
         viewModelScope.launch {
-            val id = repository.reportTicket(
+            val outcome = repository.reportTicket(
                 description = checked.description.trim(),
                 categoryId = checked.categoryId,
                 categoryName = checked.categoryName,
@@ -242,9 +244,12 @@ class ReportViewModel(
                 location = location,
                 creatorId = creatorId,
             )
-            if (id != null) {
+            if (outcome != null) {
                 _uiState.update { it.copy(isSaving = false) }
-                onSuccess()
+                if (outcome == ReportOutcome.ALREADY_FOLLOWING) {
+                    checked.attachments.forEach { File(it.file).delete() }
+                }
+                onSuccess(outcome)
             } else {
                 _uiState.update {
                     it.copy(

@@ -59,6 +59,8 @@
     <string name="report_location_refresh">Atualizar localização</string>
     <string name="report_location_unavailable">Não foi possível obter a sua localização. Ative a localização e atualize.</string>
     <string name="report_error_location">A ocorrência precisa da sua localização.</string>
+    <string name="report_joined">Esta ocorrência já tinha sido reportada perto daqui. Passou a acompanhá-la.</string>
+    <string name="report_already_following">Já acompanha esta ocorrência perto daqui.</string>
     <string name="report_submitted">Ocorrência enviada.</string>
 
     <!-- Location and the 10 km gate (F-012) -->

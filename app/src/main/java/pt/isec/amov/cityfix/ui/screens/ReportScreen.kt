@@ -60,6 +60,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
@@ -87,14 +88,14 @@ fun scopeLabelRes(scope: Scope): Int = when (scope) {
 
 /**
  * Stateful half of the report form (brief I.2.E): collects [viewModel], which validates and saves
- * the ticket. [onSubmitted] runs once the ticket is saved; a refused save keeps the form open and
+ * the ticket. [onSubmitted] runs once the report is saved, with what it did; a refused save keeps the form open and
  * shows an error. Location was requested at app start (MainActivity); here the form only checks
  * the answer when it opens, and "Try again" asks again.
  */
 @Composable
 fun ReportScreen(
     viewModel: ReportViewModel,
-    onSubmitted: () -> Unit,
+    onSubmitted: (ReportOutcome) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
