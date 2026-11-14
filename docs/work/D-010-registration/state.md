@@ -1,6 +1,6 @@
 # D-010: Registration (citizen and operator)
 Branch: dev/Diogo · Base: 73370ed
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-14 | Slices 1-5 and 7 committed (cdbcb8d..1760f28); slice 6 skipped (Gate 1); build + lint green, 22 warnings = baseline, none new; device checks pending (Diogo) |
 | Review | done | 2026-11-14 | Round 1: changes requested (B1, S1-S3, N1-N7). Round 2 (5be47fd..HEAD): approved; B1, S1-S3, N1, N2, N4-N6 resolved, N3/N7 deferred, 4 new nits (R2-N1..N4); build + lint 0 errors, 22 warnings = baseline; device checks pending |
 | Docs | done | 2026-11-14 | New decision 0016; 0015 (session) amended; overview, report notes, task file updated; N7 and the deferred nits documented; nothing committed |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-14 | eba8aa2 to origin/dev/Diogo |
 | Merged | pending | | |
 
 ## Log
@@ -93,3 +93,4 @@ Append-only.
   - `docs/tasks/phase-2/D-010-registration.md`: status line and a "Status notes" section (Q1 deviation, map pick skipped, pending device checks). No acceptance box is ticked.
   - `CLAUDE.md` is unchanged (nothing there mentions the rule). No code, rules or decision records of Francisco were edited. Nothing was committed.
   - Still open: tell Francisco about the `firestore.rules` edit and the suggested 0010 amendment; Diogo's console step (`municipality/main`) and the device checks.
+- 2026-11-14 Push: verify OK (assembleDebug, lint 0 errors / 22 warnings); dev/Diogo pushed to origin at eba8aa2. Not merged into main.
