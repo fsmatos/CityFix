@@ -39,6 +39,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.model.UploadState
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.StatusBadge
@@ -328,7 +329,8 @@ private fun MediaSection(
 
 /**
  * Photo or video frame and its label for one attachment. Without a file (sample tickets) it shows
- * the placeholder and "Not available yet" instead of drawing a fake photo.
+ * the placeholder and "Not available yet" instead of drawing a fake photo. With a file, a line says
+ * when its upload is still pending or has failed (F-013); uploaded media show no line.
  */
 @Composable
 private fun MediaTile(
@@ -338,6 +340,11 @@ private fun MediaTile(
     val labelRes = when (attachment.type) {
         AttachmentType.IMAGE -> R.string.ticket_media_photo
         AttachmentType.VIDEO -> R.string.ticket_media_video
+    }
+    val uploadRes = when (attachment.uploadState) {
+        UploadState.PENDING, UploadState.UPLOADING -> R.string.ticket_media_upload_pending
+        UploadState.FAILED -> R.string.ticket_media_upload_failed
+        UploadState.UPLOADED -> null
     }
 
     Column(
@@ -367,6 +374,13 @@ private fun MediaTile(
         if (attachment.file.isBlank()) {
             Text(
                 text = stringResource(R.string.ticket_media_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        } else if (uploadRes != null) {
+            Text(
+                text = stringResource(uploadRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -418,7 +432,10 @@ private fun ShowScreenPublicPreview() {
 @Composable
 private fun ShowScreenFullPreview() {
     CityFixTheme {
-        ShowScreen(previewTicket, audience = DetailAudience.REGISTERED)
+        // One media whose upload failed, to show the "Upload failed" line.
+        val failed = Attachment(id = "preview-a3", file = "preview-a3.jpg", uploadState = UploadState.FAILED)
+        val ticket = previewTicket.copy(attachments = previewTicket.attachments + failed)
+        ShowScreen(ticket, audience = DetailAudience.REGISTERED)
     }
 }
 
