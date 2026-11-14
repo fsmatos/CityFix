@@ -1,5 +1,7 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -26,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -40,7 +44,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.RegistrationRole
+import pt.isec.amov.cityfix.model.Coordinates
+import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.hasLocationPermission
+import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.RegisterUiState
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
 
@@ -51,6 +60,9 @@ import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
  * CityFixApp's redirect before the NIF transaction ends. [onBusyChange] reports
  * [RegisterUiState.isRegistering] so CityFixApp holds the redirect meanwhile; leaving the screen
  * releases the hold.
+ *
+ * The location permission is asked when the citizen taps "Use my location", not before; the
+ * launcher sits here, above the content.
  */
 @Composable
 fun RegisterScreen(
@@ -59,6 +71,14 @@ fun RegisterScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val askLocation = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        // Approximate location is enough for the residence.
+        viewModel.onLocationPermissionResult(hasLocationPermission(context))
+    }
 
     val currentOnBusyChange by rememberUpdatedState(onBusyChange)
     LaunchedEffect(state.isRegistering) {
@@ -79,6 +99,15 @@ fun RegisterScreen(
         onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
         onToggleShowPassword = viewModel::onToggleShowPassword,
         onImpactDetectionChange = viewModel::onImpactDetectionChange,
+        onUseMyLocation = {
+            if (hasLocationPermission(context)) {
+                viewModel.refreshLocation()
+            } else {
+                askLocation.launch(LOCATION_PERMISSIONS)
+            }
+        },
+        onLocationTryAgain = { askLocation.launch(LOCATION_PERMISSIONS) },
+        onOpenSettings = { openAppSettings(context) },
         onSubmit = viewModel::submit,
         modifier = modifier,
     )
@@ -97,6 +126,9 @@ fun RegisterContent(
     onConfirmPasswordChange: (String) -> Unit,
     onToggleShowPassword: () -> Unit,
     onImpactDetectionChange: (Boolean) -> Unit,
+    onUseMyLocation: () -> Unit,
+    onLocationTryAgain: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -179,7 +211,13 @@ fun RegisterContent(
         )
 
         if (!isOperator) {
-            CitizenLocation(state)
+            CitizenLocation(
+                state = state,
+                enabled = enabled,
+                onUseMyLocation = onUseMyLocation,
+                onTryAgain = onLocationTryAgain,
+                onOpenSettings = onOpenSettings,
+            )
             ImpactDetectionRow(
                 checked = state.impactDetection,
                 enabled = enabled,
@@ -254,19 +292,45 @@ private fun OperatorDomainHint(state: RegisterUiState) {
     }
 }
 
-/** The citizen's residence. Slice 4 adds "Use my location". */
+/** The citizen's residence (brief I.2.A georeferencing): the fix with 5 decimals and "Use my location". */
 @Composable
-private fun CitizenLocation(state: RegisterUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun CitizenLocation(
+    state: RegisterUiState,
+    enabled: Boolean,
+    onUseMyLocation: () -> Unit,
+    onTryAgain: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.register_location_label),
             style = MaterialTheme.typography.titleSmall,
         )
+        if (state.locationPermissionDenied) {
+            LocationDeniedMessage(
+                message = R.string.register_location_denied,
+                onTryAgainClick = onTryAgain,
+                onOpenSettingsClick = onOpenSettings,
+            )
+            return@Column
+        }
         Text(
-            text = stringResource(R.string.register_location_not_set),
+            text = when {
+                state.isLocating -> stringResource(R.string.report_location_locating)
+                state.location != null ->
+                    stringResource(R.string.report_location_value, state.location.latitude, state.location.longitude)
+                else -> stringResource(R.string.register_location_not_set)
+            },
             style = MaterialTheme.typography.bodyMedium,
         )
         FormMessage(state.locationError, isError = true)
+        OutlinedButton(
+            onClick = onUseMyLocation,
+            enabled = enabled && !state.isLocating,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.register_location_use))
+        }
     }
 }
 
@@ -392,6 +456,9 @@ private fun RegisterPreview(state: RegisterUiState) {
             onConfirmPasswordChange = {},
             onToggleShowPassword = {},
             onImpactDetectionChange = {},
+            onUseMyLocation = {},
+            onLocationTryAgain = {},
+            onOpenSettings = {},
             onSubmit = {},
         )
     }
@@ -403,6 +470,25 @@ private fun RegisterPreview(state: RegisterUiState) {
 @Composable
 private fun RegisterCitizenEmptyPreview() {
     RegisterPreview(RegisterUiState(isLoadingDomain = false))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun RegisterCitizenLocatedPreview() {
+    RegisterPreview(
+        RegisterUiState(
+            name = "Ana Silva",
+            location = Coordinates(40.21, -8.419),
+            impactDetection = true,
+            isLoadingDomain = false,
+        ),
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun RegisterCitizenLocationDeniedPreview() {
+    RegisterPreview(RegisterUiState(locationPermissionDenied = true, isLoadingDomain = false))
 }
 
 @Preview(showBackground = true)

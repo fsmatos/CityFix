@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AuthError
+import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.RegisterResult
 import pt.isec.amov.cityfix.data.Registration
 import pt.isec.amov.cityfix.data.RegistrationRole
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.utils.PasswordProblem
 import pt.isec.amov.cityfix.utils.isInEmailDomain
 import pt.isec.amov.cityfix.utils.isPortuguesePhone
@@ -29,10 +31,12 @@ import pt.isec.amov.cityfix.utils.passwordProblem
  * death; rotation keeps the whole ViewModel. A field's error is recomputed as it is typed (only
  * once it is not empty, D-010 Q10); Submit shows every error. A successful registration signs the
  * new user in; CityFixApp holds its redirect while [RegisterUiState.isRegistering] is true, then
- * moves to Account setup.
+ * moves to Account setup. A citizen's location comes from [locationRepository] (F-012), asked
+ * for at the point of use; its two coordinates are saved as Doubles.
  */
 class RegisterViewModel(
     private val users: UsersRepository,
+    private val locationRepository: LocationRepository,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -45,6 +49,7 @@ class RegisterViewModel(
             phone = savedState[KEY_PHONE] ?: "",
             nif = savedState[KEY_NIF] ?: "",
             impactDetection = savedState[KEY_IMPACT] ?: false,
+            location = savedLocation(),
         ),
     )
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
@@ -132,6 +137,37 @@ class RegisterViewModel(
         _uiState.update { it.copy(impactDetection = enabled) }
     }
 
+    /** The answer to the permission dialog of "Use my location". */
+    fun onLocationPermissionResult(granted: Boolean) {
+        if (granted) {
+            _uiState.update { it.copy(locationPermissionDenied = false, locationError = null) }
+            refreshLocation()
+        } else {
+            _uiState.update { it.copy(locationPermissionDenied = true, locationError = null) }
+        }
+    }
+
+    /** Reads one fix (any accuracy: the residence is not used for grouping). No fix keeps the previous one. */
+    fun refreshLocation() {
+        if (_uiState.value.isLocating) return
+        _uiState.update { it.copy(isLocating = true, locationPermissionDenied = false) }
+        viewModelScope.launch {
+            val fix = locationRepository.currentLocation()
+            if (fix != null) {
+                savedState[KEY_LATITUDE] = fix.latitude
+                savedState[KEY_LONGITUDE] = fix.longitude
+            }
+            update {
+                copy(
+                    location = fix ?: location,
+                    locationError = if (fix == null) R.string.register_location_unavailable else null,
+                    isLocating = false,
+                    error = null,
+                )
+            }
+        }
+    }
+
     fun submit() {
         val state = _uiState.value
         if (state.isRegistering || state.registered) return
@@ -182,6 +218,13 @@ class RegisterViewModel(
             val next = current.change()
             next.copy(showErrorSummary = next.showErrorSummary && !next.isValid)
         }
+    }
+
+    /** The location saved before a process death, when both coordinates are there. */
+    private fun savedLocation(): Coordinates? {
+        val latitude = savedState.get<Double>(KEY_LATITUDE) ?: return null
+        val longitude = savedState.get<Double>(KEY_LONGITUDE) ?: return null
+        return Coordinates(latitude, longitude)
     }
 
     /** A field's error while typing: an empty field shows none until Submit (Q10). */
@@ -242,5 +285,7 @@ class RegisterViewModel(
         const val KEY_PHONE = "phone"
         const val KEY_NIF = "nif"
         const val KEY_IMPACT = "impactDetection"
+        const val KEY_LATITUDE = "latitude"
+        const val KEY_LONGITUDE = "longitude"
     }
 }

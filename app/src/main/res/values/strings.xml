@@ -216,6 +216,9 @@
     <string name="register_operator_domain_loading">Checking the council’s e-mail domain…</string>
     <string name="register_location_label">Residence location</string>
     <string name="register_location_not_set">Not set yet.</string>
+    <string name="register_location_use">Use my location</string>
+    <string name="register_location_unavailable">Your location could not be found. Turn on location and try again.</string>
+    <string name="register_location_denied">Citizens register with their location. Allow location to use it. If no dialog appears, allow it in the app settings.</string>
     <string name="register_impact_label">Impact detection</string>
     <string name="register_impact_description">Suggest opening an issue when the phone detects a strong vertical impact. You can change this later.</string>
     <string name="register_submit">Create account</string>

@@ -27,6 +27,10 @@ data class RegisterUiState(
     val showPassword: Boolean = false,
     /** Citizen only: the residence (brief I.2.A georeferencing). */
     val location: Coordinates? = null,
+    /** True while "Use my location" waits for a fix. */
+    val isLocating: Boolean = false,
+    /** True after the location permission was refused; the screen shows Try again and Open settings. */
+    val locationPermissionDenied: Boolean = false,
     /** Citizen only; off by default. */
     val impactDetection: Boolean = false,
     /** The council's e-mail domain (lowercase, no '@'); null when missing or unreadable. */

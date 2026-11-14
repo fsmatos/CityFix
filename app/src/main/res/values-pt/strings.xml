@@ -216,6 +216,9 @@
     <string name="register_operator_domain_loading">A verificar o domínio de e-mail da câmara…</string>
     <string name="register_location_label">Localização da residência</string>
     <string name="register_location_not_set">Ainda não definida.</string>
+    <string name="register_location_use">Usar a minha localização</string>
+    <string name="register_location_unavailable">Não foi possível obter a sua localização. Ative a localização e tente novamente.</string>
+    <string name="register_location_denied">Os cidadãos registam-se com a sua localização. Permita a localização para a usar. Se não aparecer nenhuma janela, permita-a nas definições da aplicação.</string>
     <string name="register_impact_label">Deteção de impactos</string>
     <string name="register_impact_description">Sugere abrir uma ocorrência quando o telemóvel deteta um impacto vertical forte. Pode alterar mais tarde.</string>
     <string name="register_submit">Criar conta</string>
