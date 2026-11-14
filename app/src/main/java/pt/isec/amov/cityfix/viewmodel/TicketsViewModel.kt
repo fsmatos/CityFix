@@ -39,6 +39,9 @@ class TicketsViewModel(private val repository: TicketsRepository, user: User?) :
     /** The running ticket listener, cancelled when the user changes. */
     private var ticketsJob: Job? = null
 
+    /** Role and id of the user the listener runs for; null before the first [setUser] (D-009). */
+    private var appliedUserKey: String? = null
+
     init {
         // The dashboard is the same for every user, so it is listened to once.
         viewModelScope.launch {
@@ -53,6 +56,15 @@ class TicketsViewModel(private val repository: TicketsRepository, user: User?) :
      * previous user's full tickets while the new listener loads.
      */
     fun setUser(user: User?) {
+        // D-009: CityFixApp calls this again after rotation and on every profile change (for
+        // example new fcmTokens). Same role and id = same tickets, so keep the running listener.
+        val key = when (user) {
+            null -> "anonymous"
+            is Citizen -> "citizen:${user.id}"
+            is Operator -> "operator:${user.id}"
+        }
+        if (key == appliedUserKey) return
+        appliedUserKey = key
         ticketsJob?.cancel()
         _tickets.value = emptyList()
         ticketsJob = viewModelScope.launch {

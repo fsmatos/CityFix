@@ -719,7 +719,7 @@ Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 202
 ## D-008: Ticket lifecycle rules
 Decision: [0011](../decisions/0011-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
 
-**Not checked against the brief.** The brief PDF could not be opened in the D-008 sessions; the rules tagged brief II, II.2, I.2.E, III and I.3.E come from the task files. Check them in the PDF before writing them into the report as the brief's wording.
+**Brief status (updated 2026-11-11).** The brief PDF could not be opened in the D-008 sessions; the rules came from the task files. The brief section I text Diogo pasted in D-009 now checks I.3.E ("pedido de dados" is an operator action; resolving needs "carregamento de foto/vídeo do trabalho concluído") and I.2.E (reopening among the citizen's own tickets, "se dentro de 5 dias após conclusão"); the I.2 Obs ("acompanham") supports followers reopening as a reading, not literally. Sections II, II.2 and III (automatic close after 5 days, lock, information requests, 24 h warning) are still not checked: check them in the PDF before writing them into the report as the brief's wording.
 
 ### The state machine
 | From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
@@ -772,6 +772,72 @@ OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5
 - No automated tests by project choice; the pure functions would be easy to cover with JUnit.
 - A `PublicTicket` type and a sealed result type (instead of `null`) would let the compiler enforce more, and tell the UI why a move was refused.
 
+## D-009: Login, MFA, password recovery and role navigation
+Decision: [0015](../decisions/0015-session-role-navigation-mfa.md) (also amends [0006](../decisions/0006-anonymous-projection-phase-1.md) on `canExpandCards`). Code: `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `viewmodel/Session.kt`, `viewmodel/SessionViewModel.kt`, the Login / Forgot password / Account setup ViewModels, `ui/navigation/RoleAccess.kt`, the new screens, `MainActivity.kt`. Overview: "Auth and session (D-009)", "Roles", "Handover (D-009)".
+
+Brief (section I text pasted by Diogo; the PDF itself was unreadable in the session): I.2.B and I.3.B ask for "e-mail/password, com duplo fator (MFA) e recuperação de credenciais por e-mail" for both the registered citizen and the operator; I.1.B and I.2.D define what the public list shows and that citizens keep the anonymous features; I.2.A leaves a citizen "pendente até validação"; I.3.E puts the operator's full view in the "Painel de Gestão Operacional".
+
+Brief I.1 (same paste): the 10 km limit around Pr. Republica applies to the non-authenticated user.
+
+**Nothing has run on a device or in the console yet.** Build and lint pass (0 errors; 18 warnings before the 2026-11-14 merge of F-011/F-012, 20 after it, all version or unused-resource warnings). Three review rounds, approved (round 3 covered the merge and the session wiring).
+
+### Technical solutions
+- **A sealed `Session` drives navigation.** Seven states (`Loading`, `Anonymous`, `NeedsEmailVerification`, `NeedsSecondFactor`, `ProfileMissing`, `ProfileUnavailable`, `SignedIn(user)`), checked in a fixed order, and one `AccessRole` per home screen. Every navigation and visibility rule is a plain `when` on it, so the compiler forces a decision for every state and the code reads like the table in the overview.
+- **Two sources combined in one ViewModel.** `AuthRepository.account` (Auth state) and `UsersRepository.observeUser(uid)` (the `users/{uid}` listener) stay separate; `SessionViewModel` combines them with `flatMapLatest`, so logging out or switching account **cancels** the previous Firestore listener. The task asked for `currentUser: Flow<User?>`, which cannot express "e-mail not verified", "no second factor" or "profile not loaded".
+- **Redirect keyed on the role, with a saveable "last role".** One `LaunchedEffect(role)` after the `NavHost` sends the user to their home on login, logout or activation and clears the back stack. The last handled role is in `rememberSaveable`, so rotation and process recreation keep the back stack; on a fresh cold start (nothing restored) it goes home unless home is already the start destination. A good defence example of a bug found in review: the plan said "only record the first value", which left operators on the public dashboard after a cold start (B1).
+- **Guarding in layers.** Hidden entry points (add button, overflow menu by role) -> `RequireAccess` on every role destination (back-stack leftovers, future deep links) -> the Firestore rules, which describe the server enforcement but stay undeployed drafts (decision 0012 Q5), so in this delivery the app layers are the enforcement. The same "UI is a second layer" idea as the anonymous projection.
+- **The session drives the tickets (2026-11-14).** `Session.ticketsUser` (active citizen or operator, else `null`) goes to `TicketsViewModel.setUser` from a `LaunchedEffect`; `setUser` skips a call with the same role and id, so rotation, process death and profile-only changes (`fcmTokens`) keep the Firestore listener and the list instead of blanking it. The report's creator id is the signed-in citizen's uid. F-011's hand-edited stand-in user is gone.
+- **Log out clears first, then signs out.** One `logOut` helper calls `setUser(null)` before `signOut()`, so the frame after Log out never draws the previous user's own or operator-only tickets (review R3-S1). A good defence example of ordering: reacting to the session change alone leaves one frame of stale data.
+- **10 km gate as an overlay, only for the anonymous user (brief I.1).** `showGate = role == ANONYMOUS && !onAuthScreen && status != INSIDE`: never while the session loads, never for a signed-in user, lifted on the login screens its Log in opens. It is drawn in a `Box` over the `Scaffold` (opaque `Surface` for touches, `clearAndSetSemantics` for TalkBack, no bar controls), so the `NavHost` stays composed and the gate's Log in has a graph to navigate in, which F-012's early `return` lacked.
+- **MFA flows** with the Firebase API: sign-in `FirebaseAuthMultiFactorException` -> `MultiFactorResolver` -> `PhoneAuthProvider.verifyPhoneNumber` (hint + resolver session) -> `PhoneAuthProvider.getCredential` -> `PhoneMultiFactorGenerator.getAssertion` -> `resolveSignIn`; enrolment `multiFactor.session` -> `verifyPhoneNumber` (phone + session) -> `getAssertion` -> `multiFactor.enroll`.
+- **Callbacks turned into a suspend call.** `verifyPhoneNumber`'s callbacks are wrapped in `suspendCancellableCoroutine` inside `withTimeoutOrNull(60 s)`, so the ViewModel writes a straight `val result = repository.sendCode(...)` and a lost callback becomes a timeout with Resend instead of a hang.
+- **Firebase types stay in `data/`.** The resolver is wrapped in an opaque `SecondFactorChallenge` (internal constructor), held in a private ViewModel field, never in `UiState` or saved state. The `Activity` that reCAPTCHA needs is passed through the call and never stored.
+- **E-mail verification + token refresh** before enrolment: Firebase requires a verified e-mail for MFA, and the operator rule checks `email_verified`, so "I have verified" runs `reload()` + `getIdToken(true)` (the F-010 handover).
+- **Offline profile vs missing profile.** A non-existent `users/{uid}` that comes from the cache is reported as "unavailable" (offline), not "missing", so an offline user is never told their account is not set up.
+- **Structured concurrency kept in the repository.** Every `catch (e: Exception)` around `await()` first rethrows `CancellationException` (review S3), so closing a screen cancels the call instead of turning it into an error.
+
+### Options chosen and why (Gate 1, 2026-11-11)
+- **SMS with console test numbers, not TOTP** (decision 0012): no authenticator app at the defence, no SMS cost, fixed codes.
+- **MFA mandatory for both roles** (Q1; I.2.B, I.3.B): enrolment happens in D-009's Account setup after the first login (verify e-mail, phone, code).
+- **Console-seeded test accounts until D-010** (Q9): no seeding code to defend, and client code could not write an operator profile under the rules.
+- **Pending citizens may log in** (Q2) and get a waiting home with the anonymous features; activation switches them live.
+- **No expand toggle for anyone** (Q7, Diogo's deviation from the plan's "operators only"): the cards and the detail render only public fields for every role (even now that a citizen's list holds their own tickets and an operator's all), so an expanded card would add only the date; the full views are F-014 and the D-013 panel (I.3.E).
+- **Pending citizens are not gated by the 10 km limit** (review R3-N3): brief I.1's literal reading limits only the non-authenticated user. Cost: once registration (D-010) exists, registering lifts the limit before an operator validates the account. The stricter reading is a one-line change Diogo may still make.
+- **No extra session store** (Q5): Firebase Auth persistence and the Firestore cache already keep the session and profile offline (brief IV); a DataStore copy would be a second source of truth.
+- **Login, Forgot password and Account setup as routes; the code as a step of Login** (Q6), because the resolver is not serialisable.
+- **Rejected:** per-role graphs (crash on an unknown route), a session-driven `startDestination` (resets the graph), a `CompositionLocal` session (hidden dependency), optional MFA, an e-mail one-time code (needs a server), `setAppVerificationDisabledForTesting` (documented for phone sign-in, not MFA).
+
+### Limits to state honestly
+- **Login needs the network**; only an already-cached session works offline.
+- **Rotation while the code is being sent** can lose the Firebase callback (bound to the activity); the 60 s timeout and Resend recover. Not yet observed on a device.
+- **reCAPTCHA on non-Play builds:** debug builds may show a reCAPTCHA page; whether it appears on our AVD is not yet recorded.
+- **One second factor per user:** a lost phone needs a reset in the console; there is no self-service recovery.
+- **MFA is enforced only in the app.** The rules stay undeployed drafts (decision 0012 Q5, amended 2026-11-13), so no server check of `sign_in_second_factor` (or of any role) exists; the database is in test mode until 2026-12-10.
+- **Real SMS cost and the region policy** apply to real numbers only; test numbers send nothing.
+- **The F-011/F-012 stand-in user: done (2026-11-14, `46ee41f`).** It was replaced by the signed-in session (`Session.ticketsUser` -> `TicketsViewModel.setUser`, the creator id from the session, the gate's Log in wired) and removed from `CityFixApplication`. A follow-up slice Diogo approved after the merge, not in the original plan.
+- **An involuntary sign-out** (token revoked, account deleted) bypasses the `logOut` helper, so one frame of the previous user's list (public fields only) can still show before it is cleared.
+- **Pending citizens outside 10 km** can browse the public screens (see options above). System Back still acts on the screen behind the gate (matters only if the gate appears mid-session).
+- **Placeholder screens** for My tickets (F-014), Profile (D-011), Operations panel (D-013), Approvals and Categories (D-012).
+- **A short gap after the second factor:** the session is still the previous state until the profile snapshot arrives (review N7); nothing is visible, but code reacting to login must wait for `SignedIn`.
+- **The verification e-mail is sent once per screen entry**, not once per account (review N4), which can hit the rate limit after several restarts.
+- **Firebase `errorCode` strings** for wrong and expired codes come from the docs and are not yet confirmed in Logcat.
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after every slice and every review round: 0 errors, 18 warnings before the merge and 20 after it (the baseline each time, no new warning).
+- Static checks before each commit: `app/google-services.json` ignored and never staged; no Firebase import outside `data/` and `CityFixApplication.kt`; `Firebase.firestore` only in `CityFixApplication.kt`; no phone number or code in the diff; EN/PT string keys match.
+- **Not run yet (device and console, for Diogo):** the console steps; login per role landing on different homes (including cold start as operator, setup user and pending citizen); wrong / right code at sign-in and enrolment; the verify and reset e-mails arriving; pending -> ACTIVE live switch; airplane-mode cold start; rotation and process death on each step; R2 and R3; PT strings and TalkBack on screen; the gate (anonymous outside 10 km sees it, Log in opens Login, signed-in users are not gated); citizen own + public and operator all tickets, public list after Log out with no stale frame; a new report's `creatorId` equals the citizen's uid. Which AVD (Google Play image or not) and the results go here once run. Rules: not deployed, by decision (0012 Q5). Never write test numbers, codes, UIDs or e-mails here.
+
+### Improvement opportunities
+- A second factor or TOTP as a backup, so a lost phone does not lock the account.
+- Deploy the rules, with the server-side `sign_in_second_factor` check.
+- Clear the tickets on any sign-out inside `TicketsViewModel` (for example from the Auth state itself), so an involuntary sign-out has no stale frame either.
+- Gate pending citizens too, if the stricter reading of brief I.1 is preferred.
+- Deep-link-safe guards (today `RequireAccess` covers the back stack; deep links are not declared).
+- The SplashScreen API instead of the in-app progress gate.
+- SMS Retriever / User Consent API to fill the code automatically.
+- A re-authentication flow for sensitive actions (D-011 password change; `RECENT_LOGIN_REQUIRED`).
+- Send the verification e-mail once per account (remember the last send), and confirm the `errorCode` strings.
+
 ## F-011: Firestore tickets repository and public projection
 Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (reads per audience, stand-in user, flows, counters, seed), [0009](../decisions/0009-tickets-repository.md) and [0010](../decisions/0010-firestore-schema.md) amended. Code: `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `data/DebugSeed.kt`, `CityFixApplication.kt`, `viewmodel/TicketsViewModel(+Factory).kt`, `viewmodel/ReportViewModel(+Factory).kt`, `MainActivity.kt`, `firestore.rules` (`stats` block). Overview: "Firestore repository (F-011)", "Handover (F-011)", "ViewModel (D-003)", "Report form (F-006)".
 
@@ -822,7 +888,7 @@ Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (
 - Deploy and test the security rules (decision 0012 Q5), including the `stats/summary` block.
 - A Cloud Function or scheduled job that recomputes `stats/summary` from the tickets and detects drift.
 - Show the user when a queued offline write is later refused by the server.
-- Real authentication instead of the stand-in (D-009).
+- Real authentication instead of the stand-in (D-009). Done on 2026-11-14 (`46ee41f`).
 - Thumbnails for the public list (F-013).
 - A loading state, so the first frame before the first snapshot does not show "no tickets".
 - Restart a listener after an error (for example when the user reopens the screen or the network returns) instead of waiting for a new collection.
