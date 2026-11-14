@@ -64,8 +64,11 @@ class CityFixApplication : Application() {
     /** Sign-in, MFA and password reset (D-009), built from [auth]. */
     val authRepository: AuthRepository by lazy { FirebaseAuthRepository(auth) }
 
-    /** `users/{uid}` profiles (D-009 reads them), built from [firestore] so the cache settings apply. */
-    val usersRepository: UsersRepository by lazy { FirestoreUsersRepository(firestore) }
+    /**
+     * `users/{uid}` profiles (D-009 reads them, D-010 registers), built from [firestore] so the
+     * cache settings apply, and [auth] for the sign-up.
+     */
+    val usersRepository: UsersRepository by lazy { FirestoreUsersRepository(firestore, auth) }
 
     override fun onCreate() {
         super.onCreate()

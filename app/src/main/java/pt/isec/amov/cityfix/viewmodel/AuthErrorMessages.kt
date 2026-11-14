@@ -5,7 +5,7 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AuthError
 import pt.isec.amov.cityfix.utils.isValidEmail
 
-/** The message for each [AuthError], shared by the login, password reset and account setup screens. */
+/** The message for each [AuthError], shared by the login, password reset, account setup and registration screens. */
 @StringRes
 fun AuthError.messageRes(): Int = when (this) {
     AuthError.INVALID_CREDENTIALS -> R.string.auth_error_invalid_credentials
@@ -17,6 +17,8 @@ fun AuthError.messageRes(): Int = when (this) {
     AuthError.CODE_NOT_SENT -> R.string.auth_error_code_not_sent
     AuthError.INVALID_PHONE_NUMBER -> R.string.setup_error_phone
     AuthError.RECENT_LOGIN_REQUIRED -> R.string.auth_error_recent_login
+    AuthError.EMAIL_IN_USE -> R.string.auth_error_email_in_use
+    AuthError.WEAK_PASSWORD -> R.string.auth_error_weak_password
     AuthError.UNKNOWN -> R.string.auth_error_unknown
 }
 
