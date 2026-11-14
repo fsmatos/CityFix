@@ -56,6 +56,17 @@ val Session.accessRole: AccessRole
 val Session.canReport: Boolean
     get() = accessRole == AccessRole.CITIZEN
 
+/**
+ * The user whose tickets the lists show: the profile of an active citizen or an operator, null
+ * for every other state (anonymous, loading, setup, pending citizen, account problem), which
+ * gets the public tickets only.
+ */
+val Session.ticketsUser: User?
+    get() = when (accessRole) {
+        AccessRole.CITIZEN, AccessRole.OPERATOR -> (this as? Session.SignedIn)?.user
+        else -> null
+    }
+
 /** True for every state with a Firebase account, so Log out is offered. */
 val Session.isSignedIn: Boolean
     get() = this != Session.Loading && this != Session.Anonymous

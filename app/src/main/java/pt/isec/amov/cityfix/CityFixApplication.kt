@@ -22,7 +22,6 @@ import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
-import pt.isec.amov.cityfix.model.User
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -34,17 +33,6 @@ import pt.isec.amov.cityfix.model.User
  */
 class CityFixApplication : Application() {
     val ticketsRepository: TicketsRepository by lazy { FirestoreTicketsRepository(firestore) }
-
-    /**
-     * F-011 stand-in until D-009 (login): null = anonymous. To test another audience, change this
-     * line to Citizen(DEV_CITIZEN_ID, registrationStatus = RegistrationStatus.ACTIVE) or
-     * Operator(DEV_OPERATOR_ID) and rebuild.
-     */
-    val currentUser: User? = null
-
-    /** Reporter id until D-009: the stand-in's id, or DEV_CITIZEN_ID while anonymous. */
-    val reporterId: String
-        get() = currentUser?.id ?: DEV_CITIZEN_ID
 
     /** Copies picked media off the main thread (report form). */
     val attachmentStorage: AttachmentStorage by lazy { AttachmentStorage(this) }
@@ -79,10 +67,5 @@ class CityFixApplication : Application() {
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             DebugSeed.seedIfEmpty(firestore)
         }
-    }
-
-    companion object {
-        const val DEV_CITIZEN_ID = "dev-citizen-1"
-        const val DEV_OPERATOR_ID = "dev-operator-1"
     }
 }
