@@ -576,7 +576,7 @@ Decision: [0009](../decisions/0009-tickets-repository.md) (supersedes in part [0
 - Async copy reopened F-007's limit race (review B1): two media results arriving back to back could exceed 3. Fix: the limit is checked again when each copy returns, against the slots free then; extra copies are deleted with the limit notice; copies returning after a submit are deleted. A `copiesInProgress` counter keeps Submit and the add buttons disabled until the last copy ends. A good example for the defence of how moving work off the main thread turns a synchronous check into a race.
 
 ### Improvement opportunities
-- `FirestoreTicketsRepository` behind the same interface, with listeners instead of `refresh()` (also fixes the two separate locks in `refresh()`, review N2).
+- `FirestoreTicketsRepository` behind the same interface, with listeners instead of `refresh()` (also fixes the two separate locks in `refresh()`, review N2). (Done by F-011.)
 - A separate `CategoriesRepository` (categories per municipality).
 - A `saved` flag in `ReportUiState` consumed by a `LaunchedEffect` instead of the `onSuccess` callback; `onCleared` keyed on "saved" rather than "submitted" (review N4, N7).
 - An `isLoading` state to hide the first empty frame.
@@ -610,6 +610,68 @@ Decision: no new record; [0006](../decisions/0006-anonymous-projection-phase-1.m
 - Strip video location with a remux (`MediaMuxer` or Media3 Transformer), and handle XMP.
 - Real thumbnails (`Attachment.thumbnail`) generated at compression, so the list does not decode full photos (Coil downsamples, but still reads the whole file).
 - A `Log.w` on a failed strip; one KDoc line on `TicketsRepository.reportTicket`; a "Ticket video" description.
+
+## F-010: Firebase setup and Firestore schema
+Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules design), [0012](../decisions/0012-firebase-plan-notifications-close-maps.md) (plan, notifications, 5-day close, maps), [0009](../decisions/0009-tickets-repository.md) amended. Code: `CityFixApplication.kt`, `firestore.rules`, `storage.rules`, `firebase.json`, version catalog, both Gradle files. Overview: "Firebase (F-010)", "Setup", "Handover (F-010)".
+
+**The rules are drafts, checked by reading only** (three review rounds; no Rules Playground, no emulator), and not deployed. The smoke test and the offline check ran on the emulator on 2026-11-10 and passed (online write/read, cache read after restart, offline write synced on reconnect).
+
+### Technical solutions
+- **One Firebase container in `Application`.** `CityFixApplication` holds `auth`, `firestore`, `storage` and `messaging` `by lazy`, next to the repositories: manual DI as `ContactsApp` in Contacts_#3 (decision 0009). No Hilt/Koin: four properties are easier to explain than a DI framework.
+- **Persistent Firestore cache set explicitly** (`persistentCacheSettings { }`, default 100 MB) inside the `lazy` block, so it is applied once and before any other Firestore call (brief IV, offline). It is the Android default, but writing it makes the choice visible for the defence.
+- **Public projection as a separate collection.** Firestore rules secure whole documents, not fields, so anonymous users cannot read a filtered `tickets`. `publicTickets/{id}` holds only whitelisted keys (category, situation, status, coarse location, thumbnails, dates), written only from `toAnonymousView()` in the same batch as the ticket. The rules reject any other key, so author ids, descriptions and exact coordinates cannot get there.
+- **`ticketLocations` for the 10 m grouping.** Citizens cannot read other citizens' tickets, and the public copy has only coarse locations, so a minimal collection (category, situation, exact location, `active`) readable by signed-in active citizens and operators feeds the grouping check.
+- **Grouping enforced in rules as far as rules can.** A citizen joins a ticket only in one batch that writes their own report `tickets/{id}/reports/{uid}` and adds their uid to `followerIds`/`participantIds`; the rule checks (with `getAfter`) that the report has the ticket's category and situation and lies inside an ~11 m bounding box (0.0001 deg latitude, 0.00013 deg longitude at 40.2 N). The exact circle is a client check.
+- **5-day window on server time.** The RESOLVED write sets `resolvedAt` with `FieldValue.serverTimestamp()`, and the rule demands `resolvedAt == request.time`, so no client can backdate it. Reopen (`<= resolvedAt + 5 d`) and close (`> resolvedAt + 5 d`) compare it with the server time of the later write. Found at review round 2: the first version anchored the window on the history entry's client-written `dateTime`, so an operator could skip the citizen's reopen window by sending a backdated entry. A good defence example of "both ends of a time check must be trusted".
+- **Append-only history in rules.** Each status change appends exactly one entry by the caller (`responsibleId` = self, `status` = new `currentStatus`, earlier entries equal via a list slice, `dateTime` not before the previous one and at most 5 minutes ahead of server time). The status must be one of the five `TicketStatus` names and must change. CLOSED locks every write path, Storage uploads included.
+- **Operators prove the domain with a verified e-mail.** `isOperator()` needs `email_verified == true` and an e-mail in `municipality/main.emailDomain`. Review round 1 found that without it anyone could sign up as `x@<domain>` and read every citizen's NIF and phone.
+- **Storage cross-service rules within the documented limit** of two Firestore documents per evaluation: each rule reads the ticket once (and checks `scope == 'PUBLIC'` instead of `exists(publicTickets/...)`) plus the caller's user document.
+
+### Options taken
+- `statusHistory` and `attachments` as **arrays** in the ticket, so `currentStatus` and the history change atomically in one write (decision 0004); a ticket has few entries.
+- `messages` as a **subcollection**: it grows without limit, is read only in the detail and never by anonymous users.
+- **NIF uniqueness** through `nifs/{ROLE}_{nif}` created in the registration transaction together with `users/{uid}`; each rule checks the other (`getAfter`), so a NIF cannot be squatted.
+- **One `municipality/main` document** (name, lowercase `emailDomain`, centre, 10 km radius); it also maps the diagram's `define` and `pertence a`.
+- **Batches offline, transactions only online** (registration, upload worker), because transactions fail without a network and reporting must work offline.
+- **Storage paths without user ids** (`tickets/{ticketId}/{attachmentId}...`), so a public media URL reveals no author.
+- **Media for anonymous users** through cross-service Storage rules on the ticket's scope.
+- `participantIds` (creator + followers) so "my tickets" is one `whereArrayContains` and one rule guards ticket, messages and media.
+- `Long` times and enum names kept (decision 0003); `resolvedAt` is the one `Timestamp`, because only a server timestamp is trusted by rules. `GeoPoint` only in `data/`.
+- **The four Gate decisions** (decision 0012): Blaze with a budget alert (cost guard; Storage is impossible on Spark); no Cloud Functions (no server code in a second language that both authors must defend, no deploy pipeline); 5-day close computed on read; osmdroid (no key, so the ZIP builds and the map renders for the grader). Also: `google-services.json` out of git and copied into the ZIP by hand; test mode until rules are deployed; SMS MFA with test numbers.
+- **Firebase BoM 34.19.0, not 35.1.0:** 35.x libraries carry Kotlin 2.4 metadata, which our Kotlin 2.2.10 compiler cannot read. Upgrading Kotlin would have touched every plugin; stepping the BoM down was the plan's fallback. One accepted lint `GradleDependency` warning.
+
+### Rejected
+- One `tickets` collection with field filtering for anonymous users (rules cannot hide fields).
+- Subcollections for history and attachments (a batch per transition, extra reads).
+- Two merged queries (`creatorId ==`, `followerIds array-contains`) instead of `participantIds`.
+- A free "follow" button (the brief makes grouping automatic, I.2 obs.); grouping only PUBLIC tickets (the brief ignores scope).
+- A Cloud Function for grouping, push, the 24 h warning or the scheduled close; Google `maps-compose` (key in `local.properties`, which the ZIP excludes); Spark; production mode from day one; TOTP MFA.
+
+### Limits to state honestly
+- **Blaze is needed only because of the 2024-2026 Storage pricing change** (default buckets need Blaze since 2024-10-30; Spark lost access on 2026-02-03). A billing account and a budget alert are part of the setup.
+- **Notifications without a server work only while some client runs** (the app or its WorkManager worker); the 24 h warning is scheduled locally.
+- **The 5-day close is computed on read**, not by a server: the ticket shows as CLOSED at once, but the CLOSED write happens when the first client sees it.
+- **Not enforceable in rules:** the exact 10 m circle (bounding box only, rules have no trigonometry); the truth of the reported location (a citizen could copy a ticket's location from `ticketLocations` and join any ticket, PRIVATE included, which follows from the brief's automatic grouping); edits of existing attachment entries (rules cannot loop over lists); `coarseLocation` rounding; video metadata stripping (F-013).
+- **The 10 km anonymous radius is checked on the client only** (anonymous requests carry no location).
+- **An offline RESOLVED gets the sync time as `resolvedAt`**, not the tap time; the history entry keeps the device time, so the two can differ. A device clock more than 5 minutes fast cannot write status changes.
+- **Signed-in active citizens can read exact locations, category and situation of every ticket** through `ticketLocations` (no author, description or media). Accepted for Option A.
+- **`google-services.json` is handled outside git** and copied into the ZIP by hand.
+- **The rules are drafted but not deployed (decision 0012 Q5, amended 2026-11-13).** They were checked by reading only, never run in the Rules Playground or the emulator. The database runs in test mode (expires 2026-12-10), open to anyone with the project config, so the privacy and lifecycle rules hold only in the app code. Chosen because this is a school project that will not reach production; deploying the drafted rules is the first improvement for a real deployment.
+- **Smoke test only:** the offline check proved the cache with one test document; real offline flows (reporting with no network, the upload worker) are tested in F-011/F-013.
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and every review round: BUILD SUCCESSFUL, 0 errors, 17 warnings (16 before plus `GradleDependency` for `firebase-bom`).
+- `git check-ignore -v app/google-services.json` matches `.gitignore`; the file was never staged or committed; no key or project id in the diff.
+- Three review rounds on the rules (one blocker, then one should-fix per round, all fixed); syntax checked against the rules reference by reading.
+
+### Improvement opportunities
+- **Cloud Functions** for push on status change, the 24 h warning and the scheduled close (and server-side grouping with the exact circle).
+- **App Check**, so only the real app can use the project config.
+- **Rules unit tests with the Firebase Emulator Suite** (`@firebase/rules-unit-testing`), covering each allow/deny case the reviews traced by hand.
+- **Geohash queries** for the 10 m grouping instead of loading `ticketLocations`.
+- Upgrade Kotlin to 2.4 and the Firebase BoM to 35.x together.
+- `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011). (Done by F-011: counters, decision 0013.)
+- A note in the `CityFixApplication` KDoc that `Firebase.firestore` must never be called directly (review N6), and the remaining round-1 nits (key whitelists per role, active category and at least one attachment on ticket create).
 
 ## D-007: Anonymous projection and expand toggle
 Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 2026-11-10 (closes F-005 review S4 and the list/detail consistency point of [0007](../decisions/0007-ticket-detail-by-audience.md)). Code: `model/TicketPrivacy.kt`, `ui/navigation/MainTopAppBar.kt`, `MainActivity.kt`. Overview: "ViewModel (D-003)", "Top bar (D-005)", "App shell (D-006)".
@@ -655,7 +717,7 @@ Decision: [0006](../decisions/0006-anonymous-projection-phase-1.md), amended 202
 - One KDoc line on `Ticket.currentStatus` saying projected tickets keep it without a history (review N2). (Done by D-008.)
 
 ## D-008: Ticket lifecycle rules
-Decision: [0012](../decisions/0012-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
+Decision: [0011](../decisions/0011-ticket-lifecycle-rules.md) (builds on [0004](../decisions/0004-denormalised-current-status.md) and [0006](../decisions/0006-anonymous-projection-phase-1.md)). Code: `model/TicketLifecycle.kt`, `model/AttachmentPhase.kt`, `model/Attachment.kt`. Overview: "Lifecycle (D-008)".
 
 **Brief status (updated 2026-11-11).** The brief PDF could not be opened in the D-008 sessions; the rules came from the task files. The brief section I text Diogo pasted in D-009 now checks I.3.E ("pedido de dados" is an operator action; resolving needs "carregamento de foto/vídeo do trabalho concluído") and I.2.E (reopening among the citizen's own tickets, "se dentro de 5 dias após conclusão"); the I.2 Obs ("acompanham") supports followers reopening as a reading, not literally. Sections II, II.2 and III (automatic close after 5 days, lock, information requests, 24 h warning) are still not checked: check them in the PDF before writing them into the report as the brief's wording.
 
@@ -688,7 +750,7 @@ OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5
 ### Options chosen and rejected (Gate 1, 2026-11-11)
 - Q2: creator and followers may reopen (Option A); rejected creator only.
 - Q5: `allowedTransitions(by, now)`; rejected the task's static `allowedTransitions(status, role)`.
-- Q6: `AttachmentPhase` added in D-008 (decision 0012), F-010 reuses it; rejected waiting for F-010 or a predicate parameter.
+- Q6: `AttachmentPhase` added in D-008 (decision 0011), F-010 reuses it; rejected waiting for F-010 or a predicate parameter.
 - Q7: `Ticket?`; rejected throwing with `require`.
 - Q8: proof as a parameter of the RESOLVED transition; rejected "the ticket has any RESOLUTION attachment".
 - Q9: no committed tests; Q10: no new sample tickets (previews use a fixed `t0`).
@@ -710,70 +772,8 @@ OPEN --op--> INFO_REQUESTED <--op--> IN_PROGRESS --op--> RESOLVED --citizen, < 5
 - No automated tests by project choice; the pure functions would be easy to cover with JUnit.
 - A `PublicTicket` type and a sealed result type (instead of `null`) would let the compiler enforce more, and tell the UI why a move was refused.
 
-## F-010: Firebase setup and Firestore schema
-Decisions: [0010](../decisions/0010-firestore-schema.md) (layout and rules design), [0011](../decisions/0011-firebase-plan-notifications-close-maps.md) (plan, notifications, 5-day close, maps), [0009](../decisions/0009-tickets-repository.md) amended. Code: `CityFixApplication.kt`, `firestore.rules`, `storage.rules`, `firebase.json`, version catalog, both Gradle files. Overview: "Firebase (F-010)", "Setup", "Handover (F-010)".
-
-**The rules are drafts, checked by reading only** (three review rounds; no Rules Playground, no emulator), and not deployed. The smoke test and the offline check ran on the emulator on 2026-11-10 and passed (online write/read, cache read after restart, offline write synced on reconnect).
-
-### Technical solutions
-- **One Firebase container in `Application`.** `CityFixApplication` holds `auth`, `firestore`, `storage` and `messaging` `by lazy`, next to the repositories: manual DI as `ContactsApp` in Contacts_#3 (decision 0009). No Hilt/Koin: four properties are easier to explain than a DI framework.
-- **Persistent Firestore cache set explicitly** (`persistentCacheSettings { }`, default 100 MB) inside the `lazy` block, so it is applied once and before any other Firestore call (brief IV, offline). It is the Android default, but writing it makes the choice visible for the defence.
-- **Public projection as a separate collection.** Firestore rules secure whole documents, not fields, so anonymous users cannot read a filtered `tickets`. `publicTickets/{id}` holds only whitelisted keys (category, situation, status, coarse location, thumbnails, dates), written only from `toAnonymousView()` in the same batch as the ticket. The rules reject any other key, so author ids, descriptions and exact coordinates cannot get there.
-- **`ticketLocations` for the 10 m grouping.** Citizens cannot read other citizens' tickets, and the public copy has only coarse locations, so a minimal collection (category, situation, exact location, `active`) readable by signed-in active citizens and operators feeds the grouping check.
-- **Grouping enforced in rules as far as rules can.** A citizen joins a ticket only in one batch that writes their own report `tickets/{id}/reports/{uid}` and adds their uid to `followerIds`/`participantIds`; the rule checks (with `getAfter`) that the report has the ticket's category and situation and lies inside an ~11 m bounding box (0.0001 deg latitude, 0.00013 deg longitude at 40.2 N). The exact circle is a client check.
-- **5-day window on server time.** The RESOLVED write sets `resolvedAt` with `FieldValue.serverTimestamp()`, and the rule demands `resolvedAt == request.time`, so no client can backdate it. Reopen (`<= resolvedAt + 5 d`) and close (`> resolvedAt + 5 d`) compare it with the server time of the later write. Found at review round 2: the first version anchored the window on the history entry's client-written `dateTime`, so an operator could skip the citizen's reopen window by sending a backdated entry. A good defence example of "both ends of a time check must be trusted".
-- **Append-only history in rules.** Each status change appends exactly one entry by the caller (`responsibleId` = self, `status` = new `currentStatus`, earlier entries equal via a list slice, `dateTime` not before the previous one and at most 5 minutes ahead of server time). The status must be one of the five `TicketStatus` names and must change. CLOSED locks every write path, Storage uploads included.
-- **Operators prove the domain with a verified e-mail.** `isOperator()` needs `email_verified == true` and an e-mail in `municipality/main.emailDomain`. Review round 1 found that without it anyone could sign up as `x@<domain>` and read every citizen's NIF and phone.
-- **Storage cross-service rules within the documented limit** of two Firestore documents per evaluation: each rule reads the ticket once (and checks `scope == 'PUBLIC'` instead of `exists(publicTickets/...)`) plus the caller's user document.
-
-### Options taken
-- `statusHistory` and `attachments` as **arrays** in the ticket, so `currentStatus` and the history change atomically in one write (decision 0004); a ticket has few entries.
-- `messages` as a **subcollection**: it grows without limit, is read only in the detail and never by anonymous users.
-- **NIF uniqueness** through `nifs/{ROLE}_{nif}` created in the registration transaction together with `users/{uid}`; each rule checks the other (`getAfter`), so a NIF cannot be squatted.
-- **One `municipality/main` document** (name, lowercase `emailDomain`, centre, 10 km radius); it also maps the diagram's `define` and `pertence a`.
-- **Batches offline, transactions only online** (registration, upload worker), because transactions fail without a network and reporting must work offline.
-- **Storage paths without user ids** (`tickets/{ticketId}/{attachmentId}...`), so a public media URL reveals no author.
-- **Media for anonymous users** through cross-service Storage rules on the ticket's scope.
-- `participantIds` (creator + followers) so "my tickets" is one `whereArrayContains` and one rule guards ticket, messages and media.
-- `Long` times and enum names kept (decision 0003); `resolvedAt` is the one `Timestamp`, because only a server timestamp is trusted by rules. `GeoPoint` only in `data/`.
-- **The four Gate decisions** (decision 0011): Blaze with a budget alert (cost guard; Storage is impossible on Spark); no Cloud Functions (no server code in a second language that both authors must defend, no deploy pipeline); 5-day close computed on read; osmdroid (no key, so the ZIP builds and the map renders for the grader). Also: `google-services.json` out of git and copied into the ZIP by hand; test mode until rules are deployed; SMS MFA with test numbers.
-- **Firebase BoM 34.19.0, not 35.1.0:** 35.x libraries carry Kotlin 2.4 metadata, which our Kotlin 2.2.10 compiler cannot read. Upgrading Kotlin would have touched every plugin; stepping the BoM down was the plan's fallback. One accepted lint `GradleDependency` warning.
-
-### Rejected
-- One `tickets` collection with field filtering for anonymous users (rules cannot hide fields).
-- Subcollections for history and attachments (a batch per transition, extra reads).
-- Two merged queries (`creatorId ==`, `followerIds array-contains`) instead of `participantIds`.
-- A free "follow" button (the brief makes grouping automatic, I.2 obs.); grouping only PUBLIC tickets (the brief ignores scope).
-- A Cloud Function for grouping, push, the 24 h warning or the scheduled close; Google `maps-compose` (key in `local.properties`, which the ZIP excludes); Spark; production mode from day one; TOTP MFA.
-
-### Limits to state honestly
-- **Blaze is needed only because of the 2024-2026 Storage pricing change** (default buckets need Blaze since 2024-10-30; Spark lost access on 2026-02-03). A billing account and a budget alert are part of the setup.
-- **Notifications without a server work only while some client runs** (the app or its WorkManager worker); the 24 h warning is scheduled locally.
-- **The 5-day close is computed on read**, not by a server: the ticket shows as CLOSED at once, but the CLOSED write happens when the first client sees it.
-- **Not enforceable in rules:** the exact 10 m circle (bounding box only, rules have no trigonometry); the truth of the reported location (a citizen could copy a ticket's location from `ticketLocations` and join any ticket, PRIVATE included, which follows from the brief's automatic grouping); the order of operator transitions (D-008's state machine); edits of existing attachment entries (rules cannot loop over lists); `coarseLocation` rounding; video metadata stripping (F-013).
-- **The 10 km anonymous radius is checked on the client only** (anonymous requests carry no location).
-- **An offline RESOLVED gets the sync time as `resolvedAt`**, not the tap time; the history entry keeps the device time, so the two can differ. A device clock more than 5 minutes fast cannot write status changes.
-- **Signed-in active citizens can read exact locations, category and situation of every ticket** through `ticketLocations` (no author, description or media). Accepted for Option A.
-- **`google-services.json` is handled outside git** and copied into the ZIP by hand.
-- **The rules were drafted on 2026-11-10 and deployed on <date> (fill in later).** They were checked by reading only; they have not been run in the Rules Playground or the emulator yet. Until the deploy, the test-mode database is open to anyone with the project config (expires 2026-12-10).
-- **Smoke test only:** the offline check proved the cache with one test document; real offline flows (reporting with no network, the upload worker) are tested in F-011/F-013.
-
-### Verification
-- `./gradlew assembleDebug lint` after every slice and every review round: BUILD SUCCESSFUL, 0 errors, 17 warnings (16 before plus `GradleDependency` for `firebase-bom`).
-- `git check-ignore -v app/google-services.json` matches `.gitignore`; the file was never staged or committed; no key or project id in the diff.
-- Three review rounds on the rules (one blocker, then one should-fix per round, all fixed); syntax checked against the rules reference by reading.
-
-### Improvement opportunities
-- **Cloud Functions** for push on status change, the 24 h warning and the scheduled close (and server-side grouping with the exact circle).
-- **App Check**, so only the real app can use the project config.
-- **Rules unit tests with the Firebase Emulator Suite** (`@firebase/rules-unit-testing`), covering each allow/deny case the reviews traced by hand.
-- **Geohash queries** for the 10 m grouping instead of loading `ticketLocations`.
-- Upgrade Kotlin to 2.4 and the Firebase BoM to 35.x together.
-- `stats/summary` counters (or `count()` aggregations the rules allow) for the anonymous dashboard (F-011).
-- A note in the `CityFixApplication` KDoc that `Firebase.firestore` must never be called directly (review N6), and the remaining round-1 nits (key whitelists per role, active category and at least one attachment on ticket create).
-
 ## D-009: Login, MFA, password recovery and role navigation
-Decision: [0013](../decisions/0013-session-role-navigation-mfa.md) (also amends [0006](../decisions/0006-anonymous-projection-phase-1.md) on `canExpandCards`). Code: `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `viewmodel/Session.kt`, `viewmodel/SessionViewModel.kt`, the Login / Forgot password / Account setup ViewModels, `ui/navigation/RoleAccess.kt`, the new screens, `MainActivity.kt`. Overview: "Auth and session (D-009)", "Roles", "Handover (D-009)".
+Decision: [0015](../decisions/0015-session-role-navigation-mfa.md) (also amends [0006](../decisions/0006-anonymous-projection-phase-1.md) on `canExpandCards`). Code: `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `viewmodel/Session.kt`, `viewmodel/SessionViewModel.kt`, the Login / Forgot password / Account setup ViewModels, `ui/navigation/RoleAccess.kt`, the new screens, `MainActivity.kt`. Overview: "Auth and session (D-009)", "Roles", "Handover (D-009)".
 
 Brief (section I text pasted by Diogo; the PDF itself was unreadable in the session): I.2.B and I.3.B ask for "e-mail/password, com duplo fator (MFA) e recuperação de credenciais por e-mail" for both the registered citizen and the operator; I.1.B and I.2.D define what the public list shows and that citizens keep the anonymous features; I.2.A leaves a citizen "pendente até validação"; I.3.E puts the operator's full view in the "Painel de Gestão Operacional".
 
@@ -792,7 +792,7 @@ Brief (section I text pasted by Diogo; the PDF itself was unreadable in the sess
 - **Structured concurrency kept in the repository.** Every `catch (e: Exception)` around `await()` first rethrows `CancellationException` (review S3), so closing a screen cancels the call instead of turning it into an error.
 
 ### Options chosen and why (Gate 1, 2026-11-11)
-- **SMS with console test numbers, not TOTP** (decision 0011): no authenticator app at the defence, no SMS cost, fixed codes.
+- **SMS with console test numbers, not TOTP** (decision 0012): no authenticator app at the defence, no SMS cost, fixed codes.
 - **MFA mandatory for both roles** (Q1; I.2.B, I.3.B): enrolment happens in D-009's Account setup after the first login (verify e-mail, phone, code).
 - **Console-seeded test accounts until D-010** (Q9): no seeding code to defend, and client code could not write an operator profile under the rules.
 - **Pending citizens may log in** (Q2) and get a waiting home with the anonymous features; activation switches them live.
@@ -808,6 +808,7 @@ Brief (section I text pasted by Diogo; the PDF itself was unreadable in the sess
 - **One second factor per user:** a lost phone needs a reset in the console; there is no self-service recovery.
 - **MFA is enforced only in the client** until the Firestore/Storage rules check `sign_in_second_factor` (planned for the deploy, with Diogo's OK).
 - **Real SMS cost and the region policy** apply to real numbers only; test numbers send nothing.
+- **The F-011/F-012 stand-in user is still wired in.** The tickets list, the report form and the grouping still read the hand-edited `currentUser` in `CityFixApplication` (decision 0013); replacing it with the signed-in user from the session (`TicketsViewModel.setUser`, the seam F-011 left) is a follow-up commit after this merge (pending).
 - **Placeholder screens** for My tickets (F-014), Profile (D-011), Operations panel (D-013), Approvals and Categories (D-012).
 - **A short gap after the second factor:** the session is still the previous state until the profile snapshot arrives (review N7); nothing is visible, but code reacting to login must wait for `SignedIn`.
 - **The verification e-mail is sent once per screen entry**, not once per account (review N4), which can hit the rate limit after several restarts.
@@ -826,3 +827,112 @@ Brief (section I text pasted by Diogo; the PDF itself was unreadable in the sess
 - SMS Retriever / User Consent API to fill the code automatically.
 - A re-authentication flow for sensitive actions (D-011 password change; `RECENT_LOGIN_REQUIRED`).
 - Send the verification e-mail once per account (remember the last send), and confirm the `errorCode` strings.
+
+## F-011: Firestore tickets repository and public projection
+Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (reads per audience, stand-in user, flows, counters, seed), [0009](../decisions/0009-tickets-repository.md) and [0010](../decisions/0010-firestore-schema.md) amended. Code: `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `data/DebugSeed.kt`, `CityFixApplication.kt`, `viewmodel/TicketsViewModel(+Factory).kt`, `viewmodel/ReportViewModel(+Factory).kt`, `MainActivity.kt`, `firestore.rules` (`stats` block). Overview: "Firestore repository (F-011)", "Handover (F-011)", "ViewModel (D-003)", "Report form (F-006)".
+
+**The device checks D1-D10 have not run yet** (no device attached). Build and lint pass (0 errors, 18 warnings, all from before F-011); the review read the code and approved with two should-fix items, both applied.
+
+### Technical solutions
+- **Offline-first writes.** A report is one batched write (`tickets`, `ticketLocations`, `publicTickets` for PUBLIC, and the `stats/summary` counters). The Firestore cache queues batches offline, while transactions fail without a network, so no transaction is used. `commit()` is not awaited: it completes only when the server acknowledges, so awaiting it offline would keep the form open. The form closes at once and the snapshot listener shows the ticket from the local cache; the batch reaches the server when the network returns. The new id comes from `collection("tickets").document()`, which is created locally.
+- **Privacy by collection, not by field.** Firestore rules cannot hide fields in a document, so anonymous users read a separate collection, `publicTickets`. One function builds it: `toPublicTicketDocument()` calls `toAnonymousView()` first and copies 7 keys (category id and name, situation, status, coarse location about 1 km, thumbnails, created time). The anonymous code path never queries `tickets` or `ticketLocations`, so the privacy rule holds in the repository layer (`.claude/rules/kotlin.md`), not only in the UI.
+- **Reads per audience.** Anonymous: active `publicTickets`. Citizen: their own full tickets (`participantIds` array-contains their id) combined with the public ones; the full copy wins. Operator: every ticket. The audience is the type of the sealed `User` (no role enum), with `null` for anonymous.
+- **Dashboard without a server.** Anonymous users cannot read private tickets, but the dashboard counts them (decision 0005). So four counters live in `stats/summary` and change in the same atomic batch as the ticket, with `FieldValue.increment`. The increment is computed by the existing pure rule: `statsIncrements(before, after)` = `stats(after) - stats(before)` on one-ticket lists, so the definitions of "active" and "repair time" exist once. Increments work offline (they queue) and two devices writing at once do not overwrite each other.
+- **Live data.** Snapshot listeners wrapped in `callbackFlow { ... awaitClose { registration.remove() } }`, collected in `viewModelScope`. Listeners survive rotation with the ViewModel and are removed when it is cleared, with no `onCleared` bookkeeping. A report on one device appears on another without a refresh, so `refresh()` is gone.
+- **Listener errors.** On a listener error Firestore stops that listener; the error is logged and the flow is not closed, so the collector never throws. The flow sends nothing more and the ViewModel keeps the last list until the flow is collected again.
+- **No composite indexes.** Every query is single-field (`whereIn`, `whereArrayContains`, `whereEqualTo`); the newest-first sort runs on the client with the existing `TicketsList` order.
+- **Manual mapping as in class.** Documents are `hashMapOf`, read back with the typed getters and the model default (`getString(...) ?: ""`, as in the T8 demo). `toObject()` was not used: field names differ from the model, and `GeoPoint` is not `Coordinates`.
+- **Clearing on user change** (review S1). `setUser` clears the list before starting the new listener, so after a sign-out (D-009) an anonymous user never sees the previous user's full tickets, even offline with an empty cache.
+
+### Class material vs beyond class
+- **From class:** one Firestore instance (`getInstance()` in class, `app.firestore` with the cache settings here), `set`/`get` with success and failure listeners, typed getters like `doc.getString`, and `db.batch()` + `commit()` (T8 demo "clear all", 09_Storage); `Flow`, `collect` and ViewModel-owned `MutableStateFlow` + `asStateFlow()` (08, P08).
+- **Beyond class, accepted at Gate 1:** `addSnapshotListener` (live updates and offline cache on every change), `callbackFlow`/`awaitClose` (the listener as a `Flow`, removed when the collector is cancelled, which is the 08 slide "cancelling the collector aborts the emitter"), `combine` (the citizen's two lists), `FieldValue.increment` with `SetOptions.merge()` (counters).
+
+### Options chosen and rejected (Gate 1, 2026-11-13)
+- Q1: a `currentUser: User?` stand-in in `CityFixApplication` (edited by hand) and `TicketsViewModel.setUser` as D-009's seam; rejected a debug "View as" menu and waiting for D-009.
+- Q2: `callbackFlow`; rejected callbacks returning a `Subscription` handle (closer to class, more bookkeeping).
+- Q3: counters in `stats/summary`; rejected stats over `publicTickets` only (leaves out private tickets), an operator's device recomputing the counters (stale when no operator app runs), and `count()`/`average()` aggregations (server only, no offline).
+- Q4: `LocalTicketsRepository` deleted; nothing else used it.
+- Q5: debug-only seed of categories and tickets, so a resolved ticket exists for the repair time before D-013; removed before delivery.
+- Q6: `ticketLocations` written now, (0, 0) until F-012.
+- Q7: draft rules for `stats/summary`, not deployed.
+- After Gate 1 the person switched the readers from casts to the typed getters (the class style), and removed a guard that skipped wrong-typed documents: such a field can only come from a hand edit in the console.
+
+### Known limits
+- Device checks D1-D10 not run yet.
+- Thumbnails are empty in the anonymous list until F-013 uploads the media; other devices show the card placeholder.
+- Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database.
+- `DebugSeed` must be removed before delivery (D-015 checklist).
+- The `currentUser` seam is temporary; D-009 replaces it with the signed-in user.
+- A write the server later refuses (only once rules are deployed, or after the test mode ends on 2026-12-10) is only logged, not shown.
+- Counters drift if a future write path forgets `statsIncrements` (D-013 and F-014 must add it). Repair: recompute the four counters by hand from `tickets/` in the console.
+- With an empty cache and no network at first install, the lists, dashboard and categories are empty.
+- `toTicket()` does not read `resolvedAt` yet; the model uses the RESOLVED history entry (D-013/F-014 decide).
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and after the review fixes: 0 errors, 18 warnings (17 after F-010 plus one newer-version check, none in the F-011 files).
+- Greps: no `LocalTicketsRepository`, `loadPublicTickets`, `loadStats` or `refresh()` left; `toAnonymousView()` is called in `data/` only by `toPublicTicketDocument()`.
+- Review: the anonymous path reads only `publicTickets`, `stats/summary` and `categories`; the report batch matches decision 0010; the counters keep decision 0005's meaning; listeners are removed by `awaitClose`.
+
+### Improvement opportunities
+- Deploy and test the security rules (decision 0012 Q5), including the `stats/summary` block.
+- A Cloud Function or scheduled job that recomputes `stats/summary` from the tickets and detects drift.
+- Show the user when a queued offline write is later refused by the server.
+- Real authentication instead of the stand-in (D-009).
+- Thumbnails for the public list (F-013).
+- A loading state, so the first frame before the first snapshot does not show "no tickets".
+- Restart a listener after an error (for example when the user reopens the screen or the network returns) instead of waiting for a new collection.
+
+## F-012: Location, anonymous gate, 10 m grouping and map
+Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002](../decisions/0002-grouped-reports-single-ticket.md), [0010](../decisions/0010-firestore-schema.md), [0012](../decisions/0012-firebase-plan-notifications-close-maps.md) Q6). Code: `data/LocationRepository.kt`, `model/AnonymousArea.kt`, `utils/LocationPermissions.kt`, `viewmodel/LocationGateViewModel.kt`, `ui/screens/LocationGateScreen.kt`, `ui/components/TicketMap.kt`, `CoarseLocationMap.kt`, `LocationDeniedMessage.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `viewmodel/ReportViewModel.kt`, `ui/screens/ReportScreen.kt`, `MainActivity.kt`. Overview: "Location, gate and grouping (F-012)", "Handover (F-012)".
+
+**The device checks D1-D14 and D10b have not run yet** (no device or emulator), and the real Maps key is not pasted yet. Build passes; lint 0 errors, 21 warnings, none from F-012 code. The review approved with one should-fix (precise location in the form), applied with three nits.
+
+### Technical solutions
+- **One GPS fix.** `LocationRepository.currentLocation()` calls `FusedLocationProviderClient.getCurrentLocation(PRIORITY_HIGH_ACCURACY, null).await()` and returns `Coordinates?` (`null` = no permission or no fix). A report and the gate each need one position, so there are no continuous updates. The function checks the permission itself, so it cannot throw `SecurityException`.
+- **Permission at app start, as in class.** `MainActivity` requests FINE and COARSE with `RequestMultiplePermissions` from `LaunchedEffect(Unit)`. A denial never crashes: the gate and the form show a message with "Try again" and "Open settings" (the only way back after "don't ask again").
+- **The 10 km gate (brief I.1).** A pure rule in `model/` (`isInsideAnonymousArea`, Haversine to Pr. Republica, at most 10 000 m) and a small ViewModel with five states (checking, denied, no fix, outside, inside). `MainActivity` shows the gate instead of the app for anonymous users who are not inside. It is a client check only: security rules cannot know where the phone is (decision 0010). It runs at start and on "Try again".
+- **Precise location for reports.** On Android 12+ the user can grant "Approximate"; that fix is about 2 km off and snapped to a grid, so two unrelated reports in the same cell would get the same point and group (found in review, S1). The form asks for precise location and has its own message; the gate accepts either, because 10 km is far larger than the error.
+- **Grouping without geo queries (brief I.2 Obs.).** Firestore filters `ticketLocations` by category, situation and `active` (three equality filters, no composite index); the 10 m Haversine test (`findNearby`, D-002) runs in the app over those few documents, nearest wins. Offline the query answers from the local cache.
+- **Why `ticketLocations` exists.** Citizens cannot read other people's tickets, and `publicTickets` has only coarse locations, so the grouping reads a small collection with category, situation, exact location and `active`. Signed-in citizens can therefore see where every ticket is, but not who reported it, its description or its media (decision 0010).
+- **Joining a ticket.** A match first checks the reporter's own tickets (`participantIds`): if they already created or follow it, nothing is written ("You already follow this issue nearby"). Otherwise one batch writes their report to `tickets/{id}/reports/{uid}` and adds their uid with `FieldValue.arrayUnion` to `followerIds` and `participantIds`. The form shows one message per outcome (`ReportOutcome`: created, joined, already following).
+- **Scope and the joiner's media (the authors' reading).** The brief groups by category/situation and 10 m only and says nothing about PUBLIC/PRIVATE. Grouping ignores scope, so a PRIVATE report can join a PUBLIC ticket, whose photos anonymous users see (brief I.1.C). So the joiner's description and photos stay in their own `reports/{uid}` document, readable only by them and operators; the shared ticket gains only the follower.
+- **`active` follows `isActive`.** `ticketLocations.active` is true only for OPEN, INFO_REQUESTED and IN_PROGRESS, so a report next to a RESOLVED ticket creates a new one (decision 0005).
+- **The anonymous map never shows the exact place.** `publicTickets` stores the location rounded to 2 decimals (decision 0006). The map shows a 750 m circle (the rounding can move a point by up to about 700 m) at zoom 14, with no marker and every gesture off, so it cannot be zoomed in. No coordinates as text.
+- **Google Maps with the key in the manifest.** `maps-compose` 6.1.0, `GoogleMap` + `rememberCameraPositionState`, as in class. The key is the `com.google.android.geo.API_KEY` meta-data, so it is in the ZIP and the grader's build shows the map.
+
+### Class material vs beyond class
+- **As in Contacts_#3 / P10:** `play-services-location` 21.3.0 and the `FusedLocationProviderClient`; FINE + COARSE requested at start in `MainActivity` with `LaunchedEffect(Unit)` + `RequestMultiplePermissions`; `maps-compose` 6.1.0 with the key in the manifest; `GoogleMap` with a `Marker` at zoom 15 (our exact map, for operators); `checkSelfPermission` (class 02).
+- **Beyond class:** one-shot `getCurrentLocation` with `await()` (the class uses continuous `requestLocationUpdates` in `ProximityService`); the 10 km gate; the coarse map with `MapUiSettings` gestures off and a `Circle` instead of a marker; "Open settings" after "don't ask again"; the grouping query plus the pure `findNearby`; `FieldValue.arrayUnion`.
+
+### Options chosen and rejected
+- Gate 1 (2026-11-14): Q1 centre and radius as code constants (rejected: reading `municipality/main`, which does not exist and adds a listener and offline cases); Q2 check at start and on Try again (rejected: on every resume, continuous updates); Q3 "Log in" hidden until D-009; Q4 fix taken when the form opens and on Refresh (rejected: at the Submit tap, which makes Submit wait for GPS); Q5 joiner media in `reports/{uid}`; Q6 `active = isActive`; Q7 reporter's own coordinates shown with 5 decimals; Q8 play-services-location 21.3.0 (class version, not 21.4.0); Q9 zoom 14, circle (600 m, later 750 m), no gestures.
+- Q5 alternatives rejected: appending the joiner's media to the shared ticket (publishes private photos); appending except PRIVATE-into-PUBLIC (needs scope in `ticketLocations` and a second rule); grouping only same-scope reports (a condition the brief does not have, two tickets for one problem).
+- Query alternatives rejected: geohash (a new field and hand code or a library) and a latitude/longitude bounding box (range filters on two fields need a composite index). With only active tickets of one category and situation the candidate list is small.
+- Changed by the person after Gate 1, to follow the class practical: Google Maps Compose instead of osmdroid (no key, but archived in Nov 2024, a View library in `AndroidView`, and not what the class uses); the key in the manifest instead of `local.properties` (the ZIP excludes it); the permission requested at start instead of a rationale panel at the point of use. Also no try/catch around the grouping query (Firestore answers from the cache offline).
+- Review: precise location required in the form (S1), the dead denied error removed (N2), circle 600 -> 750 m (N3), the gate's ineffective vertical centring removed (N4). N1 (relaunch on rotation) skipped: same as Contacts_#3.
+
+### Known limits
+- Device checks D1-D14 and D10b, and the "grant Approximate, open the form" check, not run yet (no device).
+- The real Maps key is not pasted yet: until then the map shows grey tiles. The ZIP must contain the real key, and the key must not have an Android-app (package + SHA-1) restriction, because the grader's build is signed with a different debug key and the map would be blank. Anyone with the ZIP can use the key; an API restriction (Maps SDK for Android only) and the billing budget alert limit the cost.
+- Offline, the grouping sees only tickets in the local cache: a report next to a ticket this device never loaded creates a second ticket. Two citizens reporting the same spot offline at the same time also make two tickets.
+- Users who grant only approximate location cannot submit reports (they can still use the app as anonymous users).
+- A rotation re-asks the permission, as in class; Android answers at once when already granted. A rotation while the first dialog is open can show "denied" for a moment.
+- Without a try/catch, a failing grouping query (for example once rules are deployed) would crash the app instead of keeping the form open.
+- Other followers do not see a joiner's description or photos; only the joiner and operators can.
+- GPS accuracy (about 3-10 m) is of the same order as the 10 m rule, so two reports of the same problem can miss each other, or two close problems can group.
+
+### Verification
+- `./gradlew assembleDebug lint` after every slice and after the review fixes: 0 errors; 21 warnings at the end (the F-012 additions are the accepted newer-version warnings for play-services-location and maps-compose).
+- The merged manifest was checked in slice 1, while osmdroid was in (it added no storage permissions).
+- Review: gate maths and constants, anonymous privacy (map coarse, no coordinates text, `publicTickets` rounded), the grouping query and join batch, the outcome per case, denial without a crash, MVVM split, EN + PT strings.
+
+### Improvement opportunities
+- Re-check the gate on resume or with location updates, so leaving the area during use is noticed.
+- A map of all public issues for anonymous users, with clustered coarse circles.
+- Server-side grouping (a Cloud Function) to avoid duplicate tickets created offline.
+- Read the centre and radius from `municipality/main` once several municipalities exist.
+- Geohash queries if the number of tickets grows.
+- Show the joiner's reports (description, media) to the other participants, with the joiner's consent for private ones.
+- A rationale screen before the system dialog, and asking for location at the point of use.
+- Ask once per process (`rememberSaveable` flag) so a rotation does not re-ask.

@@ -58,5 +58,7 @@ dependencies {
     implementation(libs.firebase.storage)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.core)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.location)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

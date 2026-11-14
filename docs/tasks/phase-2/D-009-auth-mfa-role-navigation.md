@@ -40,7 +40,7 @@ Status of the checks (2026-11-11): none ticked, because each needs the device or
 - PT strings, TalkBack labels, keyboard Next on Login, `enrolledFactors` after enrolment;
 - after the rules deploy (with Diogo's OK): the test users still work.
 
-Decision: [0013](../../decisions/0013-session-role-navigation-mfa.md). Work item: `docs/work/D-009-auth-mfa-role-navigation/`.
+Decision: [0015](../../decisions/0015-session-role-navigation-mfa.md). Work item: `docs/work/D-009-auth-mfa-role-navigation/`.
 
 ## References
 Brief I, I.2.B, I.3.B, IV, V; decision 0010.

@@ -50,13 +50,13 @@ Merge `origin/main` into your dev branch at least once a day in this phase, and 
 3. **Closing after 5 days:** computed on read (a RESOLVED ticket older than 5 days counts as CLOSED and is locked) plus a write when a user or worker sees it, or a Cloud Function on Blaze.
 4. **Maps:** the class example uses Google `maps-compose` (needs a Maps API key: ask before adding keys) or OSMDroid (no key).
 
-**Answers (F-010 Gate 1, 2026-11-10, both authors; [decision 0011](../../decisions/0011-firebase-plan-notifications-close-maps.md)):**
+**Answers (F-010 Gate 1, 2026-11-10, both authors; [decision 0012](../../decisions/0012-firebase-plan-notifications-close-maps.md)):**
 1. **Blaze with a budget alert** (for example 5 EUR), inside the no-cost quotas. Spark is not possible: Cloud Storage needs Blaze (default buckets since 2024-10-30, no Spark bucket access since 2026-02-03).
 2. **Notifications without a server**, even on Blaze: no Cloud Functions. Firestore listeners on `participantIds` + local notifications + a WorkManager periodic check (F-016). They arrive only while some client runs; the report states it. One small Function stays an F-016 Gate option if time remains.
 3. **5-day close computed on read** from the server-set `resolvedAt` (D-008's pure rule); the first client that sees it writes CLOSED. The rules allow CLOSED only after 5 days of server time and lock the ticket. The 24 h warning is a local notification (F-016).
 4. **osmdroid**, no key, so the ZIP builds and the map renders for the grader.
 
-Also decided at that Gate (decision 0011): Firestore in test mode until 2026-12-10, rules deployed with the person's OK once D-009 login works; SMS MFA with console test numbers; `app/google-services.json` stays out of git and is shared privately. Data layout: [decision 0010](../../decisions/0010-firestore-schema.md). Items D-008, D-009/D-010, F-012 and F-013 must follow: "Handover (F-010)" in `docs/architecture/overview.md`.
+Also decided at that Gate (decision 0012): Firestore in test mode until 2026-12-10, rules drafted but not deployed (amended 2026-11-13: school project, test mode covers delivery and defence); SMS MFA with console test numbers; `app/google-services.json` stays out of git and is shared privately. Data layout: [decision 0010](../../decisions/0010-firestore-schema.md). Items D-008, D-009/D-010, F-012 and F-013 must follow: "Handover (F-010)" in `docs/architecture/overview.md`.
 
 ## Risks carried from phase 1 (see phase 1 README)
 Attachment phase (report vs resolution proof), FCM token on `User`, `role` field in Firestore, public collection for anonymous users, NIF uniqueness by transaction, one municipality document, reopening computed from the RESOLVED history entry. All six are closed in [decision 0010](../../decisions/0010-firestore-schema.md) ("Phase 1 risks"); the reopen window now uses the server-set `resolvedAt` instead of the history entry.

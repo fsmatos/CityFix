@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -14,11 +15,14 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AuthRepository
+import pt.isec.amov.cityfix.data.DebugSeed
 import pt.isec.amov.cityfix.data.FirebaseAuthRepository
+import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
-import pt.isec.amov.cityfix.data.LocalTicketsRepository
+import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.model.User
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -29,10 +33,24 @@ import pt.isec.amov.cityfix.data.UsersRepository
  * before any other Firestore call, so they are applied here, once, when [firestore] is first read.
  */
 class CityFixApplication : Application() {
-    val ticketsRepository: TicketsRepository by lazy { LocalTicketsRepository() }
+    val ticketsRepository: TicketsRepository by lazy { FirestoreTicketsRepository(firestore) }
+
+    /**
+     * F-011 stand-in until D-009 (login): null = anonymous. To test another audience, change this
+     * line to Citizen(DEV_CITIZEN_ID, registrationStatus = RegistrationStatus.ACTIVE) or
+     * Operator(DEV_OPERATOR_ID) and rebuild.
+     */
+    val currentUser: User? = null
+
+    /** Reporter id until D-009: the stand-in's id, or DEV_CITIZEN_ID while anonymous. */
+    val reporterId: String
+        get() = currentUser?.id ?: DEV_CITIZEN_ID
 
     /** Copies picked media off the main thread (report form). */
     val attachmentStorage: AttachmentStorage by lazy { AttachmentStorage(this) }
+
+    /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
+    val locationRepository: LocationRepository by lazy { LocationRepository(this) }
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 
@@ -54,4 +72,17 @@ class CityFixApplication : Application() {
 
     /** `users/{uid}` profiles (D-009 reads them), built from [firestore] so the cache settings apply. */
     val usersRepository: UsersRepository by lazy { FirestoreUsersRepository(firestore) }
+
+    override fun onCreate() {
+        super.onCreate()
+        // DEBUG ONLY (F-011 Q5): sample data in an empty database. Remove before delivery (D-015).
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            DebugSeed.seedIfEmpty(firestore)
+        }
+    }
+
+    companion object {
+        const val DEV_CITIZEN_ID = "dev-citizen-1"
+        const val DEV_OPERATOR_ID = "dev-operator-1"
+    }
 }

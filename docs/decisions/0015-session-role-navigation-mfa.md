@@ -1,4 +1,4 @@
-# 0013: Session, role navigation and SMS MFA flow
+# 0015: Session, role navigation and SMS MFA flow
 
 Status: accepted (D-009, Gate 1 on 2026-11-11, approved by Diogo: Q1 MFA mandatory for both roles, Q7 nobody gets the expand toggle (a deviation from the plan's recommendation), Q2-Q6 and Q8-Q13 as recommended; review round 1 fix B1 on 2026-11-11). Code-level detail: `docs/architecture/overview.md`, "Auth and session (D-009)". Plan: `docs/work/D-009-auth-mfa-role-navigation/00-plan.md`.
 
@@ -9,7 +9,7 @@ Status: accepted (D-009, Gate 1 on 2026-11-11, approved by Diogo: Q1 MFA mandato
   - I.2.A: a citizen registration "fica pendente até validação" (the brief does not say whether a pending citizen may log in). I.3.A: an operator registration "fica logo ativo", with an e-mail in the municipality's domain.
   - I.3.E: the operator's full view (coordinates, author contacts, full history with media) is the "Painel de Gestão Operacional".
   - IV (session cached after the first login) and V (top-bar actions by role and screen) come from the task file, not the paste.
-- F-010 ([decision 0011](0011-firebase-plan-notifications-close-maps.md) point 6) chose Identity Platform SMS MFA with console test numbers. Firebase needs a **verified e-mail** before a factor can be enrolled, and `isOperator()` in the draft rules needs `email_verified` (F-010 handover).
+- F-010 ([decision 0012](0012-firebase-plan-notifications-close-maps.md) point 6) chose Identity Platform SMS MFA with console test numbers. Firebase needs a **verified e-mail** before a factor can be enrolled, and `isOperator()` in the draft rules needs `email_verified` (F-010 handover).
 - Before D-009 every user was anonymous: `canExpandCards` was a constant `false` (D-007, [decision 0006](0006-anonymous-projection-phase-1.md)), and the report route and the add button were open to everyone.
 - The task file asked for `AuthRepository.currentUser: Flow<User?>`. A `User?` cannot say "e-mail not verified", "no second factor" or "profile not loaded".
 - Registration is D-010, so D-009's test accounts are created by hand in the console.
@@ -44,7 +44,7 @@ Status: accepted (D-009, Gate 1 on 2026-11-11, approved by Diogo: Q1 MFA mandato
 - **A `startDestination` that follows the session:** changing it resets the graph.
 - **A `CompositionLocal` session:** a hidden dependency; decision 0007 rejected the same for the detail audience.
 - **A DataStore or SharedPreferences role cache:** a second source of truth next to the Firebase caches.
-- **TOTP:** needs an authenticator app at the defence (decision 0011).
+- **TOTP:** needs an authenticator app at the defence (decision 0012).
 - **Optional MFA:** against I.2.B / I.3.B.
 - **An own e-mail one-time code:** needs a server.
 - **Debug seeding code:** it would write `role: OPERATOR` from the client, which the draft rules forbid without a verified domain e-mail, and it is code to defend for no feature.

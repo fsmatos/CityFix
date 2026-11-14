@@ -69,21 +69,65 @@ service cloud.firestore {
       return status in ['OPEN', 'INFO_REQUESTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
     }
 
-    // History is append-only: exactly one new entry, written by the caller,
-    // with the same status as the new currentStatus (decision 0004). Its
-    // dateTime (Long epoch ms) is not earlier than the previous entry and at
-    // most 5 minutes after the server time (clock skew).
-    function historyAppendedBySelf() {
+    // History is append-only: exactly one new entry with the same status as the
+    // new currentStatus (decision 0004). Its dateTime (Long epoch ms) is not
+    // earlier than the previous entry and at most 5 minutes after the server
+    // time (clock skew). Who wrote it is checked by the callers below.
+    function historyAppended() {
       let old = resource.data.statusHistory;
       let neu = request.resource.data.statusHistory;
       let t = neu[old.size()].dateTime;
       return neu.size() == old.size() + 1
         && neu[0:old.size()] == old
-        && neu[old.size()].responsibleId == request.auth.uid
         && neu[old.size()].status == request.resource.data.currentStatus
         && t is int
         && t >= old[old.size() - 1].dateTime
         && t <= request.time.toMillis() + 300000;
+    }
+
+    // The new history entry (call only after historyAppended()).
+    function newEntry() {
+      return request.resource.data.statusHistory[resource.data.statusHistory.size()];
+    }
+
+    // A transition made by a person: the new entry names the caller.
+    function entryBySelf() {
+      return newEntry().responsibleId == request.auth.uid;
+    }
+
+    // Active statuses, the same as Ticket.isActive (decision 0005). ticketLocations.active
+    // follows them (F-012, decision 0014), so a RESOLVED or CLOSED ticket is not grouped.
+    function isActiveStatus(status) {
+      return status in ['OPEN', 'INFO_REQUESTED', 'IN_PROGRESS'];
+    }
+
+    // Non-blank justification on the new entry (D-008: required for
+    // INFO_REQUESTED and for the reopen).
+    function hasJustification() {
+      return 'justification' in newEntry()
+        && newEntry().justification is string
+        && newEntry().justification.trim().size() > 0;
+    }
+
+    // Operator moves from the stored status (D-008, decision 0011): operators
+    // never reopen or close.
+    function isOperatorMove(from, to) {
+      return (from == 'OPEN' && to in ['INFO_REQUESTED', 'IN_PROGRESS'])
+        || (from == 'INFO_REQUESTED' && to == 'IN_PROGRESS')
+        || (from == 'IN_PROGRESS' && to in ['INFO_REQUESTED', 'RESOLVED']);
+    }
+
+    // Automatic close (D-008 closeIfExpired, decision 0011): RESOLVED -> CLOSED
+    // with one entry by SYSTEM_RESPONSIBLE_ID ("system"), no justification,
+    // dated exactly 5 days after the RESOLVED entry. Any participant's or
+    // operator's device may write it once the window is over (server time).
+    function isAutomaticClose() {
+      let old = resource.data.statusHistory;
+      return resource.data.currentStatus == 'RESOLVED'
+        && request.resource.data.currentStatus == 'CLOSED'
+        && newEntry().responsibleId == 'system'
+        && !('justification' in newEntry() && newEntry().justification != null)
+        && newEntry().dateTime == old[old.size() - 1].dateTime + 432000000;
     }
 
     // resolvedAt is a server timestamp: the server time of the write
@@ -104,12 +148,10 @@ service cloud.firestore {
 
     // RESOLVED -> OPEN by a citizen: within 5 days, with a justification (brief II.4).
     function isJustifiedReopen() {
-      let entry = request.resource.data.statusHistory[resource.data.statusHistory.size()];
-      return request.resource.data.currentStatus == 'OPEN'
+      return resource.data.currentStatus == 'RESOLVED'
+        && request.resource.data.currentStatus == 'OPEN'
         && request.time <= resource.data.resolvedAt + duration.value(5, 'd')
-        && 'justification' in entry
-        && entry.justification is string
-        && entry.justification.size() > 0;
+        && hasJustification();
     }
 
     // Grouping (brief I.2 obs., decision 0002): the citizen's own report in
@@ -227,33 +269,50 @@ service cloud.firestore {
         && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
         && reportMatchesTicket(ticketId);
 
-      // Lifecycle (brief I.3.E, II): the operator controls the transitions and
-      // may add resolution media. A participant may only reopen a RESOLVED ticket
-      // within 5 days with a justification, or write the automatic RESOLVED ->
-      // CLOSED after 5 days (decision 0011, Q4). currentStatus and one appended
-      // history entry change together; the status must be one of the five and
-      // must actually change. Only the operator can resolve, and resolvedAt is
-      // then the server time. CLOSED is locked (brief II.5).
+      // Lifecycle (brief I.3.E, II; transition table in D-008, decision 0011).
+      // currentStatus and one appended history entry change together; the
+      // status must be one of the five and must actually change.
+      // - Operator: the D-008 moves (INFO_REQUESTED needs a justification;
+      //   RESOLVED needs new proof attachments, and resolvedAt is then the
+      //   server time). Operators never reopen or close by hand.
+      // - Participant: reopen a RESOLVED ticket within 5 days with a justification.
+      // - Automatic close: the "system" entry 5 days after RESOLVED (decision
+      //   0012, Q4), written by a participant's or operator's device once the
+      //   window is over.
+      // Every transition writes ticketLocations.active = the new status is active
+      // (F-012) in the same batch: false on RESOLVED and CLOSED, true on reopen.
+      // CLOSED is locked (brief II.5).
       allow update: if resource.data.currentStatus != 'CLOSED'
         && isTicketStatus(request.resource.data.currentStatus)
         && request.resource.data.currentStatus != resource.data.currentStatus
-        && historyAppendedBySelf()
+        && historyAppended()
         && resolvedAtIsServerTime()
         && closesOnlyAfterFiveDays()
-        && (request.resource.data.currentStatus != 'CLOSED'
-            || getAfter(/databases/$(database)/documents/ticketLocations/$(ticketId)).data.active == false)
+        && getAfter(/databases/$(database)/documents/ticketLocations/$(ticketId)).data.active
+             == isActiveStatus(request.resource.data.currentStatus)
         && (
           (isOperator()
+            && entryBySelf()
+            && isOperatorMove(resource.data.currentStatus, request.resource.data.currentStatus)
+            && (request.resource.data.currentStatus != 'INFO_REQUESTED' || hasJustification())
+            && (request.resource.data.currentStatus == 'RESOLVED'
+                ? request.resource.data.attachments.size() > resource.data.attachments.size()
+                : !changedKeys().hasAny(['attachments']))
             && changedKeys().hasOnly(['currentStatus', 'statusHistory', 'attachments', 'resolvedAt']))
           ||
-          (isParticipant(resource.data)
-            && changedKeys().hasOnly(['currentStatus', 'statusHistory'])
-            && resource.data.currentStatus == 'RESOLVED'
-            && (isJustifiedReopen() || request.resource.data.currentStatus == 'CLOSED'))
+          (isActiveCitizen()
+            && isParticipant(resource.data)
+            && entryBySelf()
+            && isJustifiedReopen()
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory']))
+          ||
+          ((isOperator() || isParticipant(resource.data))
+            && isAutomaticClose()
+            && changedKeys().hasOnly(['currentStatus', 'statusHistory']))
         );
 
-      // Upload state of attachments (F-013 worker) and a follower's report media:
-      // only the attachments change and the list never shrinks.
+      // Upload state of attachments (F-013 worker): only the attachments change
+      // and the list never shrinks. A joiner's media is in their report, not here.
       allow update: if resource.data.currentStatus != 'CLOSED'
         && (isOperator() || isParticipant(resource.data))
         && changedKeys().hasOnly(['attachments'])
@@ -271,13 +330,14 @@ service cloud.firestore {
 
       // Document id: the reporting citizen's uid. The report of a citizen who
       // joined the ticket by grouping, written in the same batch as their
-      // followerIds/participantIds update. Read only by its author and operators.
+      // followerIds/participantIds update, with their description and media
+      // (F-012 Q5, decision 0014). Read only by its author and operators.
       match /reports/{uid} {
         allow read: if isOperator() || (isSignedIn() && request.auth.uid == uid);
         allow create: if isActiveCitizen()
           && request.auth.uid == uid
           && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location',
-              'description', 'createdAt'])
+              'description', 'createdAt', 'attachments'])
           && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
           && !(uid in get(ticketPath(ticketId)).data.participantIds)
           && uid in getAfter(ticketPath(ticketId)).data.participantIds;
@@ -328,19 +388,29 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['categoryId', 'situation', 'location', 'active'])
         && request.resource.data.active == true;
 
-      // active == (ticket not CLOSED). It changes only in the batch that changes
-      // the ticket's status and must match the new status, so in practice it
-      // becomes false once, in the closing batch. Locked once CLOSED.
+      // active == the ticket's status is active (F-012, decision 0014). It changes
+      // only in the batch that changes the ticket's status and must match the new
+      // status: false on RESOLVED, true again on reopen. Locked once CLOSED.
       allow update: if (isOperator() || isParticipant(get(ticketPath(ticketId)).data))
         && get(ticketPath(ticketId)).data.currentStatus != 'CLOSED'
         && changedKeys().hasOnly(['active'])
         && getAfter(ticketPath(ticketId)).data.currentStatus != get(ticketPath(ticketId)).data.currentStatus
-        && request.resource.data.active == (getAfter(ticketPath(ticketId)).data.currentStatus != 'CLOSED');
+        && request.resource.data.active == isActiveStatus(getAfter(ticketPath(ticketId)).data.currentStatus);
 
       allow delete: if false;
     }
 
-    // stats/summary is reserved for the dashboard counters (Q11). F-011 decides
-    // and adds its rules; until then it is denied like every other path.
+    // Dashboard counters (F-011, brief I.1.A): only stats/summary, readable by
+    // everyone (anonymous dashboard). Every ticket batch adds
+    // FieldValue.increment deltas to the four counters (statsIncrements). Rules
+    // cannot check that an increment matches the ticket written in the same
+    // batch, so the values are not bounded here. Draft: not deployed.
+    match /stats/{docId} {
+      allow read: if true;
+      allow write: if docId == 'summary'
+        && (isActiveCitizen() || isOperator())
+        && request.resource.data.keys().hasOnly(['totalTickets', 'activeTickets',
+            'resolvedTickets', 'repairTimeSumMillis']);
+    }
   }
 }

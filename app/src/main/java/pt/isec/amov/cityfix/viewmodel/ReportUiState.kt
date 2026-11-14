@@ -3,6 +3,7 @@ package pt.isec.amov.cityfix.viewmodel
 import androidx.annotation.StringRes
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 
@@ -24,6 +25,13 @@ data class ReportUiState(
     val scope: Scope? = null,
     /** Local copies in filesDir/images; `file` is an absolute path. */
     val attachments: List<Attachment> = emptyList(),
+    /** The reporter's GPS fix, read when the form opens and on Refresh; null until there is one. */
+    val location: Coordinates? = null,
+    /** True while the fix is being read. */
+    val isLocating: Boolean = false,
+    /** True when location is not allowed; the form then shows the denied message. */
+    val locationPermissionDenied: Boolean = false,
+    @StringRes val locationError: Int? = null,
     @StringRes val categoryError: Int? = null,
     @StringRes val situationError: Int? = null,
     @StringRes val descriptionError: Int? = null,
@@ -50,7 +58,7 @@ data class ReportUiState(
     val isValid: Boolean
         get() = categoryId.isNotBlank() && categories.any { it.id == categoryId } &&
             situation != null && scope != null && description.isNotBlank() &&
-            attachments.isNotEmpty() &&
+            attachments.isNotEmpty() && location != null &&
             categoryError == null && situationError == null &&
             descriptionError == null && scopeError == null && attachmentsError == null
 }

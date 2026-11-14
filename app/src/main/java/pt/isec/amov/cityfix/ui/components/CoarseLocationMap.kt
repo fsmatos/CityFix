@@ -1,19 +1,13 @@
 package pt.isec.amov.cityfix.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -28,8 +22,8 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
  * "Approximate location" section for [location] (already rounded for anonymous users, decision 0006).
- * Gate 1 of F-005 chose a static placeholder (no map library): a location icon and a caption,
- * never coordinate text. Shows "Location not available" for the unset (0, 0) (decision 0003).
+ * Since F-012 a real map (TicketMap, coarse: far zoom, a circle, no marker, no gestures) and a
+ * caption, never coordinate text. Shows "Location not available" for the unset (0, 0) (decision 0003).
  */
 @Composable
 fun CoarseLocationMap(location: Coordinates, modifier: Modifier = Modifier) {
@@ -51,21 +45,15 @@ fun CoarseLocationMap(location: Coordinates, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Box(
+            TicketMap(
+                location = location,
+                exact = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .semantics { contentDescription = mapDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.LocationOn,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            )
             Text(
                 text = stringResource(R.string.ticket_map_caption),
                 style = MaterialTheme.typography.bodySmall,

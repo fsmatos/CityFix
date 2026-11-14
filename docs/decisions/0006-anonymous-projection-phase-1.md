@@ -1,6 +1,6 @@
 # 0006: Anonymous projection of tickets in phase 1
 
-Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009. Amended on 2026-11-10 by D-007: the projection also drops `description` and `statusHistory`, the expand toggle is hidden for anonymous users, and the public projection contract for F-011 is recorded (see "Amended 2026-11-10 (D-007)"). Amended on 2026-11-11 by D-009: `canExpandCards` stays `false` for every session, not set by role (see "Amended 2026-11-11 (D-009)" and [decision 0013](0013-session-role-navigation-mfa.md)).
+Status: accepted (D-003, Gate 1 on 2026-10-29; S1/S2 review fixes on 2026-10-29). Superseded in part by [0009](0009-tickets-repository.md) (F-008, with Diogo's OK): the projection now runs in `LocalTicketsRepository`, not the ViewModel, and Q6/Q11's "no repository yet" no longer holds. Media point amended on 2026-11-08 by F-009. Amended on 2026-11-10 by D-007: the projection also drops `description` and `statusHistory`, the expand toggle is hidden for anonymous users, and the public projection contract for F-011 is recorded (see "Amended 2026-11-10 (D-007)"). Amended on 2026-11-11 by D-009: `canExpandCards` stays `false` for every session, not set by role (see "Amended 2026-11-11 (D-009)" and [decision 0015](0015-session-role-navigation-mfa.md)).
 
 ## Context
 Phase 1 has no login, so every viewer of the app is an anonymous citizen. The brief limits what anonymous users see: the list of "ocorrências públicas ativas" (I.1.B), and a detail with images/videos and a coarse map zoom, "ocultando dados pessoais do autor" (I.1.C). CLAUDE.md makes this non-negotiable: anonymous users must never see the author's personal data or exact coordinates, and the rule is enforced below the UI, not only in the screens.
@@ -83,7 +83,7 @@ F-011 writes `publicTickets/{id}` from `toAnonymousView()`, the single function 
 | `creatorId` | `""` | author |
 | `followerIds`, `messages` | empty | other citizens, message authors |
 
-`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0012](0012-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
+`Attachment.phase` (REPORT or RESOLUTION, added by D-008, [decision 0011](0011-ticket-lifecycle-rules.md)) is kept in each attachment: it is not personal data.
 
 Rules the public document must keep:
 - A projected ticket is a **view, not a valid ticket**: it has a `currentStatus` with an empty history, which breaks the "at least one history entry" rule and the "update both together" note on `Ticket.currentStatus` (decision 0004). Never write it back to `tickets/`, and never run lifecycle rules (D-008) on it. (`Ticket.kt`'s `currentStatus` KDoc does not mention this yet; add one line next time that file changes, D-007 review N2. Done by D-008 on 2026-11-11.)
@@ -106,6 +106,6 @@ None of these reaches the screens as text; they are recorded with their owners.
 - Decision 0007 (Francisco's record) still says the projection change is "not yet done"; pointing it here is left to Francisco (Gate 1 Q6).
 
 ## Amended 2026-11-11 (D-009)
-- **`canExpandCards` stays `false` for every session** (D-009 Gate 1 Q7, Diogo, a deviation from the plan's "operators only"). The public list is always the projected list, so an expanded card would add only the date; brief I.1.B lists category, situation and thumbnail, and I.2.D gives registered citizens the anonymous features. The operator's full view is D-013's operations panel (brief I.3.E), not this list. Details: [decision 0013](0013-session-role-navigation-mfa.md).
+- **`canExpandCards` stays `false` for every session** (D-009 Gate 1 Q7, Diogo, a deviation from the plan's "operators only"). The public list is always the projected list, so an expanded card would add only the date; brief I.1.B lists category, situation and thumbnail, and I.2.D gives registered citizens the anonymous features. The operator's full view is D-013's operations panel (brief I.3.E), not this list. Details: [decision 0015](0015-session-role-navigation-mfa.md).
 - The flag, the `isExpanded` `rememberSaveable` and the `canExpandCards && isExpanded` wiring stay in `CityFixApp`, with the comment updated, for a later decision (for example if F-014's "my tickets" list reuses the cards with unprojected tickets). The `&&` reason above still holds if the flag ever becomes role-dependent.
 - The D-006 check "expanded state kept on rotation" still cannot run on a device.
