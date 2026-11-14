@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-14 | slices 1-4 and 6 (5 dropped); build + lint pass; device checks D1-D12 not run (Storage bucket test mode unconfirmed); device checks D1-D3, D5, D7-D11 passed 2026-11-14 (D4 not run, D6 dropped) |
 | Review | done | 2026-11-14 | approve with should-fix: 0 blocking, 2 should-fix (S1 parallel workers make the Q1 overwrite likely; S2 stale KDocs, docs phase), 3 nits; build + lint pass (0 errors / 22 warnings); D1-D11 open |
 | Docs | done | 2026-11-14 | decision 0015; 0010 amended; 0013 consequence closed; 0006 pointer line; overview "Media upload (F-013)" + "Handover (F-013)"; report notes F-013 |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-14 | ace32d6 to origin/dev/Francisco; not merged into main |
 | Merged | pending | | |
 
 ## Log
@@ -66,3 +66,4 @@ Append-only.
   - D10: Portuguese ("Falha no envio", "Fotografias e vídeos") and landscape: the upload line sits at the bottom edge but the left column scrolls and shows it in full.
   - Not run: D4 (50 MB video killed mid-upload; no video file available on the emulator). D6 dropped with slice 5.
   - Test data left in the shared database and Storage: tickets "F013 D1/D3/D7/D8" and their files.
+- 2026-11-14: Pushed dev/Francisco to origin at ace32d6 (build and lint passed after the last code change; device checks passed except D4). Not merged into main. Tell Diogo: "Handover (F-013)" in the overview (D-013: `app.attachmentUploader.prepare(...)` before the batch, `enqueue("tickets/<id>", id, false)` after it; KDoc edits in `model/TicketPrivacy.kt` and `model/Attachment.kt`; pointer line in decision 0006).
