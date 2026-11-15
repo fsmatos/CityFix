@@ -7,7 +7,7 @@ Remote: origin/dev/Francisco
 | Start | done | 2026-11-14 | feature, task file `docs/tasks/phase-2/F-014-citizen-tickets-messages-reopen.md` |
 | Plan | done | 2026-11-15 | Draft 2026-11-14; revised 2026-11-15 for D-009 (session user, My tickets entry settled, real test accounts); 7 slices; Q1-Q14 with defaults |
 | Gate 1: plan approved | done | 2026-11-15 | approved with the person's Q1-Q15 answers; Q1 follows brief II.2, Diogo agrees |
-| Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run |
+| Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run; device checks D1-D15 and D1b passed 2026-11-15 |
 | Review | done | 2026-11-15 | approve: 0 blocking, 1 should-fix (S1 decision 0011 vs Q1, docs phase), 1 nit; build + lint 0 errors, 22 warnings; D1-D15 open |
 | Docs | done | 2026-11-15 | overview (F-014 section + handover, small updates), 0018 new, 0011 S1 amend, 0007/0010/0013 lines, report notes, task file; not committed |
 | Pushed | done | 2026-11-15 | 322eb61 to origin/dev/Francisco before the device checks; not merged into main |
@@ -73,3 +73,21 @@ Append-only.
   - `docs/report/notes.md`: F-014 section. Task file: status done, Gate 1 changes. 03-docs-plan 0011 bullet updated to match S1.
   - Deviation: D-009's suggested 0013 line added; 0014's optional line and 0015 (D-009's) not edited.
 - 2026-11-15: Pushed dev/Francisco to origin at 322eb61, before the device checks (the person is waiting for Diogo's test logins), so Diogo can see the changes to his files. Setup done: Francisco's debug SHA-1/SHA-256 added in Firebase by the person; `tickets/sample-3` reassigned to account A (creatorId and participantIds) through the REST API. Device checks D1-D15 still to run. Not merged into main.
+- 2026-11-15: Device checks on the `Medium_Phone` emulator with Diogo's real test accounts (login + SMS MFA work with Francisco's fingerprints). Accounts: A = `+cidadao` (active), C = `+pendente` (ACTIVE despite its name), O = `+operador`; the PENDING user document `+cidadao1` has no Auth user, so D1b set C to PENDING through REST and back to ACTIVE afterwards. Test tickets by A: T1 `nhaZe09f` (Public lighting/Theft), T2 `eIfmpDKV` and T3 `YmP3LIiT` (Pavement/Destruction, 20 m apart); T2/T3 then hand-set through REST to RESOLVED 4 and 6 days ago (createdAt and OPEN entry moved back, mirror, `ticketLocations.active` false, stats adjusted). All passed:
+  - D1: anonymous: only "Log in" in the top bar; public detail without thread.
+  - D1b: pending C: "Registration pending" home, menu Profile/Log out only; T1 (which C follows) opens PUBLIC, no thread.
+  - D2: A's My tickets = T1, T2, T3, Diogo's D-009 test ticket, sample-3 shown "Closed" (effective status, no write); C's My tickets empty before joining.
+  - D3: A on T1: description, photo, exact map with pin, history, "Ask for clarification", no Reopen.
+  - D4 / D9: opening sample-3 and T3 (resolved 6 days ago): "Closed", "Closed automatically", no Reopen, "This ticket is closed: no new messages."; REST: one CLOSED entry by `system` at RESOLVED + 5 days, mirror CLOSED, active false, stats unchanged.
+  - D5: A's message shown at once as "You"; REST `authorId` A, `byOperator` false.
+  - D6: a message posted through REST as O (`byOperator` true) appeared live as "Municipality" (no second emulator).
+  - D7: offline message shown at once; server 2 messages, 3 after reconnecting.
+  - D8: T2 (day 4): Reopen shown, no "Ask for clarification"; blank reason -> "Explain why the ticket should be reopened."; "Still broken" -> OPEN; REST: OPEN entry by A with the justification, mirror OPEN, active true, stats active +1, resolved -1, repair sum -4 days.
+  - D10: reopen dialog and typed text survive rotation.
+  - D11: C joined T1 by reporting the same category/situation ("already reported nearby"); T1 in C's My tickets; thread shows A's messages as "Citizen", O's as "Municipality"; C can send; no Reopen.
+  - Q1: C's "Ask for clarification" ("When will it be fixed"): badge "Info requested"; REST: INFO_REQUESTED entry by C with the question as justification, message by C, mirror INFO_REQUESTED, active true, stats unchanged.
+  - D12 / D13: landscape two panes with the thread in the right pane; Portuguese ("Pedido de informações", "Histórico de estados", "Munícipe", "Eu", "Mensagem").
+  - D15: log out on the participant detail -> anonymous dashboard; Back leaves the app; anonymous T1: photo thumbnail, approximate map, no description, no messages.
+  - The session updated live when C's registration changed back to ACTIVE (participant view without logging in again).
+  - Crash buffer: only an Android Bluetooth service abort at boot, nothing from CityFix.
+  - Test data left: T1-T3, C's report on T1, messages on T1, sample-3 CLOSED and owned by A.
