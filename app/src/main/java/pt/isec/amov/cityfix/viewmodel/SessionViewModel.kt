@@ -43,18 +43,26 @@ class SessionViewModel(
                 !account.isEmailVerified -> flowOf(Session.NeedsEmailVerification(account.email))
                 !account.hasSecondFactor -> flowOf(Session.NeedsSecondFactor(account.email))
                 // E-mail sync (D-011): after a verified change through the link, the Auth e-mail
-                // differs from users/{uid}.email, so it is copied once; the next snapshot then
-                // matches and nothing more is written. Runs whether or not Profile is opened.
-                else -> users.observeUser(account.uid)
-                    .onEach { profile ->
-                        if (profile is UserProfile.Found &&
-                            account.email.isNotBlank() &&
-                            !profile.user.email.equals(account.email, ignoreCase = true)
-                        ) {
-                            users.syncEmail(account.uid, account.email)
+                // differs from users/{uid}.email, so it is copied. It is checked once per account
+                // value (a sign-in or a reload, both with a fresh token), on the first profile
+                // snapshot only. A later snapshot never triggers it: a second device with an old
+                // cached account cannot write the old e-mail back, and a refused write is not
+                // retried in a loop. Runs whether or not Profile is opened.
+                else -> {
+                    var emailChecked = false
+                    users.observeUser(account.uid)
+                        .onEach { profile ->
+                            if (!emailChecked && profile is UserProfile.Found) {
+                                emailChecked = true
+                                if (account.email.isNotBlank() &&
+                                    !profile.user.email.equals(account.email, ignoreCase = true)
+                                ) {
+                                    users.syncEmail(account.uid, account.email)
+                                }
+                            }
                         }
-                    }
-                    .map { it.toSession() }
+                        .map { it.toSession() }
+                }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Session.Loading)
