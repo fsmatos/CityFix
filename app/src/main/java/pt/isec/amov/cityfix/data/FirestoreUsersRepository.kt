@@ -1,5 +1,6 @@
 package pt.isec.amov.cityfix.data
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
@@ -17,6 +18,7 @@ import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.RegistrationStatus
+import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.utils.isInEmailDomain
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -104,6 +106,27 @@ class FirestoreUsersRepository(
         // Only after the commit: the worker updates users/{uid}, which now exists.
         registration.photoPath?.let { photoUploader.enqueue(user.uid, it) }
         return RegisterResult.Success
+    }
+
+    override fun updateProfile(user: User, changes: ProfileChanges): Boolean {
+        val fields = buildMap<String, Any> {
+            changes.phone?.let { put("phone", it) }
+            if (user is Citizen) changes.impactDetection?.let { put("impactDetection", it) }
+        }
+        if (fields.isNotEmpty()) {
+            // Not awaited (as F-011): the write is queued in the local cache, also offline, and
+            // the listener shows it at once. A refusal by the server is only logged.
+            firestore.collection(USERS).document(user.id).update(fields)
+                .addOnFailureListener { Log.w(TAG, "profile update refused", it) }
+        }
+        changes.newPhotoPath?.let { photoUploader.enqueue(user.id, it) }
+        return fields.isNotEmpty() || changes.newPhotoPath != null
+    }
+
+    override fun syncEmail(uid: String, email: String) {
+        // Not awaited, as updateProfile.
+        firestore.collection(USERS).document(uid).update("email", email)
+            .addOnFailureListener { Log.w(TAG, "e-mail sync refused", it) }
     }
 
     /**
@@ -197,6 +220,7 @@ class FirestoreUsersRepository(
         RegistrationStatus.entries.firstOrNull { it.name == value } ?: RegistrationStatus.PENDING
 
     private companion object {
+        const val TAG = "UsersRepository"
         const val USERS = "users"
         const val NIFS = "nifs"
         const val MUNICIPALITY = "municipality"

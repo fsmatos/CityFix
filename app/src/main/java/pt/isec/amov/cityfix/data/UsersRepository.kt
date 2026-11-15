@@ -48,8 +48,18 @@ sealed interface RegisterResult {
     data class Failure(val error: AuthError) : RegisterResult
 }
 
+/** What the Profile screen may change (brief I.2.C, I.3.C). null = unchanged. */
+data class ProfileChanges(
+    /** 9 digits, without +351. */
+    val phone: String? = null,
+    /** Citizens only; ignored for an Operator. */
+    val impactDetection: Boolean? = null,
+    /** A new local photo in filesDir/images; uploaded by ProfilePhotoWorker. */
+    val newPhotoPath: String? = null,
+)
+
 /**
- * User profiles: read (D-009) and registration (D-010); profile editing is D-011.
+ * User profiles: read (D-009), registration (D-010) and profile editing (D-011).
  * [FirestoreUsersRepository] is the implementation.
  */
 interface UsersRepository {
@@ -65,4 +75,15 @@ interface UsersRepository {
 
     /** `municipality/main.emailDomain`, lowercase without '@'; null when missing or unreadable. */
     suspend fun operatorEmailDomain(): String?
+
+    /**
+     * Writes only phone and (citizen) impactDetection to users/{user.id}, then queues the photo.
+     * Never name, nif, georeferencing, role, registrationStatus or email. Not awaited: the write
+     * is queued in the local cache (works offline) and the listener shows it at once.
+     * Returns false when there is nothing to write.
+     */
+    fun updateProfile(user: User, changes: ProfileChanges): Boolean
+
+    /** Copies the Auth e-mail into users/{uid}.email (after a verified change). Not awaited. */
+    fun syncEmail(uid: String, email: String)
 }
