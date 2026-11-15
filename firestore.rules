@@ -193,14 +193,16 @@ service cloud.firestore {
         );
 
       // The owner edits their own profile (D-011, brief I.2.C, I.3.C). Allow-list: phone,
-      // photoPath (ProfilePhotoWorker), impactDetection (citizens only), fcmTokens (F-016)
-      // and email, which may only follow the verified Auth e-mail (the session's sync after a
-      // verifyBeforeUpdateEmail link); an operator's must stay in the municipality domain.
+      // photoPath and photoUpdatedAt (ProfilePhotoWorker), impactDetection (citizens only),
+      // fcmTokens (F-016) and email, which may only follow the verified Auth e-mail (the
+      // session's sync after a verifyBeforeUpdateEmail link); an operator's must stay in the
+      // municipality domain.
       // Name, NIF, georeferencing, role and the validation fields can never change here.
       // Draft: not deployed.
       allow update: if isSignedIn()
         && request.auth.uid == uid
-        && changedKeys().hasOnly(['phone', 'photoPath', 'impactDetection', 'email', 'fcmTokens'])
+        && changedKeys().hasOnly(['phone', 'photoPath', 'photoUpdatedAt', 'impactDetection', 'email',
+            'fcmTokens'])
         && (!changedKeys().hasAny(['impactDetection']) || resource.data.role == 'CITIZEN')
         && (!changedKeys().hasAny(['email'])
             || (request.resource.data.email == request.auth.token.email
