@@ -2,6 +2,8 @@
 
 Status: accepted (F-011, Gate 1 on 2026-11-13, defaults Q1-Q8; review fixes S1, S2, N1-N3 on 2026-11-13). Builds on [decision 0009](0009-tickets-repository.md) (repository, amended by F-011) and [decision 0010](0010-firestore-schema.md) (layout, amended by F-011). The number 0013 was free on `dev/Francisco` when this was written (Q8: confirm with Diogo that `dev/Diogo` has not used it).
 
+Stand-in user replaced by the D-009 session on 2026-11-14 (`46ee41f`), see decision 0015. F-014 (2026-11-15): `resolvedAt` decided, not mapped (repair time from the RESOLVED history entry); status changes add `statsIncrements` in `commitStatusChange` ([decision 0018](0018-citizen-tickets-messages-reopen.md)).
+
 ## Context
 - Brief IV wants tickets and categories in Firestore with the offline cache. F-010 set up Firebase and the layout (decision 0010), but nothing read or wrote it.
 - Anonymous users must read only `publicTickets` (CLAUDE.md, decision 0006 "Public projection contract"): Firestore rules secure whole documents, so the anonymous code path must never query `tickets` or `ticketLocations`.
@@ -44,6 +46,6 @@ Status: accepted (F-011, Gate 1 on 2026-11-13, defaults Q1-Q8; review fixes S1, 
 - With an empty cache and no network at first install, lists, dashboard and categories are empty and the form cannot be submitted (no category). Brief IV's offline promise applies after the first sync.
 - **Counters can drift** if a write path forgets `statsIncrements`. Every batch that changes a ticket (D-013, F-014) must add it. Repair: recompute the four counters by hand from `tickets/` in the console. Deleting `stats/summary` to let the seed run again is not a repair: the seed would set the counters to the 3 samples only.
 - `toTicket()` ignores the Firestore `resolvedAt`; the model's `Ticket.resolvedAt()` uses the RESOLVED history entry. D-013/F-014 decide whether to map it (decision 0010 says clients compute the window from it).
-- Until F-013, `publicTickets.thumbnails` is empty and `storagePath` holds a local path, so other devices show the card placeholder. **Done by F-013 (2026-11-14, [decision 0015](0015-media-preparation-and-uploads.md)):** once uploaded, entries hold download URLs and the worker adds the public thumbnails; other devices still see the placeholder while an entry is PENDING.
+- Until F-013, `publicTickets.thumbnails` is empty and `storagePath` holds a local path, so other devices show the card placeholder. **Done by F-013 (2026-11-14, [decision 0017](0017-media-preparation-and-uploads.md)):** once uploaded, entries hold download URLs and the worker adds the public thumbnails; other devices still see the placeholder while an entry is PENDING.
 - Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database; D-015 decides whether to clean it.
 - `currentUser`, `reporterId` and `DebugSeed` are temporary: D-009 replaces the first two, D-015 removes the seed.

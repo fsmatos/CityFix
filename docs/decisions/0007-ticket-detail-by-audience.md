@@ -2,6 +2,8 @@
 
 Status: accepted (F-005, Gate 1 on 2026-11-01; Q2 revised at review on 2026-11-01). Amends [decision 0006](0006-anonymous-projection-phase-1.md): the anonymous projection should also drop `description` and `statusHistory` (handover to Diogo, not yet done).
 
+Amended by F-014 (2026-11-15, see [decision 0018](0018-citizen-tickets-messages-reopen.md)): `detailAudience(session.ticketsUser, ticket)` picks the audience; REGISTERED gets the exact map, every history entry with justifications and "Closed automatically", and the thread through a content slot; OPERATOR is prepared for D-013; `ShowScreen` takes `now`. S4 and the list/detail consistency were done by D-007 (see the amended 0006).
+
 ## Context
 The brief defines three different ticket details, not one detail with optional extras:
 - **I.1.C, anonymous citizen:** "Detalhe de uma ocorrência pública: ocultando dados pessoais do autor e georreferenciação, apenas com imagem(ns) e/ou vídeo(s) e mapa com zoom afastado."

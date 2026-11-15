@@ -2,7 +2,7 @@
 
 Status: accepted (D-010, Gate 1 on 2026-11-14, approved by Diogo: Q1-Q15 as recommended; slice 7, a draft-rules edit that is not deployed, approved; slice 6, the map pick, skipped). Review round 1 fixes on 2026-11-14 (B1, S1-S3). Review round 2 approved. Amends [decision 0010](0010-firestore-schema.md) (operator document timing, `photoPath` value) and [decision 0015](0015-session-role-navigation-mfa.md) (redirect hold). Code-level detail: `docs/architecture/overview.md`, "Registration (D-010)". Plan: `docs/work/D-010-registration/00-plan.md`.
 
-**Numbering note (risk R8).** Two records already use the number 0015: `0015-media-preparation-and-uploads.md` (F-013, Francisco) and `0015-session-role-navigation-mfa.md` (D-009, Diogo). This record takes 0016. The clash is for the two authors to settle. D-010 does not renumber either record.
+**Numbering note (risk R8).** Two records already use the number 0015: `0015-media-preparation-and-uploads.md` (F-013, Francisco) and `0015-session-role-navigation-mfa.md` (D-009, Diogo). This record takes 0016. The clash is for the two authors to settle. D-010 does not renumber either record. **Resolved 2026-11-15 (F-014):** F-013's record was renamed to `0017-media-preparation-and-uploads.md`; D-009 keeps 0015.
 
 **Not verified on a device.** Build and lint pass: 0 errors and 22 warnings, the same as the baseline. The device checks are still pending (Diogo). The list is in `docs/work/D-010-registration/state.md`.
 

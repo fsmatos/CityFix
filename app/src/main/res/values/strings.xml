@@ -33,6 +33,41 @@
     <string name="ticket_map_caption">Approximate area (about 1 km)</string>
     <string name="ticket_map_unavailable">Location not available</string>
     <string name="cd_ticket_map">Map of the approximate area of the issue</string>
+    <string name="ticket_map_exact_title">Location</string>
+    <string name="cd_ticket_map_exact">Map with the exact location of the issue</string>
+    <string name="ticket_history_system">Closed automatically</string>
+
+    <!-- Message thread -->
+    <string name="messages_title">Messages</string>
+    <string name="messages_empty">No messages yet.</string>
+    <string name="message_author_you">You</string>
+    <string name="message_author_operator">Municipality</string>
+    <string name="message_author_citizen">Citizen</string>
+    <string name="message_input_label">Message</string>
+    <string name="cd_send_message">Send message</string>
+    <string name="messages_locked">This ticket is closed: no new messages.</string>
+
+    <!-- Reopen -->
+    <string name="reopen_error_blank">Explain why the ticket should be reopened.</string>
+    <string name="reopen_error_not_allowed">This ticket can no longer be reopened.</string>
+    <string name="reopen_button">Reopen</string>
+    <string name="reopen_dialog_title">Reopen ticket</string>
+    <string name="reopen_dialog_text">Explain why the issue is not solved. A ticket can be reopened up to 5 days after it was resolved.</string>
+    <string name="reopen_justification_label">Justification</string>
+    <string name="reopen_confirm">Reopen</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Ask for clarification -->
+    <string name="clarification_button">Ask for clarification</string>
+    <string name="clarification_dialog_title">Ask for clarification</string>
+    <string name="clarification_dialog_text">Your question is sent to the municipality as a message and the ticket waits for information until they answer.</string>
+    <string name="clarification_question_label">Question</string>
+    <string name="clarification_confirm">Send</string>
+    <string name="clarification_error_blank">Write your question.</string>
+    <string name="clarification_error_not_allowed">You cannot ask for clarification on this ticket now.</string>
+
+    <!-- My tickets -->
+    <string name="my_tickets_empty">You have not reported or followed any tickets yet.</string>
 
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>

@@ -18,6 +18,7 @@ import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
@@ -25,7 +26,10 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.closeIfExpired
+import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
+import pt.isec.amov.cityfix.model.transition
 import java.text.Collator
 
 /**
@@ -45,6 +49,10 @@ import java.text.Collator
  * Privacy (CLAUDE.md, decision 0006): [publicTickets] reads only `publicTickets`, never `tickets`
  * or `ticketLocations`, so the anonymous code path never receives author data or exact
  * coordinates.
+ *
+ * Messages (F-014): each ticket has a `messages` subcollection. [messagesFor] is live like the
+ * other reads and [sendMessage] is queued offline like the report batch. Neither is ever called
+ * for anonymous or pending users (brief I.1.C).
  */
 class FirestoreTicketsRepository(
     private val firestore: FirebaseFirestore,
@@ -181,6 +189,87 @@ class FirestoreTicketsRepository(
             uploader.enqueue("$TICKETS/${ticket.id}", ticket.id, scope == Scope.PUBLIC)
         }
         ReportOutcome.CREATED
+    }
+
+    /** The thread of ticket [ticketId], oldest first (sorted here, so no index is needed). */
+    override fun messagesFor(ticketId: String): Flow<List<Message>> =
+        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES)
+            .listen { snapshot ->
+                snapshot.documents.map { it.toMessage() }.sortedBy { it.sentAt }
+            }
+
+    /**
+     * Adds a message by [author] to ticket [ticketId]; false when the trimmed [text] is empty.
+     * Not awaited, as in reportTicket: offline the write is queued and this device's listener
+     * shows the message at once; failures are only logged.
+     */
+    override fun sendMessage(ticketId: String, text: String, author: User): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return false
+        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES).document()
+            .set(messageDocument(trimmed, System.currentTimeMillis(), author))
+            .addOnFailureListener { Log.w(TAG, "message not saved", it) }
+        return true
+    }
+
+    /**
+     * Reopens a RESOLVED [ticket] (brief II.4). The lifecycle (D-008 transition) checks the
+     * participant, the 5-day window and the justification; false when it rejects the move.
+     */
+    override fun reopenTicket(ticket: Ticket, by: User, justification: String): Boolean {
+        val after = ticket.transition(TicketStatus.OPEN, by, System.currentTimeMillis(), justification)
+            ?: return false
+        commitStatusChange(ticket, after)
+        return true
+    }
+
+    /**
+     * Writes a RESOLVED [ticket] whose reopen window has ended as CLOSED (brief II), with the
+     * entry by "system" at the end of the window (D-008 closeIfExpired). Nothing otherwise.
+     */
+    override fun closeExpiredTicket(ticket: Ticket) {
+        val after = ticket.closeIfExpired(System.currentTimeMillis()) ?: return
+        commitStatusChange(ticket, after)
+    }
+
+    /**
+     * A citizen's clarification request (brief II.2, F-014 Q1): D-008's transition to
+     * INFO_REQUESTED with the question as justification, and the question as a message, in the
+     * same batch. False when the lifecycle rejects the move.
+     */
+    override fun askForClarification(ticket: Ticket, by: User, question: String): Boolean {
+        val now = System.currentTimeMillis()
+        val after = ticket.transition(TicketStatus.INFO_REQUESTED, by, now, question) ?: return false
+        commitStatusChange(ticket, after, messageDocument(question.trim(), now, by))
+        return true
+    }
+
+    /**
+     * One batch for a status change from [before] to [after] (decisions 0010, 0013, 0014):
+     * the ticket's status fields, the publicTickets mirror for a PUBLIC ticket, whether
+     * ticketLocations still groups (`active`), the stats/summary counters and, when given,
+     * [message] as a new message in the thread. Not awaited, as in reportTicket. D-013 can reuse
+     * it for the operator's moves.
+     */
+    private fun commitStatusChange(before: Ticket, after: Ticket, message: Map<String, Any>? = null) {
+        val ticketRef = firestore.collection(TICKETS).document(after.id)
+        val batch = firestore.batch()
+        batch.update(ticketRef, after.toStatusFields())
+        if (message != null) {
+            batch.set(ticketRef.collection(MESSAGES).document(), message)
+        }
+        if (after.scope == Scope.PUBLIC) {
+            batch.update(
+                firestore.collection(PUBLIC_TICKETS).document(after.id),
+                "currentStatus", after.currentStatus.name,
+            )
+        }
+        batch.update(
+            firestore.collection(TICKET_LOCATIONS).document(after.id),
+            "active", after.isActive,
+        )
+        batch.set(firestore.document(STATS_SUMMARY), statsIncrements(before, after), SetOptions.merge())
+        batch.commit().addOnFailureListener { Log.w(TAG, "status change not saved", it) }
     }
 
     /** The nearest active ticket with this category and situation within 10 m, or null. */
