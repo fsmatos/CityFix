@@ -168,8 +168,8 @@ internal fun ImpactDetectionRow(
 /**
  * The optional photo (brief I.2.A, I.3.A): a preview, Gallery, Camera and Remove.
  * [photo] is the Coil model: a File (local pick) or the https photoPath; null = no photo.
- * [showRemove] shows Remove (only for a photo picked on this screen). The caller shows any
- * notice below it.
+ * [showRemove] shows Remove (only for a photo picked on this screen). [labelRes] is the title
+ * ("Photo (optional)" on Register, "Photo" on Profile). The caller shows any notice below it.
  */
 @Composable
 internal fun ProfilePhotoPicker(
@@ -180,10 +180,11 @@ internal fun ProfilePhotoPicker(
     onPickPhoto: () -> Unit,
     onTakePhoto: () -> Unit,
     onRemovePhoto: () -> Unit,
+    @StringRes labelRes: Int = R.string.register_photo_label,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringResource(R.string.register_photo_label),
+            text = stringResource(labelRes),
             style = MaterialTheme.typography.titleSmall,
         )
         if (photo != null) {

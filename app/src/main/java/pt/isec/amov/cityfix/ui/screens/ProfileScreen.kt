@@ -192,6 +192,7 @@ fun ProfileContent(
             onPickPhoto = onPickPhoto,
             onTakePhoto = onTakePhoto,
             onRemovePhoto = onRemovePhoto,
+            labelRes = R.string.profile_photo_label,
         )
         FormMessage(state.photoNotice, isError = true)
         if (state.photoUploadPending) {
