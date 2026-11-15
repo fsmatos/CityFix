@@ -46,11 +46,13 @@ import java.io.File
 /**
  * Stateful Profile screen (D-011): collects [viewModel] and shows [ProfileContent]. The photo is
  * picked as on Register (PickVisualMedia, or TakePicture into a FileProvider file); the launchers
- * sit here, above the content. [onLogOut] is CityFixApp's logOut helper.
+ * sit here, above the content. [onChangePassword] opens its route; [onLogOut] is CityFixApp's
+ * logOut helper.
  */
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    onChangePassword: () -> Unit,
     onLogOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -98,6 +100,7 @@ fun ProfileScreen(
         },
         onRemovePhoto = viewModel::onRemoveNewPhoto,
         onSave = viewModel::save,
+        onChangePassword = onChangePassword,
         onLogOut = onLogOut,
         modifier = modifier,
     )
@@ -130,6 +133,7 @@ fun ProfileContent(
     onTakePhoto: () -> Unit,
     onRemovePhoto: () -> Unit,
     onSave: () -> Unit,
+    onChangePassword: () -> Unit,
     onLogOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -221,6 +225,9 @@ fun ProfileContent(
         ) {
             Text(stringResource(R.string.profile_save))
         }
+        OutlinedButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.profile_change_password))
+        }
         OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_log_out))
         }
@@ -263,6 +270,7 @@ private fun ProfilePreview(state: ProfileUiState) {
             onTakePhoto = {},
             onRemovePhoto = {},
             onSave = {},
+            onChangePassword = {},
             onLogOut = {},
         )
     }

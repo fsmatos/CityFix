@@ -32,7 +32,7 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 enum class TopBarScreen {
     DASHBOARD, LIST, DETAIL, REPORT, LOGIN, FORGOT_PASSWORD,
     PENDING_VALIDATION, OPERATOR_PANEL, MY_TICKETS, PROFILE, APPROVALS, CATEGORIES, ACCOUNT_PROBLEM,
-    ACCOUNT_SETUP, REGISTER,
+    ACCOUNT_SETUP, REGISTER, CHANGE_PASSWORD,
 }
 
 /** The account button at the end of the bar: Log in for anonymous users, Log out once signed in. */
@@ -81,6 +81,7 @@ fun MainTopAppBar(
         TopBarScreen.ACCOUNT_PROBLEM -> R.string.top_bar_title_account_problem
         TopBarScreen.ACCOUNT_SETUP -> R.string.top_bar_title_account_setup
         TopBarScreen.REGISTER -> R.string.top_bar_title_register
+        TopBarScreen.CHANGE_PASSWORD -> R.string.top_bar_title_change_password
     }
     val showMenu = menuItems.isNotEmpty()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }

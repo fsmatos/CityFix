@@ -45,11 +45,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
+import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
 import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
 import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
+import pt.isec.amov.cityfix.ui.navigation.ChangePasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.LoginRoute
@@ -68,6 +70,7 @@ import pt.isec.amov.cityfix.ui.navigation.homeFor
 import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
+import pt.isec.amov.cityfix.ui.screens.ChangeCredentialScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
@@ -85,6 +88,9 @@ import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CredentialChange
+import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModel
+import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.GateStatus
@@ -437,7 +443,34 @@ private fun CityFixApp(app: CityFixApplication) {
                                 app.attachmentStorage,
                             ),
                         )
-                        ProfileScreen(viewModel = profileViewModel, onLogOut = logOut)
+                        ProfileScreen(
+                            viewModel = profileViewModel,
+                            onChangePassword = {
+                                navController.navigate(ChangePasswordRoute) { launchSingleTop = true }
+                            },
+                            onLogOut = logOut,
+                        )
+                    }
+                }
+                composable<ChangePasswordRoute> {
+                    RequireAccess(
+                        role = role,
+                        allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                        onDenied = goHome,
+                    ) {
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            factory = CredentialChangeViewModelFactory(
+                                CredentialChange.PASSWORD,
+                                user is Operator,
+                                app.authRepository,
+                                app.usersRepository,
+                            ),
+                        )
+                        ChangeCredentialScreen(
+                            viewModel = credentialViewModel,
+                            onDone = { navController.navigateUp() },
+                        )
                     }
                 }
                 composable<OperatorPanelRoute> {
@@ -511,5 +544,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM
     hasRoute<AccountSetupRoute>() -> TopBarScreen.ACCOUNT_SETUP
     hasRoute<RegisterRoute>() -> TopBarScreen.REGISTER
+    hasRoute<ChangePasswordRoute>() -> TopBarScreen.CHANGE_PASSWORD
     else -> TopBarScreen.DASHBOARD
 }

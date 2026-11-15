@@ -254,4 +254,16 @@
     <string name="profile_unavailable">Your profile could not be read. Check your connection and open it again.</string>
     <string name="profile_log_out">Log out</string>
     <string name="cd_profile_loading">Loading your profile</string>
+    <!-- D-011 Change password -->
+    <string name="profile_change_password">Change password</string>
+    <string name="credential_current_password_label">Current password</string>
+    <string name="credential_new_password_label">New password</string>
+    <string name="credential_error_current_blank">Enter your current password.</string>
+    <string name="credential_error_current_wrong">The current password is wrong.</string>
+    <string name="credential_continue">Continue</string>
+    <string name="credential_back">Back</string>
+    <string name="credential_password_changed">Password changed. Use the new password the next time you log in.</string>
+    <string name="credential_back_to_profile">Back to profile</string>
+    <string name="cd_credential_progress">Checking</string>
+    <string name="top_bar_title_change_password">Change password</string>
 </resources>

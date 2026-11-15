@@ -53,6 +53,10 @@ data object MyTicketsRoute
 @Serializable
 data object ProfileRoute
 
+/** Change password, from Profile (D-011). */
+@Serializable
+data object ChangePasswordRoute
+
 /** Operator: citizen registrations to validate. Placeholder until D-012. */
 @Serializable
 data object ApprovalsRoute

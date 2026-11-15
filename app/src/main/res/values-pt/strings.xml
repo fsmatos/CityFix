@@ -254,4 +254,16 @@
     <string name="profile_unavailable">Não foi possível ler o seu perfil. Verifique a ligação e abra-o de novo.</string>
     <string name="profile_log_out">Terminar sessão</string>
     <string name="cd_profile_loading">A carregar o seu perfil</string>
+    <!-- D-011 Alterar palavra-passe -->
+    <string name="profile_change_password">Alterar palavra-passe</string>
+    <string name="credential_current_password_label">Palavra-passe atual</string>
+    <string name="credential_new_password_label">Nova palavra-passe</string>
+    <string name="credential_error_current_blank">Introduza a palavra-passe atual.</string>
+    <string name="credential_error_current_wrong">A palavra-passe atual está errada.</string>
+    <string name="credential_continue">Continuar</string>
+    <string name="credential_back">Voltar</string>
+    <string name="credential_password_changed">Palavra-passe alterada. Use a nova palavra-passe no próximo início de sessão.</string>
+    <string name="credential_back_to_profile">Voltar ao perfil</string>
+    <string name="cd_credential_progress">A verificar</string>
+    <string name="top_bar_title_change_password">Alterar palavra-passe</string>
 </resources>
