@@ -7,7 +7,7 @@
   - Update: "ViewModel (D-003)", "App shell (D-006)" (audience, `canExpandCards`); "Navigation (D-004)" table; "Handover (D-009)", "Handover (F-011)" (`resolvedAt`, Q13); "Open: lifecycle fields" point 1 (once Diogo agrees); "Lifecycle (D-008)"; "Screens".
 - 0007: exact map, justifications, slot, `detailAudience` from `ticketsUser`, OPERATOR, `now`.
 - 0010: `byOperator`, `authorId` = uid, `document().set()`, `resolvedAt` not read, reopen sets `active`; fix line 73 ("0011" -> "0012").
-- 0011 (Diogo's): II.2 Context line only with permission, else in F-014's record.
+- 0011 (Diogo's, he agreed; review S1): citizen column on OPEN and IN_PROGRESS = "INFO_REQUESTED (clarification, F-014)"; Q1 marked superseded, see 0018. Rest unchanged.
 - 0013: `resolvedAt` decided; D-009's stand-in line. 0014: D-009's line (optional).
 - D-009's 0015: do not edit; suggested line in the handover.
 - Task file: "done" + Gate 1 changes. `docs/report/notes.md`: below.

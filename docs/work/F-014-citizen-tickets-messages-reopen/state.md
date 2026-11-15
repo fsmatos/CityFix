@@ -9,7 +9,7 @@ Remote: origin/dev/Francisco
 | Gate 1: plan approved | done | 2026-11-15 | approved with the person's Q1-Q15 answers; Q1 follows brief II.2, Diogo agrees |
 | Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run |
 | Review | done | 2026-11-15 | approve: 0 blocking, 1 should-fix (S1 decision 0011 vs Q1, docs phase), 1 nit; build + lint 0 errors, 22 warnings; D1-D15 open |
-| Docs | pending | | |
+| Docs | done | 2026-11-15 | overview (F-014 section + handover, small updates), 0018 new, 0011 S1 amend, 0007/0010/0013 lines, report notes, task file; not committed |
 | Pushed | pending | | |
 | Merged | pending | | |
 
@@ -65,3 +65,10 @@ Append-only.
   - Device checks D1-D15: not run (they need the test accounts A/C/P/O that the person must prepare, Francisco's SHA keys in Firebase and a Google Play AVD).
 - 2026-11-15: Review (reviewer) of `fbbbbe0..HEAD` against 00-plan Q1-Q15, 01-coding-plan, the code-phase deviations, the brief (I.1.C, I.2.E, II.2, II.4, II.5, IV) and Contacts_#3. `./gradlew assembleDebug lint`: BUILD SUCCESSFUL, 0 errors, 22 warnings (same ids). Verdict approve: 0 blocking; S1 decision 0011's table and Q1 still say a citizen cannot set INFO_REQUESTED (amend in the docs phase, Diogo agreed; update the 03-docs-plan bullet); N1 PT "Você" -> "Eu". Checked: status batches keep ticket, history, publicTickets mirror, `ticketLocations.active` and stats consistent; the citizen move is minimal; anonymous/pending/non-participants never create `TicketDetailViewModel`; EN/PT keys match; no broken 0015-media link, Diogo's 0015 untouched. Open: D1-D15, D-013 INFO_REQUESTED -> IN_PROGRESS only after a citizen question on an OPEN ticket, D-014 geofence pause, F-016 notifications. See `review.md`.
 - 2026-11-15: Review N1 applied in the main session: PT `message_author_you` is now "Eu" (was "Você"). S1 (decision 0011 table and Q1) goes to the docs phase. Build and lint pass, 0 errors.
+- 2026-11-15: Docs (docs-writer), kept short at the person's request. No code, rules, Gradle or `google-services.json` touched; not committed.
+  - New `docs/decisions/0018-citizen-tickets-messages-reopen.md` (0018 was free).
+  - 0011 (review S1, Diogo agreed): citizen column on OPEN / IN_PROGRESS reads "INFO_REQUESTED (clarification, F-014)"; Q1 marked superseded by F-014 Gate 1 Q1, see 0018. Rest untouched.
+  - Overview: new "Citizen tickets, messages and reopen (F-014)" and "Handover (F-014)"; one-line updates in Lifecycle (table, Q1), ViewModel, Navigation table, App shell (detail), Screens, "Open: lifecycle fields" (point 1, marked "confirm with Diogo"), Handover D-009 / F-011 / F-012.
+  - 0007, 0010, 0013: one amendment block each; 0010's wrong "decision 0011" link (no-server notifications) now points to 0012 (it sat on line 81, not 73).
+  - `docs/report/notes.md`: F-014 section. Task file: status done, Gate 1 changes. 03-docs-plan 0011 bullet updated to match S1.
+  - Deviation: D-009's suggested 0013 line added; 0014's optional line and 0015 (D-009's) not edited.

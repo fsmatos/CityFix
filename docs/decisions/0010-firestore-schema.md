@@ -1,6 +1,10 @@
 # 0010: Firestore and Storage layout
 
-Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012 and F-013 (below).
+Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012, F-013 and F-014 (below).
+
+Amended by F-014 (2026-11-15, see [decision 0018](0018-citizen-tickets-messages-reopen.md)):
+- `messages` documents gain `byOperator` (Boolean); `authorId` = the Auth uid; written with `document().set()` (queued offline).
+- `resolvedAt` is not read by the app (Q7): times come from the RESOLVED history entry. A reopen sets `ticketLocations.active = true` in the same batch.
 
 Amended by F-011 (2026-11-13, see [decision 0013](0013-firestore-reads-and-dashboard-counters.md)):
 - **`stats/summary` is decided** (Q3): four counters `totalTickets`, `activeTickets`, `resolvedTickets`, `repairTimeSumMillis`, changed with `FieldValue.increment` (`statsIncrements(before, after)`, `SetOptions.merge()`) in the same batch as every ticket change; read by everyone. The rules draft has a `stats/{docId}` block (write: `summary` only, active citizens and operators, only the four keys; values not bounded). Not deployed.
@@ -78,7 +82,7 @@ Model types stay as [decision 0003](0003-domain-model-representation.md) defines
 - Subcollections for `statusHistory` and `attachments`: a batch for every transition and extra reads for the detail.
 - One `tickets` collection read with field filtering for anonymous users: rules cannot hide fields.
 - Two queries (`creatorId ==` and `followerIds array-contains`) merged on the client instead of `participantIds`.
-- For the 10 m grouping: grouping only against the citizen's own tickets (defeats Option A); letting any citizen read full tickets (exposes descriptions and author ids); a Cloud Function (conflicts with no-server notifications, decision 0011).
+- For the 10 m grouping: grouping only against the citizen's own tickets (defeats Option A); letting any citizen read full tickets (exposes descriptions and author ids); a Cloud Function (conflicts with no-server notifications, [decision 0012](0012-firebase-plan-notifications-close-maps.md)).
 - A `{latitude, longitude}` map instead of `GeoPoint`: equally simple, but no type in the console.
 - `Timestamp` for times: extra mapping, against decision 0003.
 

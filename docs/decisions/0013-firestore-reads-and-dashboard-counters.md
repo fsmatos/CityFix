@@ -2,6 +2,8 @@
 
 Status: accepted (F-011, Gate 1 on 2026-11-13, defaults Q1-Q8; review fixes S1, S2, N1-N3 on 2026-11-13). Builds on [decision 0009](0009-tickets-repository.md) (repository, amended by F-011) and [decision 0010](0010-firestore-schema.md) (layout, amended by F-011). The number 0013 was free on `dev/Francisco` when this was written (Q8: confirm with Diogo that `dev/Diogo` has not used it).
 
+Stand-in user replaced by the D-009 session on 2026-11-14 (`46ee41f`), see decision 0015. F-014 (2026-11-15): `resolvedAt` decided, not mapped (repair time from the RESOLVED history entry); status changes add `statsIncrements` in `commitStatusChange` ([decision 0018](0018-citizen-tickets-messages-reopen.md)).
+
 ## Context
 - Brief IV wants tickets and categories in Firestore with the offline cache. F-010 set up Firebase and the layout (decision 0010), but nothing read or wrote it.
 - Anonymous users must read only `publicTickets` (CLAUDE.md, decision 0006 "Public projection contract"): Firestore rules secure whole documents, so the anonymous code path must never query `tickets` or `ticketLocations`.

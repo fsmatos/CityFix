@@ -1,7 +1,9 @@
 # F-014: Citizen: my tickets, message thread and reopening
 
-Owner: Francisco (`dev/Francisco`) · Layer: `ui` / `viewmodel` / `data` · Phase 2 · Status: to do · Target: 2026-11-17
+Owner: Francisco (`dev/Francisco`) · Layer: `ui` / `viewmodel` / `data` · Phase 2 · Status: done (2026-11-15; device checks D1-D15 open) · Target: 2026-11-17
 Depends on: F-011, D-008, D-009 · Used by: D-013 (same message thread for operators), F-016
+
+Gate 1 changes (2026-11-15, [decision 0018](../../decisions/0018-citizen-tickets-messages-reopen.md)): a citizen's clarification request sets INFO_REQUESTED (Q1, brief II.2); My tickets entry kept as D-009 left it (Q2); no expand toggle (Q13).
 
 ## Goal
 Let a registered citizen follow their own tickets, talk to the council on each one, and reopen a resolved ticket within 5 days.

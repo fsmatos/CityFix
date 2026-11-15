@@ -97,13 +97,13 @@ Details and reasons: [decision 0011](../decisions/0011-ticket-lifecycle-rules.md
 
   | From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
   | --- | --- | --- |
-  | OPEN | INFO_REQUESTED, IN_PROGRESS | - |
+  | OPEN | INFO_REQUESTED, IN_PROGRESS | INFO_REQUESTED (clarification, F-014) |
   | INFO_REQUESTED | IN_PROGRESS | - |
-  | IN_PROGRESS | INFO_REQUESTED, RESOLVED | - |
+  | IN_PROGRESS | INFO_REQUESTED, RESOLVED | INFO_REQUESTED (clarification, F-014) |
   | RESOLVED (less than 5 days) | - | OPEN (reopen) |
   | CLOSED (stored, or RESOLVED for 5 days or more) | - | - |
 
-  Nobody moves a ticket to CLOSED by hand; only `closeIfExpired` writes it. A citizen's question is a plain message and does not move the status (Q1; consistent with brief I.3.E, II.2 not checked). Followers may reopen as well as the creator (Q2; brief I.2.E and the I.2 Obs read as creator + followers, II not checked). A `PENDING` citizen gets nothing (Q11).
+  Nobody moves a ticket to CLOSED by hand; only `closeIfExpired` writes it. **Since F-014** a citizen's clarification request sets INFO_REQUESTED (brief II.2, F-014 Gate 1 Q1, Diogo agreed; [decision 0018](../decisions/0018-citizen-tickets-messages-reopen.md)); D-008's Q1 (plain message) is superseded. Followers may reopen as well as the creator (Q2; brief I.2.E and the I.2 Obs read as creator + followers, II not checked). A `PENDING` citizen gets nothing (Q11).
 - API (top-level extension functions, like `isActive` and `toAnonymousView()`):
   - `const val SYSTEM_RESPONSIBLE_ID = "system"`, `REOPEN_WINDOW_MS = 432_000_000` (5 d), `CLOSING_WARNING_MS = 345_600_000` (4 d, i.e. 24 h before closing; brief III not checked);
   - `Ticket.resolvedAt(): Long?`: time of the **last** RESOLVED entry while `currentStatus` is RESOLVED or CLOSED, otherwise `null`;
@@ -123,7 +123,7 @@ Details and reasons: [decision 0011](../decisions/0011-ticket-lifecycle-rules.md
 - Why nothing else changes: `isActive` treats RESOLVED and CLOSED alike (both inactive), so `publicActive()`, `findNearby()` and "% active" are unaffected by the effective CLOSED. `stats()` reads the last RESOLVED entry, and a later CLOSED entry comes after it, so the repair time is unchanged. A reopened ticket is OPEN, active, and out of the average until resolved again (decision 0005). The dashboard stays at 3 / 67% / 3 days / 1 repair.
 - `phase` passes through `toAnonymousView()` (not personal data). `SYSTEM_RESPONSIBLE_ID` and the justifications live in the history, which the projection drops.
 - **How F-014 / D-013 / F-016 use it:**
-  - **F-014 (citizen reopen):** show Reopen only when `TicketStatus.OPEN in ticket.allowedTransitions(user, now)` (not `canReopen` alone, which ignores the user and a broken history; review S1). Ask for a justification and call `transition(OPEN, user, now, justification)`. Treat `isLocked(now)` as read-only (no messages, no reopen).
+  - **F-014 (citizen reopen): done 2026-11-15**, see "Citizen tickets, messages and reopen (F-014)". Show Reopen only when `TicketStatus.OPEN in ticket.allowedTransitions(user, now)` (not `canReopen` alone, which ignores the user and a broken history; review S1). Ask for a justification and call `transition(OPEN, user, now, justification)`. Treat `isLocked(now)` as read-only (no messages, no reopen).
   - **D-013 (operator transitions):** offer exactly `allowedTransitions(operator, now)`. Resolve by building the proof `Attachment` (upload state PENDING) and calling `transition(RESOLVED, operator, now, proof = listOf(att))`; no separate `addResolutionProof` is needed. Write `tickets` and `publicTickets` in one batch, and use a transaction or a precondition on `currentStatus` against concurrent writes. The INFO_REQUESTED justification is also posted as a message (D-013's job).
   - **F-016 (24 h warning):** schedule at `closingWarningAt()` and cancel when the ticket leaves RESOLVED. The time can be in the past: before notifying check `!isLocked(now)` (or `closingWarningAt()!! > now` when scheduling), or a 6-day-old ticket gets a "closes in 24 h" message (review S2).
   - **Badges:** registered and operator screens pass `effectiveStatus(now)` to `StatusBadge`, not `currentStatus`, so an expired RESOLVED ticket shows CLOSED.
@@ -147,7 +147,7 @@ Details and reasons: [decision 0006](../decisions/0006-anonymous-projection-phas
   - `tickets: StateFlow<List<Ticket>>` and `stats: StateFlow<DashboardStats>`: start as `emptyList()` and `DashboardStats()`. `stats` is collected once in `init` (the same for every user). **On cold start the dashboard and list show the empty state until the first snapshot arrives** (from the local cache, or from the server on a first install), and after process death on the detail route "Ticket not found" shows until then (accepted; no loading state).
   - `setUser(user: User?)`: called from `init` with the factory's user (`null`), and by D-009 whenever `Session.ticketsUser` changes (sign-in, sign-out, activation). It cancels the previous listener job, **clears `tickets`** (review S1, so an anonymous user never sees the previous user's full tickets while the new listener loads) and starts: `null` -> `publicTickets()`; `Citizen` -> `combine(participantTickets(id), publicTickets())`, merged with `TicketsList(own + public)` so the citizen's full ticket wins over its public copy; `Operator` -> `allTickets()`. The `when` is exhaustive over the sealed `User`.
   - `getTicketById(id): Ticket?`: searches only the current `tickets` value. For anonymous users unknown, PRIVATE, RESOLVED and CLOSED ids return `null`. It is a snapshot, not a stream, and still has no caller.
-  - **Since F-011 `tickets` holds full tickets for citizens (their own) and operators (all).** The screens still render `DetailAudience.PUBLIC` and collapsed cards for everyone: D-009 wires the session but keeps both (Gate Q7, decision 0015); the role-specific views are F-014 / D-013.
+  - **Since F-011 `tickets` holds full tickets for citizens (their own) and operators (all).** The screens still render `DetailAudience.PUBLIC` and collapsed cards for everyone: D-009 wires the session but keeps both (Gate Q7, decision 0015); the role-specific views are F-014 / D-013. **Since F-014** the detail uses `detailAudience(session.ticketsUser, ticket)` (cards stay collapsed); see "Citizen tickets, messages and reopen (F-014)".
   - **D-009 (2026-11-14, its only change to `setUser`, which F-011 wrote):** `setUser` returns early when the role and id equal the last applied ones (`appliedUserKey`, for example `"citizen:<id>"`, `"anonymous"` for null), so rotation, process-death re-application and profile-only changes (`fcmTokens`) do not restart the listener or blank the list. The caller is `LaunchedEffect(ticketsUser)` in `CityFixApp`, plus the `logOut` helper, which calls `setUser(null)` before `signOut()`.
 - `Ticket.toAnonymousView()` (`model/TicketPrivacy.kt`, pure Kotlin) returns a copy of the same `Ticket` type with:
   - `creatorId` blank, `followerIds` and `messages` empty;
@@ -231,7 +231,7 @@ Code: `ui/navigation/Destinations.kt`. No decision record (D-004 Gate 1, Q5): ty
   | `AccountSetupRoute` | verify e-mail, phone, code, enrol | SETUP | D-009 |
   | `PendingValidationRoute` | "waiting for validation" home | PENDING_CITIZEN | D-009 |
   | `AccountProblemRoute` | profile missing / unavailable, Retry, Log out | ACCOUNT_PROBLEM | D-009 |
-  | `MyTicketsRoute` | placeholder | CITIZEN | F-014 (Francisco) |
+  | `MyTicketsRoute` | `MyTicketsScreen` (F-014) | CITIZEN | F-014 (Francisco), done |
   | `ProfileRoute` | placeholder | CITIZEN, PENDING_CITIZEN, OPERATOR | D-011 |
   | `OperatorPanelRoute` | placeholder, operator home | OPERATOR | D-013 |
   | `ApprovalsRoute`, `CategoriesRoute` | placeholders | OPERATOR | D-012 |
@@ -315,7 +315,7 @@ Code: `MainActivity.kt`. No decision record: state ownership and ViewModel scope
   The same `viewModel()` call gives two lifetimes because it uses `LocalViewModelStoreOwner`: the activity above the `NavHost`, the `NavBackStackEntry` inside `composable`.
 - Top bar: `backStackEntry` comes from `currentBackStackEntryAsState()`, and a private `NavDestination?.toTopBarScreen()` maps it with `hasRoute<T>()`. Its `else` means a new route silently gets the dashboard title, so new routes must be added there by hand. `canNavigateBack = navController.previousBackStackEntry != null` is read in the body of `CityFixApp`, next to `backStackEntry`: `previousBackStackEntry` is not Compose state, so read alone it could leave the arrow stale (D-005 review N4).
 - Navigation: every forward `navigate` uses `launchSingleTop = true`, to stop a double tap stacking a screen. This covers forward navigation only: a double tap on the back arrow goes back two screens (review N1, left as planned). The add button stays on the detail screen (D-005 Q2), which is how detail -> report works.
-- Detail: always `DetailAudience.PUBLIC`, for every session since D-009 too. Since F-011 `tickets` holds a citizen's own + public tickets and an operator's all, but the detail still renders only the public fields (decision 0006); F-014 / D-013 add the role-specific views. The ticket comes from the collected `tickets`.
+- Detail: always `DetailAudience.PUBLIC`, for every session since D-009 too. Since F-011 `tickets` holds a citizen's own + public tickets and an operator's all, but the detail still renders only the public fields (decision 0006); F-014 / D-013 add the role-specific views. The ticket comes from the collected `tickets`. **Since F-014:** `detailAudience(session.ticketsUser, ticket)`; PUBLIC draws `ShowScreen`, otherwise `TicketDetailScreen` with a destination-scoped `TicketDetailViewModel` (`TicketDetailViewModelFactory(app.ticketsRepository, id, user)`). `canExpandCards` stays `false` (Q13).
 - **Since D-009** (details in "Auth and session (D-009)"):
   - **Loading gate:** while `session == Session.Loading` the `Scaffold` content is a centred `CircularProgressIndicator` labelled `cd_loading_session`, not the `NavHost`, so an operator never sees the dashboard flash.
   - **Guards:** the report destination and every role destination are wrapped in `RequireAccess(role, allowed, onDenied = goHome)`; `ReportViewModel` is created only inside the guard. `goHome` navigates to `homeFor(role)` with `popUpTo(navController.graph.id) { inclusive = true }` and `launchSingleTop`.
@@ -408,6 +408,7 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
   - Previews (private data, `CityFixTheme`): `previewStats` (30 / 12 / 8, 3 days 4 hours) in portrait, landscape and PT landscape; `DashboardStats()` in portrait, landscape and PT; the sample figures (3 / 2 / 1, exactly 3 days) in EN and PT; a single-ticket preview `DashboardStats(1, 0, 1, 30 min)` in EN and PT for "Less than 1 hour", "Based on 1 repair" and "0 of 1 issue". It uses 0 active of 1, not 1 of 1, because a resolved ticket is never active (D-002 contract). The "hours only" branch ("5 hours") has no preview and is checked by reading the code.
   - No stateful wrapper (Q1, as in F-003): D-006 collects `vm.stats`.
   - Wired by D-006 in `CityFixApp` (see "App shell (D-006)"). D-005's top bar has no list action, so dashboard -> list goes through this button (Q5). As for `ListScreen`, the tall-cutout check covered the bar's controls, not the cards.
+- **F-014 screens** (see "Citizen tickets, messages and reopen (F-014)"): `MyTicketsScreen(tickets, now, onTicketClick)` behind `MyTicketsRoute`; `TicketDetailScreen(ticket, user, viewModel, ...)` / `TicketDetailContent` for participants; `ShowScreen` gained `now`, an exact map, history labels and a participant slot.
 - `ShowScreen(ticket: Ticket?, audience: DetailAudience, modifier)` (`ui/screens/ShowScreen.kt`, F-005): the ticket detail behind `TicketDetailRoute`. Details and reasons: [decision 0007](../decisions/0007-ticket-detail-by-audience.md).
   - `enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }` lives in the same file (Gate 1: only this screen and D-006's call use it; move it to `model/` only if the Auth task needs it there). `audience` is required, with no default, so every caller states who is looking; `modifier` stays the first optional parameter (lint `ModifierParameter`). The screen branches with an exhaustive `when (audience)`, so a later task that adds messages or coordinates must decide for each audience to compile.
   - Who gets which audience (the screen only receives it; the Auth/ViewModel layer maps role + creator/follower relation to it, review S3):
@@ -521,6 +522,8 @@ Options to agree on: (a) F-011 maps the Firestore `resolvedAt` into the model an
 
 Status after merging F-011/F-012 into `dev/Diogo` (2026-11-14): point 2 is settled in the draft rules, which Francisco aligned with D-008's transition table and automatic close in `ab00ee2` (the CLOSED entry by `"system"` is accepted; option (b), first half). Point 1 is still open: the rules still check the server `resolvedAt`, while F-011's `toTicket()` ignores it and `Ticket.resolvedAt()` uses the RESOLVED history entry ("Handover (F-011)", D-013 / F-014 decide and amend decision 0010). The rules are not deployed (decision 0012 Q5 amended), so neither point is enforced on the server today.
 
+**Point 1 settled in F-014 (2026-11-15, Gate 1 Q7; confirm with Diogo):** times come from the RESOLVED history entry; the Firestore `resolvedAt` is not read or cleared ([decision 0018](../decisions/0018-citizen-tickets-messages-reopen.md)). The draft rules still mention it (not deployed).
+
 ### Auth and session (D-009)
 Decision: [0015](../decisions/0015-session-role-navigation-mfa.md). Code: `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `viewmodel/Session.kt`, `viewmodel/SessionViewModel.kt` (+ factory), `viewmodel/{Login,ForgotPassword,AccountSetup}{ViewModel,UiState,ViewModelFactory}.kt`, `viewmodel/AuthErrorMessages.kt`, `ui/navigation/RoleAccess.kt`, `ui/screens/{Login,Mfa,ForgotPassword,AccountSetup,PendingValidation,Placeholder}Screen.kt`, `MainActivity.kt`, `CityFixApplication.kt`.
 
@@ -579,7 +582,7 @@ Decision: [0015](../decisions/0015-session-role-navigation-mfa.md). Code: `data/
   - `CityFixApplication.kt` (shared container) gained `authRepository` and `usersRepository`, both `by lazy`; on 2026-11-14 F-011's stand-ins were removed from it (next items).
   - Shared strings: about 50 new EN/PT keys with prefixes `login_`, `mfa_`, `forgot_`, `setup_`, `pending_`, `placeholder_`, `account_problem_`, `menu_`, `top_bar_title_`, `cd_`. Expect merge conflicts in both `strings.xml` files; keep both sides.
   - `MainTopAppBar` has new required parameters (`showAddAction`, `accountAction`, `menuItems`, `onAccountClick`, `onMenuItemClick`).
-  - **F-014:** fill `composable<MyTicketsRoute>` (guarded for CITIZEN) inside the existing `RequireAccess`. The uid comes from `Session.SignedIn.user.id`. The `DetailAudience` mapping needs an unprojected source (decision 0007). If "my tickets" reuses `TicketCard` with unprojected tickets, the expand toggle question (`canExpandCards`, decision 0006 D-009 amendment) can be reopened there.
+  - **F-014:** fill `composable<MyTicketsRoute>` (guarded for CITIZEN) inside the existing `RequireAccess`. The uid comes from `Session.SignedIn.user.id`. The `DetailAudience` mapping needs an unprojected source (decision 0007). If "my tickets" reuses `TicketCard` with unprojected tickets, the expand toggle question (`canExpandCards`, decision 0006 D-009 amendment) can be reopened there. **Done by F-014 (2026-11-15):** My tickets filled inside the guard, audience mapped, toggle kept off (Q13).
   - **F-011 / F-012: done by D-009 on 2026-11-14** (`46ee41f`, review fix `f141ae4`). The report's creator id is `session.ticketsUser?.id` (the active citizen's uid), `TicketsViewModel.setUser` follows `Session.ticketsUser`, the gate's Log in opens `LoginRoute`, and the gate shows only for the anonymous user. The stand-ins `currentUser`, `reporterId`, `DEV_CITIZEN_ID` and `DEV_OPERATOR_ID` are removed from `CityFixApplication` (no other code used them; `DebugSeed` does not). The report route is reachable only by `AccessRole.CITIZEN`.
   - **Changes in code Francisco wrote (tell him):** (1) `viewmodel/TicketsViewModel.kt` (`setUser` came from F-011), the only change there: the same-user guard in `setUser` (`appliedUserKey`), see "ViewModel (D-003)". (2) `ui/screens/LocationGateScreen.kt`: one KDoc line, `onLoginClick` now opens the login (`null` still hides the button). (3) `CityFixApplication.kt`: the stand-ins and the unused `model.User` import removed. (4) `MainActivity.kt`: F-012's early `return` for the gate replaced by the overlay (see "Auth and session (D-009)").
   - **F-016:** store the FCM token in `users/{uid}.fcmTokens` once the session is `Session.SignedIn` (not on "not Anonymous": see the N7 gap above).
@@ -636,7 +639,7 @@ Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (
 - **D-013 (Diogo) and F-014 (Francisco), status changes:**
   - every batch that changes a ticket adds `statsIncrements(before, after)` on `stats/summary` with `SetOptions.merge()`; both tickets need a non-blank id;
   - the same batch mirrors the status to `publicTickets` (PUBLIC tickets) and, when closing, sets `ticketLocations/{id}.active = false` (decision 0010);
-  - `toTicket()` ignores the Firestore `resolvedAt`; the model's `Ticket.resolvedAt()` uses the RESOLVED history entry. Decide whether to map `resolvedAt` (a Firestore-only field) or keep using the history entry, and update decision 0010 to match.
+  - `toTicket()` ignores the Firestore `resolvedAt`; the model's `Ticket.resolvedAt()` uses the RESOLVED history entry. Decide whether to map `resolvedAt` (a Firestore-only field) or keep using the history entry, and update decision 0010 to match. **F-014 (Q7): keep the history entry**; batches and mirror done in `commitStatusChange` ([decision 0018](../decisions/0018-citizen-tickets-messages-reopen.md)).
 - **F-012 (Francisco), location and grouping:** `ticketLocations/{id}` already exists for every ticket, with (0, 0); write the real location in the create batch (`tickets`, `ticketLocations`, `publicTickets`). **Done by F-012 (2026-11-14).**
 - **F-013 (Francisco), media:** `storagePath` holds the local path while PENDING; replace it with the Storage path and fill `publicTickets.thumbnails`. **Done by F-013 (2026-11-14):** the https download URL (Q2), and the worker adds public thumbnails with `arrayUnion`.
 - **D-015 (Diogo), delivery:** add to the checklist: delete `data/DebugSeed.kt` and its call and import in `CityFixApplication`; decide whether to clean the stand-in test data (`dev-citizen-1`, `citizen-1`, `citizen-2`) before the defence.
@@ -671,7 +674,7 @@ Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002]
 - **D-013 (Diogo), operator:** the exact map is `TicketMap(location, exact = true, modifier)` (marker, zoom 15). Show each ticket's `tickets/{id}/reports/{uid}` (description and media of the citizens who joined it) to operators. Set `ticketLocations/{id}.active = false` in the resolve batch (and keep it false when closing).
 - **D-014 (Diogo), geofence and sensors:** reuse `LocationRepository` and add location updates there (the `ProximityService` pattern with `requestLocationUpdates` from Contacts_#3), plus the background permission.
 - **F-013 (Francisco), media:** upload the joiner's media in `reports/{uid}` too (same PENDING format as ticket attachments), not only the ticket's. **Done by F-013 (2026-11-14).**
-- **F-014 (Francisco), reopen:** set `ticketLocations/{id}.active = true` in the reopen batch.
+- **F-014 (Francisco), reopen:** set `ticketLocations/{id}.active = true` in the reopen batch. **Done by F-014** (`active = isActive` in `commitStatusChange`).
 - **F-016 (Francisco), notifications:** add `POST_NOTIFICATIONS` (Android 13+) to the start-up `RequestMultiplePermissions` request in `MainActivity`; the callback must then read the location entries, not `values.any { it }`.
 - **D-015 (Diogo), delivery:** the ZIP must contain the real Maps key in `AndroidManifest.xml` (not `PASTE_MAPS_API_KEY_HERE`), and the key must not have an Android-app (SHA-1) restriction, or the grader's build shows a blank map. Delete `data/DebugSeed.kt` and its call (from F-011).
 - **Diogo's files changed by F-012** (after the person told him): `MainActivity.kt` (start-up permission request, gate ViewModel and early return, `app.locationRepository` to `ReportViewModelFactory`, one snackbar per `ReportOutcome`), `AndroidManifest.xml` (location permissions, `INTERNET`, Maps meta-data). `model/TicketsList.kt:19` comment is still out of date (F-011 review N4).
@@ -726,6 +729,36 @@ Decision: [0017](../decisions/0017-media-preparation-and-uploads.md) (amends [00
 - **Rules (if ever deployed):** `firestore.rules` `reports/{uid}` needs an attachments-only update for its author (Q11); `storage.rules` `create`-only refuses a retry that re-uploads an existing object.
 - **Task file superseded by Gate 1** (not missing work): Q5 no reuse of `FileUtils.removeImageLocation` (deleted; re-encoding drops EXIF); Q6 no UPLOADING state (PENDING -> UPLOADED / FAILED); Q7 plain `enqueue`, no unique work, and one worker per document instead of the task file's "ticket id + attachment id" input (review S1); Q8 indicator in `ShowScreen`'s `MediaTile`, not in `AttachmentGallery`.
 - **Diogo's files changed by F-013** (KDoc only, approved by the person): `model/TicketPrivacy.kt` (`toAnonymousView()`: EXIF dropped by re-encoding in `AttachmentUploader.prepare`, videos keep their metadata, Storage paths hold only the ticket id and a UUID) and `model/Attachment.kt` (`id` is a random UUID, also the file name; `file` / `thumbnail` are the local path until uploaded, then the https download URL).
+
+### Citizen tickets, messages and reopen (F-014)
+Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md) (amends [0011](../decisions/0011-ticket-lifecycle-rules.md) Q1). Code: `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `model/Message.kt`, `model/TicketLifecycle.kt`, `ui/components/MessageThread.kt`, `ui/screens/ShowScreen.kt`, `TicketDetailScreen.kt`, `MyTicketsScreen.kt`, `viewmodel/TicketDetailViewModel(+UiState, +Factory).kt`, `MainActivity.kt`.
+
+**Device checks D1-D15 have not run** (test accounts A/C/P/O, Francisco's SHA keys and a Google Play AVD pending). Build and lint: 0 errors, 22 warnings.
+
+- **Audience** (`detailAudience(user, ticket)` in `ShowScreen.kt`, user = `session.ticketsUser`):
+
+  | User | Audience | Sees |
+  | --- | --- | --- |
+  | `null` (anonymous, pending, loading) | PUBLIC | `ShowScreen` as before |
+  | Citizen, not a participant | PUBLIC | same |
+  | Citizen participant (creator or follower) | REGISTERED | exact map, full history, thread, Reopen / Ask for clarification |
+  | Operator | OPERATOR | prepared; reachable from D-013 |
+- **My tickets:** `MainActivity` passes `tickets.filter { it.isParticipant(citizenId) }` (already newest first); `MyTicketsScreen` shows badge = `effectiveStatus(now)` and an empty state.
+- **Messages:** `tickets/{id}/messages`; `messagesFor(ticketId)` (live `listen` Flow), `sendMessage(ticketId, text, author)` (`document().set()`, not awaited, queued offline). `Message.byOperator` picks the label.
+- **`MessageThread(messages, currentUserId, draft, canSend, onDraftChange, onSendClick)`:** stateless plain `Column`; "You" / "Municipality" / "Citizen"; `canSend = false` shows a locked note.
+- **`TicketDetailViewModel(repository, ticketId, user)`:** per destination, created only for REGISTERED / OPERATOR; holds the messages, draft and one dialog (`DetailDialog` REOPEN or ASK_CLARIFICATION).
+- **Status writes:** `reopenTicket`, `closeExpiredTicket` (close-on-read), `askForClarification` (status + message) all call the private `commitStatusChange(before, after, message?)`: one batch with the ticket, `publicTickets` mirror, `ticketLocations.active = isActive`, `statsIncrements`.
+- **Beyond class:** `listen` Flow, `combine`, `FieldValue.increment`, the `ShowScreen` content slot.
+
+### Handover (F-014)
+- **Diogo, `TicketLifecycle.kt`:** citizen move OPEN / IN_PROGRESS -> INFO_REQUESTED (Q1, he agreed); `isParticipant` now public.
+- **D-013:** route operators to the detail (`detailAudience` gives OPERATOR); reuse `MessageThread`, the slot and `TicketDetailViewModel`; add a public repository function over `commitStatusChange` for operator moves; post the INFO_REQUESTED reason with `sendMessage(..., operator)`; attachment `phase`.
+- **D-013, answer:** the only operator move out of INFO_REQUESTED is IN_PROGRESS, so a ticket asked about while OPEN comes back IN_PROGRESS; D-013 decides whether to add INFO_REQUESTED -> OPEN.
+- **D-014:** the geofence pauses while a ticket is INFO_REQUESTED (also after a citizen's question on an IN_PROGRESS ticket).
+- **F-016:** notify the other side on messages and status changes (II.2); 24 h warning from `closingWarningAt()` (check `!isLocked(now)`); act only on `SignedIn`.
+- **`Message.byOperator`** (Diogo's `Message.kt`): new field, default `false`.
+- **`MainActivity.kt`:** detail destination (audience branch, detail ViewModel) and My tickets destination changed.
+- **D-010, D-015:** nothing new.
 
 ## Roles
 Anonymous citizen (public, active issues only, no personal data), registered citizen, municipal operator. Since D-009 the app has one `AccessRole` per home screen ([decision 0015](../decisions/0015-session-role-navigation-mfa.md); `homeFor` and `menuItemsFor` in `ui/navigation/RoleAccess.kt`):

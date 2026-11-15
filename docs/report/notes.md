@@ -997,3 +997,31 @@ Decision: [0017](../decisions/0017-media-preparation-and-uploads.md) (amends [00
 - Deploy the Storage rules (`image/*` under 10 MB, `video/*` under 100 MB, no uploads to CLOSED tickets), fixing the two gaps above.
 - Cloud Functions to make thumbnails on the server.
 - Unique work per document, if the same device could ever enqueue twice for one document.
+
+## F-014: My tickets, message thread and reopen
+Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview: "Citizen tickets, messages and reopen (F-014)", "Handover (F-014)".
+
+### Technical solutions
+- **Messages** in the `tickets/{id}/messages` subcollection: live listener, served from the cache offline, writes queued with `document().set()` (brief IV).
+- **One batch per status change** (reopen, automatic close, clarification): ticket and history, `publicTickets` mirror, `ticketLocations.active`, dashboard counters. Status and history change together (decision 0004); rules from D-008. No server code (decision 0012).
+- **One audience function** (`detailAudience`) decides PUBLIC, REGISTERED or OPERATOR. Anonymous users never create the messages ViewModel, so they never read messages.
+- **Close on read:** an expired RESOLVED ticket is written CLOSED when a participant opens it.
+
+### Options chosen (Gate 1)
+- Brief II.2 read as: state 2 "Pedido de Informações" also covers the citizen's clarification request, so it sets INFO_REQUESTED (Diogo agreed; amends decision 0011).
+- Exact map, full history and the operator audience prepared, as the brief says (I.1.C, I.3.E, II.2, II.4).
+- Rejected: a plain message for the clarification; a top-bar icon for My tickets; an expand toggle on My tickets.
+
+### Known limits
+- Device checks D1-D15 not run yet (test accounts pending).
+- Concurrent offline changes: last write wins.
+- All followers of a ticket share one thread.
+- An operator's answer moves INFO_REQUESTED to IN_PROGRESS, even if the question was asked while OPEN (D-013 decides).
+
+### Improvement opportunities
+- Deploy security rules for messages and status writes.
+- Transactions or a `currentStatus` precondition against concurrent changes.
+- Unread counters and notifications (F-016).
+- Paginate long threads.
+- A detail listener on the single ticket instead of the list.
+- `hasPendingWrites` to mark messages not yet sent.
