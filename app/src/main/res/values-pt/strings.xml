@@ -153,6 +153,8 @@
     <string name="auth_error_code_not_sent">Não foi possível enviar o código. Tente novamente.</string>
     <string name="auth_error_recent_login">Inicie sessão novamente.</string>
     <string name="auth_error_unknown">Ocorreu um erro. Tente novamente.</string>
+    <string name="auth_error_email_in_use">Este e-mail já tem uma conta.</string>
+    <string name="auth_error_weak_password">Esta palavra-passe é demasiado fraca.</string>
 
     <!-- Role navigation (D-009) -->
     <string name="top_bar_title_pending">Registo pendente</string>
@@ -197,4 +199,47 @@
     <string name="mfa_back">Voltar</string>
     <string name="mfa_code_sent">Código enviado.</string>
     <string name="mfa_error_code_length">Introduza o código de 6 dígitos.</string>
+
+    <!-- Registo (D-010) -->
+    <string name="top_bar_title_register">Criar conta</string>
+    <string name="register_create_account">Criar uma conta</string>
+    <string name="register_role_label">Registar como</string>
+    <string name="register_role_citizen">Cidadão</string>
+    <string name="register_role_operator">Operador municipal</string>
+    <string name="register_name_label">Nome</string>
+    <string name="register_phone_label">Telefone</string>
+    <string name="register_nif_label">NIF</string>
+    <string name="register_password_label">Palavra-passe</string>
+    <string name="register_confirm_password_label">Confirmar palavra-passe</string>
+    <string name="register_password_hint">Pelo menos 8 caracteres, com uma letra e um algarismo.</string>
+    <string name="register_operator_domain_hint">Use o seu endereço @%1$s.</string>
+    <string name="register_operator_domain_loading">A verificar o domínio de e-mail da câmara…</string>
+    <string name="register_location_label">Localização da residência</string>
+    <string name="register_location_not_set">Ainda não definida.</string>
+    <string name="register_location_use">Usar a minha localização</string>
+    <string name="register_location_unavailable">Não foi possível obter a sua localização. Ative a localização e tente novamente.</string>
+    <string name="register_location_denied">Os cidadãos registam-se com a sua localização. Permita a localização para a usar. Se não aparecer nenhuma janela, permita-a nas definições da aplicação.</string>
+    <string name="register_impact_label">Deteção de impactos</string>
+    <string name="register_impact_description">Sugere abrir uma ocorrência quando o telemóvel deteta um impacto vertical forte. Pode alterar mais tarde.</string>
+    <string name="register_submit">Criar conta</string>
+    <string name="register_error_name">Introduza o seu nome (pelo menos 2 caracteres).</string>
+    <string name="register_error_email_domain">Use um endereço de e-mail terminado em @%1$s.</string>
+    <string name="register_error_operator_unavailable">O registo de operadores não está disponível de momento. Tente mais tarde.</string>
+    <string name="register_error_phone">Introduza 9 algarismos, começando por 2 ou 9.</string>
+    <string name="register_error_nif">Introduza um NIF válido de 9 algarismos.</string>
+    <string name="register_error_nif_taken">Este NIF já está registado.</string>
+    <string name="register_error_password_short">Use pelo menos 8 caracteres.</string>
+    <string name="register_error_password_letter">Inclua pelo menos uma letra.</string>
+    <string name="register_error_password_digit">Inclua pelo menos um algarismo.</string>
+    <string name="register_error_confirm">As palavras-passe não coincidem.</string>
+    <string name="register_error_location">Defina a sua localização para se registar como cidadão.</string>
+    <string name="register_error_summary">Alguns campos precisam da sua atenção.</string>
+    <string name="cd_register_progress">A criar a conta</string>
+    <string name="register_photo_label">Fotografia (opcional)</string>
+    <string name="register_photo_gallery">Galeria</string>
+    <string name="register_photo_camera">Câmara</string>
+    <string name="register_photo_remove">Remover fotografia</string>
+    <string name="register_photo_copy_failed">Não foi possível adicionar a fotografia. Tente novamente.</string>
+    <string name="cd_register_photo">A sua fotografia de perfil</string>
+    <string name="cd_register_photo_copying">A adicionar a fotografia</string>
 </resources>

@@ -2,13 +2,8 @@ package pt.isec.amov.cityfix.data
 
 import android.app.Activity
 import com.google.firebase.FirebaseException
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthMultiFactorException
-import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
@@ -222,25 +217,6 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         isEmailVerified = isEmailVerified,
         hasSecondFactor = multiFactor.enrolledFactors.isNotEmpty(),
     )
-
-    /**
-     * One place for the Firebase exception -> AuthError mapping. With e-mail enumeration
-     * protection, a wrong e-mail and a wrong password both arrive as invalid credentials.
-     */
-    private fun Exception.toAuthError(): AuthError = when (this) {
-        is FirebaseAuthInvalidCredentialsException -> when (errorCode) {
-            "ERROR_INVALID_VERIFICATION_CODE" -> AuthError.WRONG_CODE
-            "ERROR_SESSION_EXPIRED" -> AuthError.CODE_EXPIRED
-            "ERROR_INVALID_PHONE_NUMBER" -> AuthError.INVALID_PHONE_NUMBER
-            else -> AuthError.INVALID_CREDENTIALS
-        }
-        is FirebaseAuthInvalidUserException ->
-            if (errorCode == "ERROR_USER_NOT_FOUND") AuthError.INVALID_CREDENTIALS else AuthError.USER_DISABLED
-        is FirebaseAuthRecentLoginRequiredException -> AuthError.RECENT_LOGIN_REQUIRED
-        is FirebaseNetworkException -> AuthError.NETWORK
-        is FirebaseTooManyRequestsException -> AuthError.TOO_MANY_REQUESTS
-        else -> AuthError.UNKNOWN
-    }
 
     private companion object {
         const val SEND_TIMEOUT_MS = 60_000L
