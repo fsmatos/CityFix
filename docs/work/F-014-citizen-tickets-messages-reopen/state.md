@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run |
 | Review | done | 2026-11-15 | approve: 0 blocking, 1 should-fix (S1 decision 0011 vs Q1, docs phase), 1 nit; build + lint 0 errors, 22 warnings; D1-D15 open |
 | Docs | done | 2026-11-15 | overview (F-014 section + handover, small updates), 0018 new, 0011 S1 amend, 0007/0010/0013 lines, report notes, task file; not committed |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-15 | 322eb61 to origin/dev/Francisco before the device checks; not merged into main |
 | Merged | pending | | |
 
 ## Log
@@ -72,3 +72,4 @@ Append-only.
   - 0007, 0010, 0013: one amendment block each; 0010's wrong "decision 0011" link (no-server notifications) now points to 0012 (it sat on line 81, not 73).
   - `docs/report/notes.md`: F-014 section. Task file: status done, Gate 1 changes. 03-docs-plan 0011 bullet updated to match S1.
   - Deviation: D-009's suggested 0013 line added; 0014's optional line and 0015 (D-009's) not edited.
+- 2026-11-15: Pushed dev/Francisco to origin at 322eb61, before the device checks (the person is waiting for Diogo's test logins), so Diogo can see the changes to his files. Setup done: Francisco's debug SHA-1/SHA-256 added in Firebase by the person; `tickets/sample-3` reassigned to account A (creatorId and participantIds) through the REST API. Device checks D1-D15 still to run. Not merged into main.
