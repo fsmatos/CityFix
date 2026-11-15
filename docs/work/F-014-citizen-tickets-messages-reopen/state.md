@@ -7,7 +7,7 @@ Remote: origin/dev/Francisco
 | Start | done | 2026-11-14 | feature, task file `docs/tasks/phase-2/F-014-citizen-tickets-messages-reopen.md` |
 | Plan | done | 2026-11-15 | Draft 2026-11-14; revised 2026-11-15 for D-009 (session user, My tickets entry settled, real test accounts); 7 slices; Q1-Q14 with defaults |
 | Gate 1: plan approved | done | 2026-11-15 | approved with the person's Q1-Q15 answers; Q1 follows brief II.2, Diogo agrees |
-| Code | pending | | |
+| Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run |
 | Review | pending | | |
 | Docs | pending | | |
 | Pushed | pending | | |
@@ -46,3 +46,20 @@ Append-only.
 - 2026-11-15: Second shortening pass; 00-plan is now a one-page summary. Detail from 00-plan (user source, message/batch rules, audience notes, rejected alternatives, Q reasons and alternatives, failure modes, out of scope) moved to 01-coding-plan "Decisions" and "Failure modes"; the strings table became a key list; the D6 REST payload is one line. No decision, signature, file, risk, open question or device check removed.
 - 2026-11-15: The person answered Q1-Q15 after the questions were re-explained against the brief. Q1 follows brief II.2 (a citizen's clarification request sets INFO_REQUESTED; needs Diogo's agreement because it adds a citizen move to his `TicketLifecycle.kt` and pauses D-014's geofence); Q2 keep D-009; Q3 queued (brief IV covers offline writes for messages); Q4-Q6 defaults; Q7 the RESOLVED history entry; Q8-Q10 as the brief says (exact map for participants, operator audience prepared, full history with justifications and automatic close); Q12-Q15 defaults (F-013's record renamed to 0017, F-014 uses 0018). 00-plan updated (approach, slice 6, risks, answered questions). Gate 1 approval still to be given explicitly.
 - 2026-11-15: Gate 1: approved by the person ("Approve, Diogo agrees"): all 7 slices, including the Q1 change to Diogo's `TicketLifecycle.kt` (citizen "Ask for clarification" -> INFO_REQUESTED), which the person confirms Diogo agrees to.
+- 2026-11-15: Code (implementer). Followed 01-coding-plan with the Gate 1 answers in 00-plan overriding it (Q1: the citizen's clarification request sets INFO_REQUESTED). Verify (assembleDebug + lint) passed before every commit: 0 errors, 22 warnings each time (the 23 recorded at the D-009 merge is now 22; no new warning ids).
+  - `cac6213` docs: Q15, F-013's record renamed to `0017-media-preparation-and-uploads.md` (title, status line notes the renumbering); links fixed in the overview (3), decisions 0006/0010/0013 and `docs/report/notes.md`. The other "decision 0015" mentions in the overview are D-009's record and were left. Historical `docs/work` logs untouched.
+  - `71fc640` slice 1: `Message.byOperator`, `MESSAGES`, `messageDocument`, `toMessage`, `messagesFor`, `sendMessage`.
+  - `f99858a` slice 2: `toStatusFields`, `reopenTicket`, `closeExpiredTicket`, private `commitStatusChange`.
+  - `de470b4` slice 3: public `isParticipant`, `detailAudience`, `ShowScreen(now, participantContent)`, `ExactLocationSection`, history labels; `MainActivity` detail audience and the Q7 comment; `TicketMap` KDoc now says exact = participants and operators.
+  - `e174725` slice 4: `MessageThread`.
+  - `837f1f5` slice 5: `TicketDetailUiState`, `TicketDetailViewModel`, factory.
+  - `c4e2e75` slice 6: `TicketDetailScreen` / `TicketDetailContent`, dialog, close-on-read, `MainActivity` wiring, and "Ask for clarification" (Q1).
+  - `6ffb359` slice 7: `MyTicketsScreen`, `TicketCard.status`, placeholder replaced, Diogo's two KDoc lines.
+  - Deviations from 01-coding-plan:
+    - Q1 (Gate 1 answer, not the plan's "plain message"): `TicketLifecycle.allowedTransitions` (Diogo's file, he agrees) now lets an ACTIVE participant citizen move OPEN or IN_PROGRESS to INFO_REQUESTED; `transition` already requires the justification (the question). KDoc updated. New `TicketsRepository.askForClarification(ticket, by, question)`; `commitStatusChange` takes an optional message map so the message and the status change go in one batch with the publicTickets mirror, `ticketLocations.active` and `statsIncrements`. The button shows only for a `Citizen` when INFO_REQUESTED is allowed. The answer moving it on is D-013's (operator targets: INFO_REQUESTED -> IN_PROGRESS only).
+    - Reopen and clarification share one dialog: the UiState has `openDialog: DetailDialog?` (REOPEN, ASK_CLARIFICATION), `dialogText`, `dialogError` instead of `isReopenDialogOpen`, `justification`, `reopenError`; ViewModel functions `onReopenClick`, `onAskClarificationClick`, `onDialogTextChange`, `onDialogDismiss`, `confirmDialog(ticket)` instead of `onJustificationChange`, `onReopenDismiss`, `confirmReopen`. `TicketDetailContent` parameters follow these names.
+    - Strings: `reopen_cancel` is `dialog_cancel` (shared); new `clarification_button`, `clarification_dialog_title`, `clarification_dialog_text`, `clarification_question_label`, `clarification_confirm`, `clarification_error_blank`, `clarification_error_not_allowed` (EN + PT).
+    - Message bubbles are capped at 320 dp (`widthIn(max)`) instead of 85 % of the width (simpler).
+    - `TicketDetailContent` puts `imePadding()` on ShowScreen so the input stays above the keyboard.
+    - The "Placeholders" comment in `MainActivity` moved below the My tickets destination (it no longer is one).
+  - Device checks D1-D15: not run (they need the test accounts A/C/P/O that the person must prepare, Francisco's SHA keys in Firebase and a Google Play AVD).
