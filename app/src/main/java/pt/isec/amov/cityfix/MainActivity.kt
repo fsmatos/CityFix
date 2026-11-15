@@ -59,6 +59,7 @@ import pt.isec.amov.cityfix.ui.navigation.MyTicketsRoute
 import pt.isec.amov.cityfix.ui.navigation.OperatorPanelRoute
 import pt.isec.amov.cityfix.ui.navigation.PendingValidationRoute
 import pt.isec.amov.cityfix.ui.navigation.ProfileRoute
+import pt.isec.amov.cityfix.ui.navigation.RegisterRoute
 import pt.isec.amov.cityfix.ui.navigation.ReportTicketRoute
 import pt.isec.amov.cityfix.ui.navigation.RequireAccess
 import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
@@ -77,6 +78,7 @@ import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
+import pt.isec.amov.cityfix.ui.screens.RegisterScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
@@ -93,6 +95,8 @@ import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
+import pt.isec.amov.cityfix.viewmodel.RegisterViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.Session
@@ -186,6 +190,10 @@ private fun CityFixApp(app: CityFixApplication) {
     // The last role the redirect (after the NavHost below) has handled. Saveable: null means a
     // fresh start; a restored value means process recreation, whose back stack is kept.
     var handledRole by rememberSaveable { mutableStateOf<AccessRole?>(null) }
+    // True while the Register screen creates an account (D-010). Sign-up signs the new user in at
+    // once, so without this hold the redirect would clear the Register entry, and cancel its
+    // ViewModel, before the NIF transaction ends. Saveable, so a rotation keeps the hold.
+    var holdRedirect by rememberSaveable { mutableStateOf(false) }
 
     // Every Log out path (top bar, account setup, account problem). The list is cleared first,
     // synchronously, so the next frame never shows the previous user's tickets to an anonymous
@@ -196,8 +204,10 @@ private fun CityFixApp(app: CityFixApplication) {
     }
 
     val onAuthScreen = screen == TopBarScreen.LOGIN || screen == TopBarScreen.FORGOT_PASSWORD ||
-        screen == TopBarScreen.ACCOUNT_SETUP
+        screen == TopBarScreen.ACCOUNT_SETUP || screen == TopBarScreen.REGISTER
     val accountAction = when {
+        // The new account is briefly signed in while it registers: no Log out there.
+        screen == TopBarScreen.REGISTER -> AccountAction.NONE
         session.isSignedIn -> AccountAction.LOG_OUT
         role == AccessRole.ANONYMOUS && !onAuthScreen -> AccountAction.LOG_IN
         else -> AccountAction.NONE
@@ -239,7 +249,8 @@ private fun CityFixApp(app: CityFixApplication) {
                     screen = screen,
                     // While the gate covers the app, no bar control stays reachable behind it
                     // (keyboard or switch focus); the gate has its own Log in.
-                    canNavigateBack = canNavigateBack && !showGate,
+                    // Nor while Register holds the redirect: leaving it mid-registration is not allowed.
+                    canNavigateBack = canNavigateBack && !showGate && !holdRedirect,
                     isExpanded = isExpanded,
                     showExpandToggle = canExpandCards,
                     showAddAction = session.canReport && screen != TopBarScreen.REPORT,
@@ -332,6 +343,20 @@ private fun CityFixApp(app: CityFixApplication) {
                         onForgotPassword = { email ->
                             navController.navigate(ForgotPasswordRoute(email)) { launchSingleTop = true }
                         },
+                        onCreateAccount = {
+                            navController.navigate(RegisterRoute) { launchSingleTop = true }
+                        },
+                    )
+                }
+                composable<RegisterRoute> {
+                    // No RequireAccess: reached only from Login, which only anonymous users see, and
+                    // the user it creates is signed in while this screen is still showing.
+                    val registerViewModel: RegisterViewModel =
+                        viewModel(factory = RegisterViewModelFactory(app.usersRepository, app.locationRepository, app.attachmentStorage))
+                    RegisterScreen(
+                        viewModel = registerViewModel,
+                        accountSignedIn = role != AccessRole.ANONYMOUS,
+                        onBusyChange = { holdRedirect = it },
                     )
                 }
                 composable<ForgotPasswordRoute> { entry ->
@@ -448,7 +473,12 @@ private fun CityFixApp(app: CityFixApplication) {
             // dashboard. Placed after the NavHost, so its graph is set before goHome() runs; never
             // reached while the session is Loading. Rotation does not change the role, and process
             // recreation restores handledRole, so neither resets the back stack.
-            LaunchedEffect(role) {
+            // While Register holds the redirect, nothing moves: on success the hold is released and
+            // the new role (SETUP) opens Account setup; on failure the account is deleted and the
+            // hold lasts until the role is ANONYMOUS again (= handledRole), so the form stays with
+            // its error.
+            LaunchedEffect(role, holdRedirect) {
+                if (holdRedirect) return@LaunchedEffect
                 if (role != handledRole) {
                     // null = fresh start: the NavHost is on the dashboard, so only other homes navigate.
                     if (handledRole != null || homeFor(role) != DashboardRoute) goHome()
@@ -491,5 +521,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<CategoriesRoute>() -> TopBarScreen.CATEGORIES
     hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM
     hasRoute<AccountSetupRoute>() -> TopBarScreen.ACCOUNT_SETUP
+    hasRoute<RegisterRoute>() -> TopBarScreen.REGISTER
     else -> TopBarScreen.DASHBOARD
 }

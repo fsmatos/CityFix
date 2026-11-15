@@ -29,6 +29,10 @@ data object ReportTicketRoute
 @Serializable
 data object LoginRoute
 
+/** Self-registration for citizens and operators, opened from Login (D-010). */
+@Serializable
+data object RegisterRoute
+
 /** Password reset; [email] prefills the field with what was typed on Login. */
 @Serializable
 data class ForgotPasswordRoute(val email: String = "")

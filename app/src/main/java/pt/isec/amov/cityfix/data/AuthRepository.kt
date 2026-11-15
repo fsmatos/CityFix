@@ -29,6 +29,10 @@ enum class AuthError {
     /** Firebase refused the phone number given for enrolment. */
     INVALID_PHONE_NUMBER,
     RECENT_LOGIN_REQUIRED,
+    /** Sign-up with an e-mail that already has an account. */
+    EMAIL_IN_USE,
+    /** Sign-up with a password Firebase considers too weak. */
+    WEAK_PASSWORD,
     UNKNOWN,
 }
 

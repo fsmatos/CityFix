@@ -48,13 +48,14 @@ import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 /**
  * Stateful login screen: collects [viewModel] and shows [LoginContent] or, for an enrolled
  * account, the SMS code step ([MfaCodeContent]). [onForgotPassword] receives the typed e-mail,
- * so the reset form starts with it. Firebase needs the Activity for the reCAPTCHA fallback when
+ * so the reset form starts with it; [onCreateAccount] opens the Register screen (D-010). Firebase needs the Activity for the reCAPTCHA fallback when
  * it sends the SMS, so it is read here and handed to the ViewModel call, never stored.
  */
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
     onForgotPassword: (email: String) -> Unit,
+    onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -93,6 +94,7 @@ fun LoginScreen(
         onToggleShowPassword = viewModel::onToggleShowPassword,
         onSignIn = viewModel::signIn,
         onForgotPassword = { onForgotPassword(state.email.trim()) },
+        onCreateAccount = onCreateAccount,
         modifier = modifier,
     )
 }
@@ -106,6 +108,7 @@ fun LoginContent(
     onToggleShowPassword: () -> Unit,
     onSignIn: () -> Unit,
     onForgotPassword: () -> Unit,
+    onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FormColumn(modifier = modifier) {
@@ -169,6 +172,13 @@ fun LoginContent(
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text(stringResource(R.string.login_forgot_password))
+        }
+        TextButton(
+            onClick = onCreateAccount,
+            enabled = !state.isBusy,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text(stringResource(R.string.register_create_account))
         }
     }
 }
@@ -257,6 +267,7 @@ private fun LoginPreview(state: LoginUiState) {
             onToggleShowPassword = {},
             onSignIn = {},
             onForgotPassword = {},
+            onCreateAccount = {},
         )
     }
 }

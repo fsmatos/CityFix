@@ -1,6 +1,6 @@
 # D-010: Registration (citizen and operator)
 
-Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `viewmodel` · Phase 2 · Status: to do · Target: 2026-11-14
+Owner: Diogo (`dev/Diogo`) · Layer: `data` / `ui` / `viewmodel` · Phase 2 · Status: done; code reviewed and approved, docs done (2026-11-14), device checks passed on the emulator (2026-11-15); pushed to origin/dev/Diogo, not merged into main · Target: 2026-11-14
 Depends on: D-009 · Blocks: D-011, D-012, F-015
 
 ## Goal
@@ -23,11 +23,18 @@ Register citizens (pending until the council validates the NIF) and operators (a
 New `ui/screens/RegisterScreen.kt`, `viewmodel/RegisterViewModel.kt`, `viewmodel/RegisterUiState.kt`, `utils/Validation.kt`; `data/UsersRepository.kt`, navigation, strings EN/PT.
 
 ## Acceptance checks
-- [ ] Invalid email/phone/NIF show errors in real time and block submit.
-- [ ] Two citizens with the same NIF: the second fails; a citizen and an operator may share one NIF.
-- [ ] Operator with an email outside the domain is refused.
-- [ ] New citizen is PENDING; new operator is ACTIVE.
-- [ ] Rotation keeps the form.
+- [x] Invalid email/phone/NIF show errors in real time and block submit.
+- [x] Two citizens with the same NIF: the second fails; a citizen and an operator may share one NIF.
+- [x] Operator with an email outside the domain is refused.
+- [x] New citizen is PENDING; new operator is ACTIVE.
+- [x] Rotation keeps the form.
+
+## Status notes (2026-11-14, updated 2026-11-15)
+- Work item: `docs/work/D-010-registration/` (plans, `state.md`, `review.md`); decision [0016](../../decisions/0016-registration.md); overview "Registration (D-010)".
+- **Deviation from "What to build" (Gate 1 Q1):** the operator's `users/{uid}` is created in the registration transaction, before the e-mail is verified, not after it. The draft `firestore.rules` `users` create rule lost its operator `email_verified` term (not deployed; Francisco to be told).
+- The map pick was skipped (Gate 1); only "Use my location" is built.
+- Device checks (2026-11-15, emulator, PT locale; details in `state.md`): all five acceptance checks passed, plus e-mail already in use, Back right after Submit ignored, camera photo uploaded (`photoPath` URL), offline Submit ("Sem ligação", form kept) and landscape without clipping. Console checks by Diogo: `users`/`nifs` documents as expected, no Auth user left by the NIF clash or the offline attempt.
+- Not run on a device: a gallery photo, a location permission denial, the operator domain re-read after starting offline, the EN locale.
 
 ## References
 Brief I.2.A, I.3.A; P08 (form validation); decision 0010; phase 1 risk 4.

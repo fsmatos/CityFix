@@ -14,6 +14,7 @@ import pt.isec.amov.cityfix.data.AuthAccount
 import pt.isec.amov.cityfix.data.AuthError
 import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.CodeSendResult
+import pt.isec.amov.cityfix.utils.isPortugueseMobile
 
 /**
  * Account setup ViewModel, created per route (inside composable<AccountSetupRoute>).
@@ -101,8 +102,7 @@ class AccountSetupViewModel(
     fun sendCode(activity: Activity) {
         val state = _uiState.value
         if (state.isBusy) return
-        // A Portuguese mobile number: 9 digits starting with 9. D-010 moves this rule to utils/.
-        if (!PORTUGUESE_MOBILE.matches(state.phoneDigits)) {
+        if (!isPortugueseMobile(state.phoneDigits)) {
             _uiState.update { it.copy(phoneError = R.string.setup_error_phone) }
             return
         }
@@ -172,6 +172,5 @@ class AccountSetupViewModel(
         const val KEY_PHONE = "phone"
         const val KEY_VERIFICATION_ID = "verificationId"
         const val KEY_EMAIL_SENT = "emailSent"
-        val PORTUGUESE_MOBILE = Regex("9[0-9]{8}")
     }
 }

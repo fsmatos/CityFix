@@ -175,7 +175,9 @@ service cloud.firestore {
 
       // Registration: one transaction writes users/{uid} and nifs/{ROLE}_{nif}.
       // getAfter checks that the NIF document is written in the same transaction.
-      // An operator registers only with a verified e-mail in the municipality domain.
+      // An operator registers only with an e-mail in the municipality domain. The operator
+      // document is written at registration, before verification (D-010); isOperator() still
+      // requires a verified e-mail for every operator permission.
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && request.resource.data.email == request.auth.token.email
@@ -187,7 +189,6 @@ service cloud.firestore {
             && !('validatedAt' in request.resource.data))
           ||
           (request.resource.data.role == 'OPERATOR'
-            && request.auth.token.email_verified == true
             && request.auth.token.email.lower().split('@')[1] == municipality().emailDomain)
         );
 
