@@ -18,6 +18,7 @@ import pt.isec.amov.cityfix.data.SecondFactorChallenge
 import pt.isec.amov.cityfix.data.SignInResult
 import pt.isec.amov.cityfix.data.UsersRepository
 import pt.isec.amov.cityfix.utils.PasswordProblem
+import pt.isec.amov.cityfix.utils.isInEmailDomain
 import pt.isec.amov.cityfix.utils.passwordProblem
 
 /**
@@ -27,7 +28,9 @@ import pt.isec.amov.cityfix.utils.passwordProblem
  * is accepted the change runs at once.
  *
  * The [challenge] and [verificationId] stay in private fields, never in the UI or saved state.
- * The passwords are never saved; after process death the form step returns empty.
+ * The passwords are never saved; after process death the form step returns with only the new
+ * e-mail kept. An operator's new e-mail must stay in `municipality/main.emailDomain`, read on
+ * init as on Register (D-010).
  */
 class CredentialChangeViewModel(
     private val change: CredentialChange,
@@ -37,11 +40,45 @@ class CredentialChangeViewModel(
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CredentialChangeUiState(change = change))
+    private val _uiState = MutableStateFlow(
+        CredentialChangeUiState(
+            change = change,
+            currentEmail = auth.account.value?.email.orEmpty(),
+            newEmail = savedState[KEY_NEW_EMAIL] ?: "",
+            isOperator = isOperator,
+        ),
+    )
     val uiState: StateFlow<CredentialChangeUiState> = _uiState.asStateFlow()
 
     private var challenge: SecondFactorChallenge? = null
     private var verificationId: String? = null
+
+    init {
+        if (change == CredentialChange.EMAIL && isOperator) loadDomain()
+    }
+
+    /**
+     * Reads the council's domain (operators only). Called from init and again from submit()
+     * while it is missing, so coming back online is enough.
+     */
+    private fun loadDomain() {
+        _uiState.update { it.copy(isLoadingDomain = true) }
+        viewModelScope.launch {
+            val domain = users.operatorEmailDomain()
+            _uiState.update {
+                val loaded = it.copy(operatorDomain = domain, isLoadingDomain = false)
+                loaded.copy(newEmailError = ifTyped(loaded.newEmail, newEmailError(loaded)))
+            }
+        }
+    }
+
+    fun onNewEmailChange(text: String) {
+        savedState[KEY_NEW_EMAIL] = text
+        _uiState.update {
+            val changed = it.copy(newEmail = text, error = null)
+            changed.copy(newEmailError = ifTyped(text, newEmailError(changed)))
+        }
+    }
 
     fun onCurrentPasswordChange(text: String) {
         _uiState.update { it.copy(currentPassword = text, currentPasswordError = null, error = null) }
@@ -72,14 +109,37 @@ class CredentialChangeViewModel(
     fun submit() {
         val state = _uiState.value
         if (state.isBusy || state.step != CredentialStep.FORM) return
-        val currentError = if (state.currentPassword.isBlank()) R.string.credential_error_current_blank else null
-        val newError = newPasswordError(state)
-        val confirmError = confirmError(state)
-        if (currentError != null || newError != null || confirmError != null) {
-            _uiState.update {
-                it.copy(currentPasswordError = currentError, newPasswordError = newError, confirmError = confirmError)
+        if (change == CredentialChange.EMAIL && isOperator) {
+            // The new e-mail is checked against the domain: wait for it, or read it again.
+            if (state.isLoadingDomain) return
+            if (state.operatorDomain == null) {
+                loadDomain()
+                return
             }
-            return
+        }
+        val currentError = if (state.currentPassword.isBlank()) R.string.credential_error_current_blank else null
+        when (change) {
+            CredentialChange.EMAIL -> {
+                val emailError = newEmailError(state)
+                if (currentError != null || emailError != null) {
+                    _uiState.update { it.copy(currentPasswordError = currentError, newEmailError = emailError) }
+                    return
+                }
+            }
+            CredentialChange.PASSWORD -> {
+                val newError = newPasswordError(state)
+                val confirmError = confirmError(state)
+                if (currentError != null || newError != null || confirmError != null) {
+                    _uiState.update {
+                        it.copy(
+                            currentPasswordError = currentError,
+                            newPasswordError = newError,
+                            confirmError = confirmError,
+                        )
+                    }
+                    return
+                }
+            }
         }
 
         _uiState.update { it.copy(isBusy = true, error = null) }
@@ -197,11 +257,16 @@ class CredentialChangeViewModel(
     private suspend fun performChange() {
         challenge = null
         verificationId = null
-        val error = auth.changePassword(_uiState.value.newPassword)
+        val state = _uiState.value
+        val error = when (change) {
+            CredentialChange.EMAIL -> auth.requestEmailChange(state.newEmail.trim())
+            CredentialChange.PASSWORD -> auth.changePassword(state.newPassword)
+        }
         _uiState.update {
             when (error) {
                 null -> it.copy(isBusy = false, step = CredentialStep.DONE, error = null, notice = null)
                 AuthError.WEAK_PASSWORD -> it.backOnForm().copy(newPasswordError = R.string.auth_error_weak_password)
+                AuthError.EMAIL_IN_USE -> it.backOnForm().copy(newEmailError = R.string.auth_error_email_in_use)
                 else -> it.backOnForm().copy(error = error.messageRes())
             }
         }
@@ -221,6 +286,17 @@ class CredentialChangeViewModel(
     @StringRes
     private fun ifTyped(text: String, @StringRes error: Int?): Int? = if (text.isEmpty()) null else error
 
+    /** The D-010 e-mail rule, then "same as now", then (operator) the council's domain. */
+    @StringRes
+    private fun newEmailError(state: CredentialChangeUiState): Int? {
+        val email = state.newEmail.trim()
+        emailErrorFor(email)?.let { return it }
+        if (email.equals(state.currentEmail, ignoreCase = true)) return R.string.credential_error_email_same
+        if (!state.isOperator || state.isLoadingDomain) return null
+        val domain = state.operatorDomain ?: return R.string.register_error_operator_unavailable
+        return if (isInEmailDomain(email, domain)) null else R.string.register_error_email_domain
+    }
+
     @StringRes
     private fun newPasswordError(state: CredentialChangeUiState): Int? = when (passwordProblem(state.newPassword)) {
         PasswordProblem.TOO_SHORT -> R.string.register_error_password_short
@@ -232,4 +308,8 @@ class CredentialChangeViewModel(
     @StringRes
     private fun confirmError(state: CredentialChangeUiState): Int? =
         if (state.confirmPassword == state.newPassword) null else R.string.register_error_confirm
+
+    private companion object {
+        const val KEY_NEW_EMAIL = "newEmail"
+    }
 }

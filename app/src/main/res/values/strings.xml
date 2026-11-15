@@ -266,4 +266,11 @@
     <string name="credential_back_to_profile">Back to profile</string>
     <string name="cd_credential_progress">Checking</string>
     <string name="top_bar_title_change_password">Change password</string>
+    <!-- D-011 Change e-mail -->
+    <string name="profile_change_email">Change e-mail</string>
+    <string name="credential_current_email_label">Current e-mail</string>
+    <string name="credential_new_email_label">New e-mail</string>
+    <string name="credential_error_email_same">This is already your e-mail.</string>
+    <string name="credential_email_link_sent">We sent a link to %1$s. Your e-mail changes when you open it; you may have to log in again with the new address.</string>
+    <string name="top_bar_title_change_email">Change e-mail</string>
 </resources>

@@ -57,6 +57,10 @@ data object ProfileRoute
 @Serializable
 data object ChangePasswordRoute
 
+/** Change e-mail (verification link), from Profile (D-011). */
+@Serializable
+data object ChangeEmailRoute
+
 /** Operator: citizen registrations to validate. Placeholder until D-012. */
 @Serializable
 data object ApprovalsRoute

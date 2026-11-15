@@ -51,6 +51,7 @@ import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
 import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
 import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
+import pt.isec.amov.cityfix.ui.navigation.ChangeEmailRoute
 import pt.isec.amov.cityfix.ui.navigation.ChangePasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
@@ -445,6 +446,9 @@ private fun CityFixApp(app: CityFixApplication) {
                         )
                         ProfileScreen(
                             viewModel = profileViewModel,
+                            onChangeEmail = {
+                                navController.navigate(ChangeEmailRoute) { launchSingleTop = true }
+                            },
                             onChangePassword = {
                                 navController.navigate(ChangePasswordRoute) { launchSingleTop = true }
                             },
@@ -462,6 +466,27 @@ private fun CityFixApp(app: CityFixApplication) {
                         val credentialViewModel: CredentialChangeViewModel = viewModel(
                             factory = CredentialChangeViewModelFactory(
                                 CredentialChange.PASSWORD,
+                                user is Operator,
+                                app.authRepository,
+                                app.usersRepository,
+                            ),
+                        )
+                        ChangeCredentialScreen(
+                            viewModel = credentialViewModel,
+                            onDone = { navController.navigateUp() },
+                        )
+                    }
+                }
+                composable<ChangeEmailRoute> {
+                    RequireAccess(
+                        role = role,
+                        allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                        onDenied = goHome,
+                    ) {
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            factory = CredentialChangeViewModelFactory(
+                                CredentialChange.EMAIL,
                                 user is Operator,
                                 app.authRepository,
                                 app.usersRepository,
@@ -545,5 +570,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<AccountSetupRoute>() -> TopBarScreen.ACCOUNT_SETUP
     hasRoute<RegisterRoute>() -> TopBarScreen.REGISTER
     hasRoute<ChangePasswordRoute>() -> TopBarScreen.CHANGE_PASSWORD
+    hasRoute<ChangeEmailRoute>() -> TopBarScreen.CHANGE_EMAIL
     else -> TopBarScreen.DASHBOARD
 }

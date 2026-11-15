@@ -16,10 +16,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.PasswordField
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.CredentialChange
@@ -70,6 +72,7 @@ fun ChangeCredentialScreen(
     ChangeCredentialContent(
         state = state,
         onCurrentPasswordChange = viewModel::onCurrentPasswordChange,
+        onNewEmailChange = viewModel::onNewEmailChange,
         onNewPasswordChange = viewModel::onNewPasswordChange,
         onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
         onToggleShowPassword = viewModel::onToggleShowPassword,
@@ -84,6 +87,7 @@ fun ChangeCredentialScreen(
 fun ChangeCredentialContent(
     state: CredentialChangeUiState,
     onCurrentPasswordChange: (String) -> Unit,
+    onNewEmailChange: (String) -> Unit,
     onNewPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
     onToggleShowPassword: () -> Unit,
@@ -94,7 +98,11 @@ fun ChangeCredentialContent(
     FormColumn(modifier = modifier) {
         if (state.step == CredentialStep.DONE) {
             Text(
-                text = stringResource(R.string.credential_password_changed),
+                text = when (state.change) {
+                    CredentialChange.EMAIL ->
+                        stringResource(R.string.credential_email_link_sent, state.newEmail.trim().lowercase())
+                    CredentialChange.PASSWORD -> stringResource(R.string.credential_password_changed)
+                },
                 style = MaterialTheme.typography.bodyLarge,
             )
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
@@ -104,6 +112,36 @@ fun ChangeCredentialContent(
         }
 
         val enabled = !state.isBusy
+        val isEmail = state.change == CredentialChange.EMAIL
+        if (isEmail) {
+            AccountTextField(
+                value = state.currentEmail,
+                onValueChange = {},
+                labelRes = R.string.credential_current_email_label,
+                error = null,
+                enabled = true,
+                keyboardType = KeyboardType.Email,
+                readOnly = true,
+            )
+            if (state.isOperator) OperatorDomainLine(state)
+            // The domain error names the council's domain.
+            val emailError = state.newEmailError?.let {
+                if (it == R.string.register_error_email_domain) {
+                    stringResource(it, state.operatorDomain.orEmpty())
+                } else {
+                    stringResource(it)
+                }
+            }
+            AccountTextField(
+                value = state.newEmail,
+                onValueChange = onNewEmailChange,
+                labelRes = R.string.credential_new_email_label,
+                error = emailError,
+                enabled = enabled,
+                keyboardType = KeyboardType.Email,
+                autoCorrect = false,
+            )
+        }
         PasswordField(
             value = state.currentPassword,
             onValueChange = onCurrentPasswordChange,
@@ -113,31 +151,9 @@ fun ChangeCredentialContent(
             showPassword = state.showPassword,
             enabled = enabled,
             onToggleShowPassword = onToggleShowPassword,
-            imeAction = ImeAction.Next,
+            imeAction = if (isEmail) ImeAction.Done else ImeAction.Next,
         )
-        PasswordField(
-            value = state.newPassword,
-            onValueChange = onNewPasswordChange,
-            labelRes = R.string.credential_new_password_label,
-            error = state.newPasswordError?.let { stringResource(it) },
-            hint = stringResource(R.string.register_password_hint),
-            showPassword = state.showPassword,
-            enabled = enabled,
-            onToggleShowPassword = null,
-            imeAction = ImeAction.Next,
-        )
-        PasswordField(
-            value = state.confirmPassword,
-            onValueChange = onConfirmPasswordChange,
-            labelRes = R.string.register_confirm_password_label,
-            error = state.confirmError?.let { stringResource(it) },
-            hint = null,
-            showPassword = state.showPassword,
-            enabled = enabled,
-            onToggleShowPassword = null,
-            imeAction = ImeAction.Done,
-        )
-
+        if (!isEmail) NewPasswordFields(state, enabled, onNewPasswordChange, onConfirmPasswordChange)
         FormMessage(state.error, isError = true)
         val progressDescription = stringResource(R.string.cd_credential_progress)
         Button(onClick = onSubmit, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
@@ -155,12 +171,58 @@ fun ChangeCredentialContent(
     }
 }
 
+/** PASSWORD: the new password (the D-010 rule) and its confirmation. */
+@Composable
+private fun NewPasswordFields(
+    state: CredentialChangeUiState,
+    enabled: Boolean,
+    onNewPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit,
+) {
+    PasswordField(
+        value = state.newPassword,
+        onValueChange = onNewPasswordChange,
+        labelRes = R.string.credential_new_password_label,
+        error = state.newPasswordError?.let { stringResource(it) },
+        hint = stringResource(R.string.register_password_hint),
+        showPassword = state.showPassword,
+        enabled = enabled,
+        onToggleShowPassword = null,
+        imeAction = ImeAction.Next,
+    )
+    PasswordField(
+        value = state.confirmPassword,
+        onValueChange = onConfirmPasswordChange,
+        labelRes = R.string.register_confirm_password_label,
+        error = state.confirmError?.let { stringResource(it) },
+        hint = null,
+        showPassword = state.showPassword,
+        enabled = enabled,
+        onToggleShowPassword = null,
+        imeAction = ImeAction.Done,
+    )
+}
+
+/** EMAIL, operators: the council's domain the new e-mail must use, or why it cannot be checked. */
+@Composable
+private fun OperatorDomainLine(state: CredentialChangeUiState) {
+    when {
+        state.isLoadingDomain -> FormMessage(R.string.register_operator_domain_loading, isError = false)
+        state.operatorDomain == null -> FormMessage(R.string.register_error_operator_unavailable, isError = true)
+        else -> Text(
+            text = stringResource(R.string.register_operator_domain_hint, state.operatorDomain),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
 @Composable
 private fun ChangeCredentialPreview(state: CredentialChangeUiState) {
     CityFixTheme {
         ChangeCredentialContent(
             state = state,
             onCurrentPasswordChange = {},
+            onNewEmailChange = {},
             onNewPasswordChange = {},
             onConfirmPasswordChange = {},
             onToggleShowPassword = {},
@@ -201,6 +263,49 @@ private fun ChangePasswordErrorsPreview() {
 private fun ChangePasswordDonePreview() {
     ChangeCredentialPreview(
         CredentialChangeUiState(change = CredentialChange.PASSWORD, step = CredentialStep.DONE),
+    )
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 800, heightDp = 360)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ChangeEmailFormPreview() {
+    ChangeCredentialPreview(
+        CredentialChangeUiState(
+            change = CredentialChange.EMAIL,
+            currentEmail = "ana@example.com",
+            newEmail = "ana@example",
+            newEmailError = R.string.login_error_email_invalid,
+        ),
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChangeEmailOperatorPreview() {
+    ChangeCredentialPreview(
+        CredentialChangeUiState(
+            change = CredentialChange.EMAIL,
+            currentEmail = "rui@cm-example.pt",
+            newEmail = "rui@example.com",
+            isOperator = true,
+            operatorDomain = "cm-example.pt",
+            newEmailError = R.string.register_error_email_domain,
+        ),
+    )
+}
+
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ChangeEmailDonePreview() {
+    ChangeCredentialPreview(
+        CredentialChangeUiState(
+            change = CredentialChange.EMAIL,
+            step = CredentialStep.DONE,
+            newEmail = "ana.nova@example.com",
+        ),
     )
 }
 
