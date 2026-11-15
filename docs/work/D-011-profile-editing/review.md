@@ -96,3 +96,62 @@ If the account changes while the screen is open (for example, a reload from anot
 - The plan's rule "only the verified token e-mail" rests on `reloadAccount()` calling `getIdToken(true)`, which is pre-existing D-009 code. Point to it when explaining why the sync write passes the draft rule.
 - The rules are a draft and test mode is still on, so the "direct write is denied" check can only be shown in the Rules Playground (R8).
 - Two `observeUser(uid)` listeners (the session and Profile) share the Firestore cache, so this does not cost two server reads per change.
+
+## Round 2
+
+Reviewer: reviewer agent · Date: 2026-11-15 · Range: `f085729..HEAD` (f704087, f592488, 3b3dfb1, 8f3257a, 2ca6af5, d0a9663, fc55408)
+
+### Verdict
+**Approve.** S1, S2 and N1-N4 are resolved, Register still works, and the change to the rules allow-list is correct. Nothing new is Blocking or Should-fix. S3 (the R1-R4 device checks, plus the new ones the round 1 log added) is still open and must be done before `/write-docs`. N5 and N6 stay with the docs phase, as decided.
+
+What was verified:
+- `./gradlew assembleDebug lint`: build OK. Lint reports **0 errors / 22 warnings** with the baseline ids (5 GradleDependency, 7 NewerVersionAvailable, 1 AndroidGradlePluginVersion, 1 RedundantLabel, 7 UnusedResources, 1 UseKtx). The new `profile_photo_label` is used.
+- EN/PT: `profile_photo_label` and the reworded `profile_photo_uploading` are in both files, and the texts match round 1's suggestion.
+- **S1 resolved.** `SessionViewModel` keeps a local `emailChecked` inside the `flatMapLatest` branch, so only the first `Found` snapshot per branch is compared. A later snapshot (another device's write, or the cache reverting a refused write) never calls `syncEmail`. This removes the ping-pong between devices and the loop of writes and rejections. The KDoc explains why. See R2-N1 for one case the comment over-claims.
+- **S2 resolved.** The worker writes `photoPath` and `photoUpdatedAt` in one `update` with a client epoch value, not `serverTimestamp()`, so the local snapshot already carries a non-null value. `UserProfile.Found.photoUpdatedAt` defaults to null, which keeps the other `Found(...)` callers source-compatible, and `model/` is unchanged. `photoUploadPending` now clears when the version changes, including the first upload (null to a value). The Coil memory and disk keys are `"$url#$t"` and fall back to the plain URL when `t` is absent. `savedPhotoPath` keeps the saved photo on screen after Save and is cleared in the same update as the pending flag. It is not deleted in `onCleared`, because the worker owns the file.
+- **Register still works.** `RegisterViewModel` and `RegisterScreen` are unchanged. `ProfilePhotoPicker`'s new `labelRes` defaults to `register_photo_label`. The registration upload goes through the same worker, and its extra field is accepted by the rules, as the next item shows.
+- **Rules.** `photoUpdatedAt` is added to the owner `changedKeys().hasOnly([...])`. The worker's write is always an `update` on an existing document, so the owner update rule is what applies on both paths:
+  - On registration, a `PENDING` citizen or a new operator writes `{photoPath, photoUpdatedAt}`. The rule does not depend on `registrationStatus`, and neither key triggers the `impactDetection` or `email` terms, so the write is allowed.
+  - On Profile, the same write is allowed.
+  - The `allow create` rule does not need the field: registration never writes `photoUpdatedAt`, and the create rule has no key allow-list anyway.
+  - The operator validation rule is still a separate `allow update` limited to `registrationStatus` / `validatedBy` / `validatedAt`.
+  - Name, NIF, georeferencing, role and the validation fields remain locked.
+  - Nothing is deployed.
+- **N1 resolved.** `changing` is set at the start of `performChange()` and cleared in a `finally`, so a failure or a cancellation still clears it. Both the `BackHandler` and the top-bar Back go through `backToForm()`, which returns early while the change runs. On the main dispatcher there is no race.
+- **N2 resolved.** `updateProfile` returns `Unit` and the KDoc says why. The only caller is still gated by `hasChanges`.
+- **N3 and N4 resolved.** Profile passes `R.string.profile_photo_label` ("Photo" / "Fotografia"), and Register still shows "Photo (optional)".
+- **No new exposure.** The only data added is the photo version on the owner's own document. Anonymous users still cannot reach any of the three routes, and the log lines are unchanged.
+
+### Blocking
+None.
+
+### Should-fix
+None new. S3 from round 1 remains: record the R1-R4 outcomes and the round 1 fix checks in the Log before `/write-docs`.
+
+### Nit
+
+#### R2-N1. "Once per account value" is really once per subscription
+`session` uses `SharingStarted.WhileSubscribed(5_000)`. When the app has been in the background for more than 5 s and comes back, `auth.account`, a `StateFlow`, is collected again and emits the same current value. `flatMapLatest` then starts a new branch with `emailChecked = false`, so the check runs again with the same cached `AuthAccount`. `retry()` has the same effect, which the Log already records.
+
+As a result, a second device with a stale account can still write the old e-mail once each time it returns to the foreground, until its ID token expires (up to about an hour) and it is signed out. This does not loop, because each return gives one write. However, the KDoc says "a second device with an old cached account cannot write the old e-mail back", which is stronger than what the code does, and the Log's accepted edge mentions only the cold start.
+
+Fix, either of these:
+- (a) Reword the KDoc and the Log's accepted edge to say "once per account emission, including a resubscription after 5 s in the background; at most one stale write per return, until the old token expires".
+- (b) Make it truly once per account value with a ViewModel field compared by identity:
+  ```kotlin
+  private var emailCheckedFor: AuthAccount? = null
+  // in the branch:
+  if (emailCheckedFor !== account && profile is UserProfile.Found) {
+      emailCheckedFor = account
+      ...
+  }
+  ```
+  A resubscription re-emits the same instance, so the check is skipped. A sign-in or a reload that changes the account creates a new instance, so the check runs. `MutableStateFlow` does not re-emit an equal value, so a reload that changes nothing triggers no check either way.
+
+(b) is four lines. Choose (a) if you prefer not to change code again before the defence.
+
+#### R2-N2. Add `photoUpdatedAt` to the N5 type checks in the docs phase
+When N5 is handled, also add `&& (!changedKeys().hasAny(['photoUpdatedAt']) || request.resource.data.photoUpdatedAt is int)`. `getLong("photoUpdatedAt")` on a string would throw during mapping, the same failure mode as `impactDetection`. This is draft only, so tell Francisco.
+
+#### R2-N3. Mention the two-photo case in the docs
+If the user saves photo A and then photo B before A's upload ends, `REPLACE` cancels A's worker, which is expected. If A's worker had already written, its snapshot clears `photoUploadPending` and `savedPhotoPath` while B is still uploading. For a moment the screen shows A, and the notice disappears until B's snapshot shows B. This is harmless and rare. Fix: one line in decision 0017's R4 note. No code change.
