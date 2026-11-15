@@ -96,6 +96,7 @@
     <string name="cd_expand_tickets">Expand tickets</string>
     <string name="cd_collapse_tickets">Collapse tickets</string>
     <string name="cd_report_ticket">Report an issue</string>
+    <string name="cd_loading_session">Loading your session</string>
 
     <!-- Dashboard -->
     <string name="dashboard_repair_time_label">Average repair time</string>
@@ -121,4 +122,79 @@
         <item quantity="one">%1$s of %2$s issue</item>
         <item quantity="other">%1$s of %2$s issues</item>
     </plurals>
+
+    <!-- Login and password reset (D-009) -->
+    <string name="top_bar_title_login">Log in</string>
+    <string name="top_bar_title_forgot_password">Reset password</string>
+    <string name="cd_log_in">Log in</string>
+    <string name="cd_log_out">Log out</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="login_email_label">E-mail</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_show_password">Show</string>
+    <string name="login_hide_password">Hide</string>
+    <string name="login_submit">Log in</string>
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="login_error_email_blank">Enter your e-mail.</string>
+    <string name="login_error_email_invalid">Enter a valid e-mail.</string>
+    <string name="login_error_password_blank">Enter your password.</string>
+    <string name="forgot_intro">Enter your account e-mail. We will send you a link to choose a new password.</string>
+    <string name="forgot_submit">Send link</string>
+    <string name="forgot_sent">If an account exists for this e-mail, a reset link was sent.</string>
+    <string name="auth_error_invalid_credentials">E-mail or password is wrong.</string>
+    <string name="auth_error_user_disabled">This account is disabled.</string>
+    <string name="auth_error_network">No connection. Try again.</string>
+    <string name="auth_error_too_many_requests">Too many attempts. Wait and try again.</string>
+    <string name="auth_error_wrong_code">Wrong code.</string>
+    <string name="auth_error_code_expired">The code expired. Send a new one.</string>
+    <string name="auth_error_code_not_sent">Could not send the code. Try again.</string>
+    <string name="auth_error_recent_login">Please log in again.</string>
+    <string name="auth_error_unknown">Something went wrong. Try again.</string>
+
+    <!-- Role navigation (D-009) -->
+    <string name="top_bar_title_pending">Registration pending</string>
+    <string name="top_bar_title_operator_panel">Operations panel</string>
+    <string name="top_bar_title_my_tickets">My tickets</string>
+    <string name="top_bar_title_profile">Profile</string>
+    <string name="top_bar_title_approvals">Registration approvals</string>
+    <string name="top_bar_title_categories">Categories</string>
+    <string name="top_bar_title_account_problem">Account</string>
+    <string name="cd_more_options">More options</string>
+    <string name="menu_my_tickets">My tickets</string>
+    <string name="menu_profile">Profile</string>
+    <string name="menu_approvals">Registration approvals</string>
+    <string name="menu_categories">Categories</string>
+    <string name="menu_log_out">Log out</string>
+    <string name="placeholder_message">Coming soon.</string>
+    <string name="pending_title">Your registration is waiting for validation</string>
+    <string name="pending_message">The council must validate your registration before you can report issues. Meanwhile you can browse the public issues.</string>
+    <string name="pending_browse">Browse public issues</string>
+    <string name="account_problem_missing">Your account is not set up yet.</string>
+    <string name="account_problem_unavailable">Your profile could not be loaded. Check your connection.</string>
+    <string name="account_problem_retry">Retry</string>
+
+    <!-- Account setup and SMS code (D-009) -->
+    <string name="top_bar_title_account_setup">Account setup</string>
+    <string name="setup_verify_title">Verify your e-mail</string>
+    <string name="setup_verify_intro">Open the verification link sent to %1$s, then come back and tap \"I have verified\".</string>
+    <string name="setup_verified_button">I have verified</string>
+    <string name="setup_resend_email">Resend e-mail</string>
+    <string name="setup_verification_sent">Verification e-mail sent.</string>
+    <string name="setup_not_verified">Not verified yet. Open the link in the e-mail first.</string>
+    <string name="setup_phone_title">Add your phone</string>
+    <string name="setup_phone_intro">Your account needs a second factor. Each time you log in, we will send a code by SMS to this number.</string>
+    <string name="setup_phone_label">Mobile number</string>
+    <string name="setup_phone_prefix" translatable="false">+351\u0020</string>
+    <string name="setup_phone_display" translatable="false">+351 %1$s</string>
+    <string name="setup_error_phone">Enter a Portuguese mobile number: 9 digits starting with 9.</string>
+    <string name="setup_send_code">Send code</string>
+    <string name="setup_change_number">Change number</string>
+    <string name="mfa_code_intro">Enter the 6-digit code sent by SMS to %1$s.</string>
+    <string name="mfa_code_label">SMS code</string>
+    <string name="mfa_confirm">Confirm</string>
+    <string name="mfa_resend">Send a new code</string>
+    <string name="mfa_back">Back</string>
+    <string name="mfa_code_sent">Code sent.</string>
+    <string name="mfa_error_code_length">Enter the 6-digit code.</string>
 </resources>
