@@ -5,9 +5,11 @@ import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
+import pt.isec.amov.cityfix.model.User
 
 /**
  * What a valid report did (brief I.2 Obs., decision 0002): opened a new ticket, joined an active
@@ -54,4 +56,16 @@ interface TicketsRepository {
         location: Coordinates,
         creatorId: String,
     ): ReportOutcome?
+
+    /**
+     * The thread of ticket [ticketId], oldest first, live. Only for participants and operators:
+     * never called for anonymous or pending users (brief I.1.C).
+     */
+    fun messagesFor(ticketId: String): Flow<List<Message>>
+
+    /**
+     * Adds a message by [author] to ticket [ticketId]. Returns false when the trimmed [text] is
+     * empty; otherwise true once the write is queued (it reaches the server when online).
+     */
+    fun sendMessage(ticketId: String, text: String, author: User): Boolean
 }

@@ -9,6 +9,8 @@ import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Message
+import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
@@ -16,6 +18,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
 import pt.isec.amov.cityfix.model.toAnonymousView
 
@@ -37,6 +40,9 @@ internal const val TICKET_LOCATIONS = "ticketLocations"
 
 /** Subcollection of a ticket: one report per citizen who joined it by grouping. */
 internal const val REPORTS = "reports"
+
+/** Subcollection of a ticket: the message thread (F-014). */
+internal const val MESSAGES = "messages"
 internal const val CATEGORIES = "categories"
 internal const val STATS_SUMMARY = "stats/summary"
 
@@ -45,7 +51,8 @@ internal const val STATS_SUMMARY = "stats/summary"
 /**
  * The full `tickets/{id}` document (decision 0010). The id is the document id, not a field.
  * `participantIds` = creator + followers, so one array-contains query lists "my tickets".
- * Not written here: `resolvedAt` (server time, D-013) and `messages` (subcollection, F-014).
+ * Not written here: `resolvedAt` (server time, D-013) and `messages` (subcollection written by
+ * FirestoreTicketsRepository.sendMessage, F-014).
  */
 internal fun Ticket.toTicketDocument(): Map<String, Any?> = hashMapOf(
     "description" to description,
@@ -114,6 +121,17 @@ internal fun reportDocument(
     "description" to description,
     "createdAt" to createdAt,
     "attachments" to attachments.map { it.toDocument() },
+)
+
+/**
+ * One `tickets/{id}/messages/{auto id}` document (F-014). `byOperator` is stored so the thread
+ * can say "Municipality" without reading the author's profile.
+ */
+internal fun messageDocument(text: String, sentAt: Long, author: User): Map<String, Any> = hashMapOf(
+    "text" to text,
+    "sentAt" to sentAt,
+    "authorId" to author.id,
+    "byOperator" to (author is Operator),
 )
 
 /** The `categories/{id}` document (debug seed only; operators manage categories in D-012). */
@@ -205,6 +223,15 @@ internal fun DocumentSnapshot.toTicketLocation(): Ticket = Ticket(
     situation = enumOrDefault(getString("situation"), Situation.DAMAGE),
     location = getGeoPoint("location").toCoordinates(),
     currentStatus = if (getBoolean("active") == true) TicketStatus.OPEN else TicketStatus.CLOSED,
+)
+
+/** One message from `tickets/{id}/messages/{id}`. */
+internal fun DocumentSnapshot.toMessage(): Message = Message(
+    id = id,
+    text = getString("text") ?: "",
+    sentAt = getLong("sentAt") ?: 0L,
+    authorId = getString("authorId") ?: "",
+    byOperator = getBoolean("byOperator") ?: false,
 )
 
 internal fun DocumentSnapshot.toCategory(): Category = Category(

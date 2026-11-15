@@ -18,6 +18,7 @@ import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
@@ -25,6 +26,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
 import java.text.Collator
 
@@ -45,6 +47,10 @@ import java.text.Collator
  * Privacy (CLAUDE.md, decision 0006): [publicTickets] reads only `publicTickets`, never `tickets`
  * or `ticketLocations`, so the anonymous code path never receives author data or exact
  * coordinates.
+ *
+ * Messages (F-014): each ticket has a `messages` subcollection. [messagesFor] is live like the
+ * other reads and [sendMessage] is queued offline like the report batch. Neither is ever called
+ * for anonymous or pending users (brief I.1.C).
  */
 class FirestoreTicketsRepository(
     private val firestore: FirebaseFirestore,
@@ -181,6 +187,27 @@ class FirestoreTicketsRepository(
             uploader.enqueue("$TICKETS/${ticket.id}", ticket.id, scope == Scope.PUBLIC)
         }
         ReportOutcome.CREATED
+    }
+
+    /** The thread of ticket [ticketId], oldest first (sorted here, so no index is needed). */
+    override fun messagesFor(ticketId: String): Flow<List<Message>> =
+        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES)
+            .listen { snapshot ->
+                snapshot.documents.map { it.toMessage() }.sortedBy { it.sentAt }
+            }
+
+    /**
+     * Adds a message by [author] to ticket [ticketId]; false when the trimmed [text] is empty.
+     * Not awaited, as in reportTicket: offline the write is queued and this device's listener
+     * shows the message at once; failures are only logged.
+     */
+    override fun sendMessage(ticketId: String, text: String, author: User): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return false
+        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES).document()
+            .set(messageDocument(trimmed, System.currentTimeMillis(), author))
+            .addOnFailureListener { Log.w(TAG, "message not saved", it) }
+        return true
     }
 
     /** The nearest active ticket with this category and situation within 10 m, or null. */
