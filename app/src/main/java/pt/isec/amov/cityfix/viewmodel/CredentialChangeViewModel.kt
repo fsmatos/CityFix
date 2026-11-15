@@ -53,6 +53,13 @@ class CredentialChangeViewModel(
     private var challenge: SecondFactorChallenge? = null
     private var verificationId: String? = null
 
+    /**
+     * True while [performChange] runs. The challenge is already gone then, so Back must not
+     * reopen the form: a second Continue would start another re-authentication (and, for the
+     * e-mail, maybe a second link) while the first change is still running.
+     */
+    private var changing = false
+
     init {
         if (change == CredentialChange.EMAIL && isOperator) loadDomain()
     }
@@ -235,8 +242,12 @@ class CredentialChangeViewModel(
         }
     }
 
-    /** Back from the code step: the challenge is dropped, the typed values stay. */
+    /**
+     * Back from the code step: the challenge is dropped, the typed values stay. Ignored while
+     * the change runs ([changing]).
+     */
     fun backToForm() {
+        if (changing) return
         challenge = null
         verificationId = null
         _uiState.update {
@@ -255,12 +266,17 @@ class CredentialChangeViewModel(
 
     /** Runs right after a successful re-authentication; [isBusy] is still true. */
     private suspend fun performChange() {
+        changing = true
         challenge = null
         verificationId = null
         val state = _uiState.value
-        val error = when (change) {
-            CredentialChange.EMAIL -> auth.requestEmailChange(state.newEmail.trim())
-            CredentialChange.PASSWORD -> auth.changePassword(state.newPassword)
+        val error = try {
+            when (change) {
+                CredentialChange.EMAIL -> auth.requestEmailChange(state.newEmail.trim())
+                CredentialChange.PASSWORD -> auth.changePassword(state.newPassword)
+            }
+        } finally {
+            changing = false
         }
         _uiState.update {
             when (error) {
