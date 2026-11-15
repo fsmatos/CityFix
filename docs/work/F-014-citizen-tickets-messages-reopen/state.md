@@ -91,3 +91,4 @@ Append-only.
   - The session updated live when C's registration changed back to ACTIVE (participant view without logging in again).
   - Crash buffer: only an Android Bluetooth service abort at boot, nothing from CityFix.
   - Test data left: T1-T3, C's report on T1, messages on T1, sample-3 CLOSED and owned by A.
+- 2026-11-15: Merged origin/main (D-010 registration) into dev/Francisco before merging into main. One conflict in docs/report/notes.md (both added a section at the end; kept D-010's, then F-014's). Added a line in the overview, decision 0016 (Diogo's) and the report notes saying the 0015 numbering clash is resolved (F-013's record is 0017). assembleDebug and lint pass, 0 errors.
