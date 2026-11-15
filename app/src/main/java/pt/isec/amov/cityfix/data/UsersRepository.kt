@@ -6,8 +6,13 @@ import pt.isec.amov.cityfix.model.User
 
 /** The result of reading `users/{uid}`. */
 sealed interface UserProfile {
-    /** A Citizen or an Operator; the concrete type is the role (decision 0010). */
-    data class Found(val user: User) : UserProfile
+    /**
+     * A Citizen or an Operator; the concrete type is the role (decision 0010).
+     * [photoUpdatedAt] is when ProfilePhotoWorker last stored the photo (epoch ms; null before the
+     * first upload). The overwritten photo may keep the same download URL, so this is the
+     * photo's version: the image cache key and the end of a Profile upload (D-011 R4).
+     */
+    data class Found(val user: User, val photoUpdatedAt: Long? = null) : UserProfile
 
     /** No document, or a `role` that is not CITIZEN or OPERATOR. The role is never guessed. */
     data object Missing : UserProfile

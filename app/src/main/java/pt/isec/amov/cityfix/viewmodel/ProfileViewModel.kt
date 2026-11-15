@@ -51,8 +51,11 @@ class ProfileViewModel(
     /** True once [reloadAccount] ran for this visit. */
     private var reloaded = false
 
-    /** The stored photo when Save queued a new one; a different value means the upload finished. */
-    private var photoAtSave: String? = null
+    /**
+     * The stored photo's version when Save queued a new one; a different value means the upload
+     * finished. Not the URL: an overwrite may keep the same download URL (D-011 R4).
+     */
+    private var photoUpdatedAtSave: Long? = null
 
     init {
         viewModelScope.launch {
@@ -74,7 +77,7 @@ class ProfileViewModel(
     private fun onProfile(found: UserProfile.Found) {
         val user = found.user
         _uiState.update { state ->
-            var next = state.copy(profile = user, unavailable = false)
+            var next = state.copy(profile = user, photoUpdatedAt = found.photoUpdatedAt, unavailable = false)
             if (!initialised) {
                 val phone = savedState.get<String>(KEY_PHONE) ?: user.phone
                 next = next.copy(
@@ -84,8 +87,8 @@ class ProfileViewModel(
                     phoneError = if (phone.isEmpty() || isPortuguesePhone(phone)) null else R.string.register_error_phone,
                 )
             }
-            if (state.photoUploadPending && user.photo != photoAtSave) {
-                next = next.copy(photoUploadPending = false)
+            if (state.photoUploadPending && found.photoUpdatedAt != photoUpdatedAtSave) {
+                next = next.copy(photoUploadPending = false, savedPhotoPath = null)
             }
             next
         }
@@ -178,7 +181,7 @@ class ProfileViewModel(
         )
         // Not awaited: the write is queued in the local cache and the listener shows it at once.
         users.updateProfile(profile, changes)
-        if (state.newPhotoPath != null) photoAtSave = profile.photo
+        if (state.newPhotoPath != null) photoUpdatedAtSave = state.photoUpdatedAt
         // The stored values are the baseline now; the photo file belongs to the worker.
         savedState.remove<String>(KEY_PHOTO)
         savedState.remove<String>(KEY_PHONE)
@@ -187,6 +190,8 @@ class ProfileViewModel(
             it.copy(
                 notice = R.string.profile_saved,
                 photoUploadPending = it.photoUploadPending || state.newPhotoPath != null,
+                // Keep showing the saved photo, not the old stored one, until the upload ends.
+                savedPhotoPath = state.newPhotoPath ?: it.savedPhotoPath,
                 newPhotoPath = null,
             )
         }

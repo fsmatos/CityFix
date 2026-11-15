@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.request.ImageRequest
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
@@ -165,8 +166,26 @@ fun ProfileContent(
             return@FormColumn
         }
 
+        // A photo picked now, else the one saved in this visit (until its upload ends), else the
+        // stored one. The stored photo's cache key includes photoUpdatedAt: an overwrite may keep
+        // the same URL, and Coil would otherwise show the cached old image (D-011 R4).
+        val context = LocalContext.current
+        val storedPhoto = profile.photo
+        val storedPhotoModel: Any? = remember(storedPhoto, state.photoUpdatedAt) {
+            if (storedPhoto == null || state.photoUpdatedAt == null) {
+                storedPhoto
+            } else {
+                val key = "$storedPhoto#${state.photoUpdatedAt}"
+                ImageRequest.Builder(context)
+                    .data(storedPhoto)
+                    .memoryCacheKey(key)
+                    .diskCacheKey(key)
+                    .build()
+            }
+        }
+        val localPhoto = state.newPhotoPath ?: state.savedPhotoPath
         ProfilePhotoPicker(
-            photo = state.newPhotoPath?.let { File(it) } ?: profile.photo,
+            photo = localPhoto?.let { File(it) } ?: storedPhotoModel,
             isCopying = state.isCopyingPhoto,
             enabled = !state.isCopyingPhoto,
             showRemove = state.newPhotoPath != null,

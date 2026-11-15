@@ -188,6 +188,7 @@ class FirestoreUsersRepository(
         val email = getString("email").orEmpty()
         val phone = getString("phone").orEmpty()
         val photo = getString("photoPath")
+        val photoUpdatedAt = getLong("photoUpdatedAt")
         return when (getString("role")) {
             ROLE_CITIZEN -> {
                 val location = getGeoPoint("georeferencing")
@@ -206,10 +207,12 @@ class FirestoreUsersRepository(
                         registrationStatus = registrationStatusOf(getString("registrationStatus")),
                         impactDetection = getBoolean("impactDetection") ?: false,
                     ),
+                    photoUpdatedAt,
                 )
             }
             ROLE_OPERATOR -> UserProfile.Found(
                 Operator(id = id, name = name, nif = nif, email = email, phone = phone, photo = photo),
+                photoUpdatedAt,
             )
             else -> UserProfile.Missing
         }

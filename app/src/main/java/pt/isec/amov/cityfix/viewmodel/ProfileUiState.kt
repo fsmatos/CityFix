@@ -12,6 +12,8 @@ import pt.isec.amov.cityfix.utils.isPortuguesePhone
 data class ProfileUiState(
     /** The stored profile (read-only fields, remote photo); null until the first snapshot. */
     val profile: User? = null,
+    /** The stored photo's version (UserProfile.Found.photoUpdatedAt); part of the image cache key. */
+    val photoUpdatedAt: Long? = null,
     /** The Auth account's e-mail (the current one). */
     val email: String = "",
     /** Digits only, at most 9. */
@@ -26,8 +28,13 @@ data class ProfileUiState(
     @StringRes val phoneError: Int? = null,
     /** "Profile saved." after Save; cleared by the next edit. */
     @StringRes val notice: Int? = null,
-    /** True after Save with a photo, until photoPath changes. */
+    /** True after Save with a photo, until photoUpdatedAt changes (the worker stored it). */
     val photoUploadPending: Boolean = false,
+    /**
+     * The local file of the photo saved in this visit, shown until the upload finishes. Display
+     * only: the upload worker owns the file and deletes it.
+     */
+    val savedPhotoPath: String? = null,
     /** The profile could not be read (Unavailable/Missing); the screen shows a message. */
     val unavailable: Boolean = false,
 ) {
