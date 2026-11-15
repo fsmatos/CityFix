@@ -108,7 +108,7 @@ class FirestoreUsersRepository(
         return RegisterResult.Success
     }
 
-    override fun updateProfile(user: User, changes: ProfileChanges): Boolean {
+    override fun updateProfile(user: User, changes: ProfileChanges) {
         val fields = buildMap<String, Any> {
             changes.phone?.let { put("phone", it) }
             if (user is Citizen) changes.impactDetection?.let { put("impactDetection", it) }
@@ -120,7 +120,6 @@ class FirestoreUsersRepository(
                 .addOnFailureListener { Log.w(TAG, "profile update refused", it) }
         }
         changes.newPhotoPath?.let { photoUploader.enqueue(user.id, it) }
-        return fields.isNotEmpty() || changes.newPhotoPath != null
     }
 
     override fun syncEmail(uid: String, email: String) {

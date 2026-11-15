@@ -85,9 +85,9 @@ interface UsersRepository {
      * Writes only phone and (citizen) impactDetection to users/{user.id}, then queues the photo.
      * Never name, nif, georeferencing, role, registrationStatus or email. Not awaited: the write
      * is queued in the local cache (works offline) and the listener shows it at once.
-     * Returns false when there is nothing to write.
+     * Writes nothing when [changes] is empty (the Profile screen calls it only with changes).
      */
-    fun updateProfile(user: User, changes: ProfileChanges): Boolean
+    fun updateProfile(user: User, changes: ProfileChanges)
 
     /** Copies the Auth e-mail into users/{uid}.email (after a verified change). Not awaited. */
     fun syncEmail(uid: String, email: String)
