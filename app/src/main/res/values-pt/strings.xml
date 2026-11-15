@@ -38,7 +38,7 @@
     <!-- Message thread -->
     <string name="messages_title">Mensagens</string>
     <string name="messages_empty">Ainda não há mensagens.</string>
-    <string name="message_author_you">Você</string>
+    <string name="message_author_you">Eu</string>
     <string name="message_author_operator">Câmara Municipal</string>
     <string name="message_author_citizen">Munícipe</string>
     <string name="message_input_label">Mensagem</string>
