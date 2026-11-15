@@ -8,7 +8,7 @@ Remote: origin/dev/Francisco
 | Plan | done | 2026-11-15 | Draft 2026-11-14; revised 2026-11-15 for D-009 (session user, My tickets entry settled, real test accounts); 7 slices; Q1-Q14 with defaults |
 | Gate 1: plan approved | done | 2026-11-15 | approved with the person's Q1-Q15 answers; Q1 follows brief II.2, Diogo agrees |
 | Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run |
-| Review | pending | | |
+| Review | done | 2026-11-15 | approve: 0 blocking, 1 should-fix (S1 decision 0011 vs Q1, docs phase), 1 nit; build + lint 0 errors, 22 warnings; D1-D15 open |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -63,3 +63,4 @@ Append-only.
     - `TicketDetailContent` puts `imePadding()` on ShowScreen so the input stays above the keyboard.
     - The "Placeholders" comment in `MainActivity` moved below the My tickets destination (it no longer is one).
   - Device checks D1-D15: not run (they need the test accounts A/C/P/O that the person must prepare, Francisco's SHA keys in Firebase and a Google Play AVD).
+- 2026-11-15: Review (reviewer) of `fbbbbe0..HEAD` against 00-plan Q1-Q15, 01-coding-plan, the code-phase deviations, the brief (I.1.C, I.2.E, II.2, II.4, II.5, IV) and Contacts_#3. `./gradlew assembleDebug lint`: BUILD SUCCESSFUL, 0 errors, 22 warnings (same ids). Verdict approve: 0 blocking; S1 decision 0011's table and Q1 still say a citizen cannot set INFO_REQUESTED (amend in the docs phase, Diogo agreed; update the 03-docs-plan bullet); N1 PT "Você" -> "Eu". Checked: status batches keep ticket, history, publicTickets mirror, `ticketLocations.active` and stats consistent; the citizen move is minimal; anonymous/pending/non-participants never create `TicketDetailViewModel`; EN/PT keys match; no broken 0015-media link, Diogo's 0015 untouched. Open: D1-D15, D-013 INFO_REQUESTED -> IN_PROGRESS only after a citizen question on an OPEN ticket, D-014 geofence pause, F-016 notifications. See `review.md`.
