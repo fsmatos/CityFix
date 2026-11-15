@@ -37,6 +37,16 @@
     <string name="cd_ticket_map_exact">Map with the exact location of the issue</string>
     <string name="ticket_history_system">Closed automatically</string>
 
+    <!-- Message thread -->
+    <string name="messages_title">Messages</string>
+    <string name="messages_empty">No messages yet.</string>
+    <string name="message_author_you">You</string>
+    <string name="message_author_operator">Municipality</string>
+    <string name="message_author_citizen">Citizen</string>
+    <string name="message_input_label">Message</string>
+    <string name="cd_send_message">Send message</string>
+    <string name="messages_locked">This ticket is closed: no new messages.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>
     <string name="report_error_situation">Choose a situation.</string>

@@ -35,6 +35,16 @@
     <string name="cd_ticket_map_exact">Mapa com a localização exata da ocorrência</string>
     <string name="ticket_history_system">Fechada automaticamente</string>
 
+    <!-- Message thread -->
+    <string name="messages_title">Mensagens</string>
+    <string name="messages_empty">Ainda não há mensagens.</string>
+    <string name="message_author_you">Você</string>
+    <string name="message_author_operator">Câmara Municipal</string>
+    <string name="message_author_citizen">Munícipe</string>
+    <string name="message_input_label">Mensagem</string>
+    <string name="cd_send_message">Enviar mensagem</string>
+    <string name="messages_locked">Esta ocorrência está fechada: não aceita novas mensagens.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>
     <string name="report_error_situation">Escolha uma situação.</string>
