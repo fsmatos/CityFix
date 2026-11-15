@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-11-14 | Slices 1-5 and 7 committed (cdbcb8d..1760f28); slice 6 skipped (Gate 1); build + lint green, 22 warnings = baseline, none new; device checks pending (Diogo) |
 | Review | done | 2026-11-14 | Round 1: changes requested (B1, S1-S3, N1-N7). Round 2 (5be47fd..HEAD): approved; B1, S1-S3, N1, N2, N4-N6 resolved, N3/N7 deferred, 4 new nits (R2-N1..N4); build + lint 0 errors, 22 warnings = baseline; device checks pending |
 | Docs | done | 2026-11-14 | New decision 0016; 0015 (session) amended; overview, report notes, task file updated; N7 and the deferred nits documented; nothing committed |
-| Pushed | done | 2026-11-14 | eba8aa2 to origin/dev/Diogo |
+| Pushed | done | 2026-11-15 | f41f0f0 to origin/dev/Diogo (first push 2026-11-14 eba8aa2) |
 | Merged | pending | | |
 
 ## Log
@@ -105,3 +105,4 @@ Append-only.
 - 2026-11-15 Phone prefix "double space" nit: not a bug. The prefix is `+351` plus one space, and Material 3 adds its own small gap after a text-field prefix. Without the space the number touches `+351`; a thin space (U+2009) renders the same as before. Kept unchanged (no code change).
 - 2026-11-15 Landscape check (screenshots with `-gpu swiftshader_indirect`): the Register form is centred at the 480dp max width, field errors, supporting text, the impact switch row, the photo buttons and Create account are all fully visible when scrolling; nothing clipped.
 - 2026-11-15 Acceptance boxes ticked in the task file; status set to done.
+- 2026-11-15 Push: device-check records pushed to origin/dev/Diogo at f41f0f0 (docs only since the last push, so build and lint were not re-run). Not merged into main.
