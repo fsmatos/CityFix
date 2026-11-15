@@ -26,8 +26,10 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.closeIfExpired
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
+import pt.isec.amov.cityfix.model.transition
 import java.text.Collator
 
 /**
@@ -208,6 +210,49 @@ class FirestoreTicketsRepository(
             .set(messageDocument(trimmed, System.currentTimeMillis(), author))
             .addOnFailureListener { Log.w(TAG, "message not saved", it) }
         return true
+    }
+
+    /**
+     * Reopens a RESOLVED [ticket] (brief II.4). The lifecycle (D-008 transition) checks the
+     * participant, the 5-day window and the justification; false when it rejects the move.
+     */
+    override fun reopenTicket(ticket: Ticket, by: User, justification: String): Boolean {
+        val after = ticket.transition(TicketStatus.OPEN, by, System.currentTimeMillis(), justification)
+            ?: return false
+        commitStatusChange(ticket, after)
+        return true
+    }
+
+    /**
+     * Writes a RESOLVED [ticket] whose reopen window has ended as CLOSED (brief II), with the
+     * entry by "system" at the end of the window (D-008 closeIfExpired). Nothing otherwise.
+     */
+    override fun closeExpiredTicket(ticket: Ticket) {
+        val after = ticket.closeIfExpired(System.currentTimeMillis()) ?: return
+        commitStatusChange(ticket, after)
+    }
+
+    /**
+     * One batch for a status change from [before] to [after] (decisions 0010, 0013, 0014):
+     * the ticket's status fields, the publicTickets mirror for a PUBLIC ticket, whether
+     * ticketLocations still groups (`active`), and the stats/summary counters. Not awaited, as in
+     * reportTicket. D-013 can reuse it for the operator's moves.
+     */
+    private fun commitStatusChange(before: Ticket, after: Ticket) {
+        val batch = firestore.batch()
+        batch.update(firestore.collection(TICKETS).document(after.id), after.toStatusFields())
+        if (after.scope == Scope.PUBLIC) {
+            batch.update(
+                firestore.collection(PUBLIC_TICKETS).document(after.id),
+                "currentStatus", after.currentStatus.name,
+            )
+        }
+        batch.update(
+            firestore.collection(TICKET_LOCATIONS).document(after.id),
+            "active", after.isActive,
+        )
+        batch.set(firestore.document(STATS_SUMMARY), statsIncrements(before, after), SetOptions.merge())
+        batch.commit().addOnFailureListener { Log.w(TAG, "status change not saved", it) }
     }
 
     /** The nearest active ticket with this category and situation within 10 m, or null. */

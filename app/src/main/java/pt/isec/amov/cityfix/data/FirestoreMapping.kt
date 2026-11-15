@@ -124,6 +124,16 @@ internal fun reportDocument(
 )
 
 /**
+ * The status fields of `tickets/{id}` after a transition (F-014, D-013): the status and the whole
+ * history. The history is rewritten, not appended, so with two offline writers the last write
+ * wins (F-014 Q12). `resolvedAt` is not touched (F-014 Q7).
+ */
+internal fun Ticket.toStatusFields(): Map<String, Any> = hashMapOf(
+    "currentStatus" to currentStatus.name,
+    "statusHistory" to statusHistory.map { it.toDocument() },
+)
+
+/**
  * One `tickets/{id}/messages/{auto id}` document (F-014). `byOperator` is stored so the thread
  * can say "Municipality" without reading the author's profile.
  */

@@ -68,4 +68,14 @@ interface TicketsRepository {
      * empty; otherwise true once the write is queued (it reaches the server when online).
      */
     fun sendMessage(ticketId: String, text: String, author: User): Boolean
+
+    /**
+     * Reopens a RESOLVED [ticket] (brief II.4) by [by] with [justification]. Returns false when
+     * the lifecycle rejects it (not a participant, not active, window over, blank justification);
+     * otherwise true once the write is queued.
+     */
+    fun reopenTicket(ticket: Ticket, by: User, justification: String): Boolean
+
+    /** Writes [ticket] as CLOSED when its 5-day reopen window has ended (brief II); otherwise nothing. */
+    fun closeExpiredTicket(ticket: Ticket)
 }
