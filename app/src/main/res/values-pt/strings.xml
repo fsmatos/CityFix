@@ -242,4 +242,16 @@
     <string name="register_photo_copy_failed">Não foi possível adicionar a fotografia. Tente novamente.</string>
     <string name="cd_register_photo">A sua fotografia de perfil</string>
     <string name="cd_register_photo_copying">A adicionar a fotografia</string>
+    <!-- D-011 Perfil -->
+    <string name="profile_role_label">Função</string>
+    <string name="profile_status_label">Estado do registo</string>
+    <string name="profile_status_pending">A aguardar validação</string>
+    <string name="profile_status_active">Ativo</string>
+    <string name="profile_phone_hint">Número de contacto. O número que recebe os códigos de início de sessão não muda aqui.</string>
+    <string name="profile_save">Guardar</string>
+    <string name="profile_saved">Perfil guardado. As alterações feitas sem rede sincronizam quando estiver online.</string>
+    <string name="profile_photo_uploading">A nova fotografia é enviada quando estiver online.</string>
+    <string name="profile_unavailable">Não foi possível ler o seu perfil. Verifique a ligação e abra-o de novo.</string>
+    <string name="profile_log_out">Terminar sessão</string>
+    <string name="cd_profile_loading">A carregar o seu perfil</string>
 </resources>

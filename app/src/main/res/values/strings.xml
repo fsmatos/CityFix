@@ -242,4 +242,16 @@
     <string name="register_photo_copy_failed">The photo could not be added. Try again.</string>
     <string name="cd_register_photo">Your profile photo</string>
     <string name="cd_register_photo_copying">Adding the photo</string>
+    <!-- D-011 Profile -->
+    <string name="profile_role_label">Role</string>
+    <string name="profile_status_label">Registration status</string>
+    <string name="profile_status_pending">Waiting for validation</string>
+    <string name="profile_status_active">Active</string>
+    <string name="profile_phone_hint">Contact number. The number that receives your login codes does not change here.</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_saved">Profile saved. Changes made offline sync when you are online.</string>
+    <string name="profile_photo_uploading">The new photo is uploaded when you are online.</string>
+    <string name="profile_unavailable">Your profile could not be read. Check your connection and open it again.</string>
+    <string name="profile_log_out">Log out</string>
+    <string name="cd_profile_loading">Loading your profile</string>
 </resources>

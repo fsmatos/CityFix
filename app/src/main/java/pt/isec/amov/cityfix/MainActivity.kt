@@ -76,6 +76,7 @@ import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
+import pt.isec.amov.cityfix.ui.screens.ProfileScreen
 import pt.isec.amov.cityfix.ui.screens.RegisterScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
@@ -91,6 +92,8 @@ import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
+import pt.isec.amov.cityfix.viewmodel.ProfileViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
@@ -424,7 +427,17 @@ private fun CityFixApp(app: CityFixApplication) {
                         allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
                         onDenied = goHome,
                     ) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_profile)
+                        // The guard lets only a signed-in user in, so the session holds their profile.
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val profileViewModel: ProfileViewModel = viewModel(
+                            factory = ProfileViewModelFactory(
+                                user.id,
+                                app.usersRepository,
+                                app.authRepository,
+                                app.attachmentStorage,
+                            ),
+                        )
+                        ProfileScreen(viewModel = profileViewModel, onLogOut = logOut)
                     }
                 }
                 composable<OperatorPanelRoute> {

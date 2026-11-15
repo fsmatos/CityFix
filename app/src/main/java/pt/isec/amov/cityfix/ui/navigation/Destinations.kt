@@ -49,7 +49,7 @@ data object OperatorPanelRoute
 @Serializable
 data object MyTicketsRoute
 
-/** Profile of the signed-in user. Placeholder until D-011. */
+/** Profile of the signed-in user (D-011). */
 @Serializable
 data object ProfileRoute
 
