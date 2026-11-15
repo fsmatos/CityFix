@@ -45,6 +45,10 @@
     <string name="cd_send_message">Enviar mensagem</string>
     <string name="messages_locked">Esta ocorrência está fechada: não aceita novas mensagens.</string>
 
+    <!-- Reabrir -->
+    <string name="reopen_error_blank">Explique porque a ocorrência deve ser reaberta.</string>
+    <string name="reopen_error_not_allowed">Esta ocorrência já não pode ser reaberta.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>
     <string name="report_error_situation">Escolha uma situação.</string>

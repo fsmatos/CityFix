@@ -47,6 +47,10 @@
     <string name="cd_send_message">Send message</string>
     <string name="messages_locked">This ticket is closed: no new messages.</string>
 
+    <!-- Reopen -->
+    <string name="reopen_error_blank">Explain why the ticket should be reopened.</string>
+    <string name="reopen_error_not_allowed">This ticket can no longer be reopened.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>
     <string name="report_error_situation">Choose a situation.</string>
