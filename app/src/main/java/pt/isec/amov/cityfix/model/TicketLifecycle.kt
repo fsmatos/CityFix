@@ -148,8 +148,11 @@ fun Ticket.closeIfExpired(now: Long): Ticket? {
 private fun Ticket.isFullTicket(): Boolean =
     statusHistory.isNotEmpty() && statusHistory.last().status == currentStatus
 
-/** Option A: the creator or one of the followers (decision 0002). */
-private fun Ticket.isParticipant(userId: String): Boolean =
+/**
+ * Option A: the creator or one of the followers (decision 0002). Public since F-014: also used by
+ * the detail audience (detailAudience) and the My tickets filter.
+ */
+fun Ticket.isParticipant(userId: String): Boolean =
     userId == creatorId || userId in followerIds
 
 /**

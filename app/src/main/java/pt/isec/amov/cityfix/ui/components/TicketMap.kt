@@ -33,9 +33,9 @@ private const val COARSE_RADIUS_METERS = 750.0
 /**
  * A Google map of [location], as in Contacts_#3 (GoogleMap + rememberCameraPositionState).
  * Coarse ([exact] = false, anonymous users): far zoom, a circle, no marker, and every gesture off
- * (MapUiSettings), so the map cannot be moved or zoomed in. Exact (operators, D-013): a Marker at
- * zoom 15 and the normal gestures. Previews cannot draw a Google map, so they show a placeholder.
- * Without a valid Maps key in the manifest the map shows grey tiles.
+ * (MapUiSettings), so the map cannot be moved or zoomed in. Exact (participants F-014, operators
+ * D-013): a Marker at zoom 15 and the normal gestures. Previews cannot draw a Google map, so they
+ * show a placeholder. Without a valid Maps key in the manifest the map shows grey tiles.
  */
 @Composable
 fun TicketMap(location: Coordinates, exact: Boolean, modifier: Modifier = Modifier) {

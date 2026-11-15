@@ -31,6 +31,9 @@
     <string name="ticket_map_caption">Área aproximada (cerca de 1 km)</string>
     <string name="ticket_map_unavailable">Localização indisponível</string>
     <string name="cd_ticket_map">Mapa da área aproximada da ocorrência</string>
+    <string name="ticket_map_exact_title">Localização</string>
+    <string name="cd_ticket_map_exact">Mapa com a localização exata da ocorrência</string>
+    <string name="ticket_history_system">Fechada automaticamente</string>
 
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>

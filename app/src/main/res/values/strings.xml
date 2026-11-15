@@ -33,6 +33,9 @@
     <string name="ticket_map_caption">Approximate area (about 1 km)</string>
     <string name="ticket_map_unavailable">Location not available</string>
     <string name="cd_ticket_map">Map of the approximate area of the issue</string>
+    <string name="ticket_map_exact_title">Location</string>
+    <string name="cd_ticket_map_exact">Map with the exact location of the issue</string>
+    <string name="ticket_history_system">Closed automatically</string>
 
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>

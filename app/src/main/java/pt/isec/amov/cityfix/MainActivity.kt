@@ -68,7 +68,6 @@ import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
-import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
@@ -77,6 +76,7 @@ import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
+import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.viewmodel.AccessRole
@@ -146,11 +146,11 @@ private fun CityFixApp(app: CityFixApplication) {
     }
 
     // Nobody gets the expand toggle (D-009 Gate Q7). Since F-011 an active citizen's list holds
-    // their own tickets plus the public ones and an operator's holds all, but the cards and the
-    // detail still render only the public fields for every role, so an expanded card would add
-    // only the date; brief I.1.B lists category, situation and thumbnail, and I.2.D gives citizens
-    // the anonymous features. The full views are F-014 (my tickets) and D-013's operations panel
-    // (coordinates, author, history; brief I.3.E), not this list.
+    // their own tickets plus the public ones and an operator's holds all, but the list cards
+    // render only the public fields for every role, so an expanded card would add only the date;
+    // brief I.1.B lists category, situation and thumbnail, and I.2.D gives citizens the anonymous
+    // features. A citizen's own view is the participant detail and My tickets (F-014); the
+    // operator's is D-013's operations panel (coordinates, author, history; brief I.3.E).
     // The flag and the `canExpandCards && isExpanded` below stay for that later decision.
     val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -302,12 +302,14 @@ private fun CityFixApp(app: CityFixApplication) {
                 }
                 composable<TicketDetailRoute> { entry ->
                     val id = entry.toRoute<TicketDetailRoute>().ticketId
+                    val ticket = tickets.firstOrNull { it.id == id }
                     ShowScreen(
-                        ticket = tickets.firstOrNull { it.id == id },
-                        // The detail still renders only the public fields for every role (decision
-                        // 0006), even when `tickets` holds a citizen's own or an operator's full
-                        // tickets (F-011); F-014 / D-013 add the role-specific views.
-                        audience = DetailAudience.PUBLIC,
+                        ticket = ticket,
+                        // Decision 0007: the view depends on who is looking. A citizen who created
+                        // or follows the ticket gets the full detail (F-014); anonymous, pending
+                        // and other citizens get the public fields.
+                        audience = detailAudience(session.ticketsUser, ticket),
+                        now = System.currentTimeMillis(),
                     )
                 }
                 composable<LoginRoute> {
