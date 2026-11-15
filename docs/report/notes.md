@@ -948,7 +948,7 @@ Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002]
 - Ask once per process (`rememberSaveable` flag) so a rotation does not re-ask.
 
 ## F-013: Image compression, thumbnails and WorkManager uploads
-Decision: [0015](../decisions/0015-media-preparation-and-uploads.md) (amends [0010](../decisions/0010-firestore-schema.md)). Code: `utils/ImageCompression.kt`, `data/AttachmentUploader.kt`, `data/UploadWorker.kt`, `data/FirestoreMapping.kt`, `data/FirestoreTicketsRepository.kt`, `CityFixApplication.kt`, `ui/components/AttachmentImage.kt`, `ui/screens/ShowScreen.kt`. Overview: "Media upload (F-013)", "Handover (F-013)".
+Decision: [0017](../decisions/0017-media-preparation-and-uploads.md) (amends [0010](../decisions/0010-firestore-schema.md)). Code: `utils/ImageCompression.kt`, `data/AttachmentUploader.kt`, `data/UploadWorker.kt`, `data/FirestoreMapping.kt`, `data/FirestoreTicketsRepository.kt`, `CityFixApplication.kt`, `ui/components/AttachmentImage.kt`, `ui/screens/ShowScreen.kt`. Overview: "Media upload (F-013)", "Handover (F-013)".
 
 **The device checks D1-D11 have not run yet.** The default Storage bucket must first be confirmed in test mode. Build and lint pass (0 errors, 22 warnings). The review approved with two should-fix items, both applied: one worker per document (S1) and stale KDocs (S2).
 

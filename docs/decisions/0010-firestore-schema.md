@@ -14,7 +14,7 @@ Amended by F-012 (2026-11-14, see [decision 0014](0014-location-gate-grouping-ma
 - **The location is real.** `tickets`, `ticketLocations` (exact) and `publicTickets` (2 decimals) carry the reporter's GPS fix; (0, 0) is refused.
 - **`municipality/main` is not read.** The 10 km centre and radius are code constants (`model/AnonymousArea.kt`, F-012 Q1).
 
-Amended by F-013 (2026-11-14, see [decision 0015](0015-media-preparation-and-uploads.md)):
+Amended by F-013 (2026-11-14, see [decision 0017](0017-media-preparation-and-uploads.md)):
 - **`storagePath` / `thumbnailPath` hold the https download URL once the entry is UPLOADED** (Q2); while PENDING or FAILED they hold the local path on the device that made the report. This replaces "F-013 replaces it with the Storage path" in the F-011 amendment. The attachment `id` is a random UUID, also used in the Storage path.
 - **`publicTickets.thumbnails` = the download URLs of the uploaded REPORT-phase thumbnails of the creator's media, PUBLIC tickets only.** The upload worker adds each one with `FieldValue.arrayUnion` in the same batch as the entry update; `toPublicTicketDocument()` copies only UPLOADED thumbnails, so a local path never reaches it. A joiner's media never go there.
 - **The joiner's media are uploaded into `tickets/{id}/reports/{uid}`**: the same worker updates that document's `attachments`, not the shared ticket's.
