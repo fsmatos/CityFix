@@ -48,6 +48,21 @@
     <!-- Reabrir -->
     <string name="reopen_error_blank">Explique porque a ocorrência deve ser reaberta.</string>
     <string name="reopen_error_not_allowed">Esta ocorrência já não pode ser reaberta.</string>
+    <string name="reopen_button">Reabrir</string>
+    <string name="reopen_dialog_title">Reabrir ocorrência</string>
+    <string name="reopen_dialog_text">Explique porque o problema não está resolvido. Uma ocorrência pode ser reaberta até 5 dias depois de resolvida.</string>
+    <string name="reopen_justification_label">Justificação</string>
+    <string name="reopen_confirm">Reabrir</string>
+    <string name="dialog_cancel">Cancelar</string>
+
+    <!-- Pedir esclarecimentos -->
+    <string name="clarification_button">Pedir esclarecimentos</string>
+    <string name="clarification_dialog_title">Pedir esclarecimentos</string>
+    <string name="clarification_dialog_text">A sua pergunta é enviada à Câmara Municipal como mensagem e a ocorrência fica a aguardar informações até haver resposta.</string>
+    <string name="clarification_question_label">Pergunta</string>
+    <string name="clarification_confirm">Enviar</string>
+    <string name="clarification_error_blank">Escreva a sua pergunta.</string>
+    <string name="clarification_error_not_allowed">Não pode pedir esclarecimentos nesta ocorrência agora.</string>
 
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>

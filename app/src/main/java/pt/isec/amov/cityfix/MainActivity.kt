@@ -68,6 +68,7 @@ import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
+import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
@@ -76,6 +77,7 @@ import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
+import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
@@ -94,6 +96,8 @@ import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.Session
 import pt.isec.amov.cityfix.viewmodel.SessionViewModel
 import pt.isec.amov.cityfix.viewmodel.SessionViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.TicketDetailViewModel
+import pt.isec.amov.cityfix.viewmodel.TicketDetailViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.accessRole
 import pt.isec.amov.cityfix.viewmodel.canReport
 import pt.isec.amov.cityfix.viewmodel.isSignedIn
@@ -303,14 +307,20 @@ private fun CityFixApp(app: CityFixApplication) {
                 composable<TicketDetailRoute> { entry ->
                     val id = entry.toRoute<TicketDetailRoute>().ticketId
                     val ticket = tickets.firstOrNull { it.id == id }
-                    ShowScreen(
-                        ticket = ticket,
-                        // Decision 0007: the view depends on who is looking. A citizen who created
-                        // or follows the ticket gets the full detail (F-014); anonymous, pending
-                        // and other citizens get the public fields.
-                        audience = detailAudience(session.ticketsUser, ticket),
-                        now = System.currentTimeMillis(),
-                    )
+                    val user = session.ticketsUser
+                    // Decision 0007: the view depends on who is looking. A citizen who created or
+                    // follows the ticket gets the full detail with the thread (F-014); anonymous,
+                    // pending and other citizens get the public fields and never read messages.
+                    val audience = detailAudience(user, ticket)
+                    if (user == null || audience == DetailAudience.PUBLIC) {
+                        ShowScreen(ticket = ticket, audience = audience, now = System.currentTimeMillis())
+                    } else {
+                        // Inside the destination: scoped to this entry, so leaving the ticket
+                        // removes its messages listener.
+                        val detailViewModel: TicketDetailViewModel =
+                            viewModel(factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user))
+                        TicketDetailScreen(ticket = ticket, user = user, viewModel = detailViewModel)
+                    }
                 }
                 composable<LoginRoute> {
                     val loginViewModel: LoginViewModel =

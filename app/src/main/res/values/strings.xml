@@ -50,6 +50,21 @@
     <!-- Reopen -->
     <string name="reopen_error_blank">Explain why the ticket should be reopened.</string>
     <string name="reopen_error_not_allowed">This ticket can no longer be reopened.</string>
+    <string name="reopen_button">Reopen</string>
+    <string name="reopen_dialog_title">Reopen ticket</string>
+    <string name="reopen_dialog_text">Explain why the issue is not solved. A ticket can be reopened up to 5 days after it was resolved.</string>
+    <string name="reopen_justification_label">Justification</string>
+    <string name="reopen_confirm">Reopen</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Ask for clarification -->
+    <string name="clarification_button">Ask for clarification</string>
+    <string name="clarification_dialog_title">Ask for clarification</string>
+    <string name="clarification_dialog_text">Your question is sent to the municipality as a message and the ticket waits for information until they answer.</string>
+    <string name="clarification_question_label">Question</string>
+    <string name="clarification_confirm">Send</string>
+    <string name="clarification_error_blank">Write your question.</string>
+    <string name="clarification_error_not_allowed">You cannot ask for clarification on this ticket now.</string>
 
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>

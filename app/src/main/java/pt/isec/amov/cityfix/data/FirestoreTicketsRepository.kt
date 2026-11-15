@@ -233,14 +233,31 @@ class FirestoreTicketsRepository(
     }
 
     /**
+     * A citizen's clarification request (brief II.2, F-014 Q1): D-008's transition to
+     * INFO_REQUESTED with the question as justification, and the question as a message, in the
+     * same batch. False when the lifecycle rejects the move.
+     */
+    override fun askForClarification(ticket: Ticket, by: User, question: String): Boolean {
+        val now = System.currentTimeMillis()
+        val after = ticket.transition(TicketStatus.INFO_REQUESTED, by, now, question) ?: return false
+        commitStatusChange(ticket, after, messageDocument(question.trim(), now, by))
+        return true
+    }
+
+    /**
      * One batch for a status change from [before] to [after] (decisions 0010, 0013, 0014):
      * the ticket's status fields, the publicTickets mirror for a PUBLIC ticket, whether
-     * ticketLocations still groups (`active`), and the stats/summary counters. Not awaited, as in
-     * reportTicket. D-013 can reuse it for the operator's moves.
+     * ticketLocations still groups (`active`), the stats/summary counters and, when given,
+     * [message] as a new message in the thread. Not awaited, as in reportTicket. D-013 can reuse
+     * it for the operator's moves.
      */
-    private fun commitStatusChange(before: Ticket, after: Ticket) {
+    private fun commitStatusChange(before: Ticket, after: Ticket, message: Map<String, Any>? = null) {
+        val ticketRef = firestore.collection(TICKETS).document(after.id)
         val batch = firestore.batch()
-        batch.update(firestore.collection(TICKETS).document(after.id), after.toStatusFields())
+        batch.update(ticketRef, after.toStatusFields())
+        if (message != null) {
+            batch.set(ticketRef.collection(MESSAGES).document(), message)
+        }
         if (after.scope == Scope.PUBLIC) {
             batch.update(
                 firestore.collection(PUBLIC_TICKETS).document(after.id),

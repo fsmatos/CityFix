@@ -78,4 +78,12 @@ interface TicketsRepository {
 
     /** Writes [ticket] as CLOSED when its 5-day reopen window has ended (brief II); otherwise nothing. */
     fun closeExpiredTicket(ticket: Ticket)
+
+    /**
+     * A citizen's clarification request (brief II.2, F-014 Q1): [question] becomes a message by
+     * [by] and the ticket moves to INFO_REQUESTED with the question as justification, in one
+     * write. Returns false when the lifecycle rejects it (blank question, not an active
+     * participant, ticket not OPEN or IN_PROGRESS); otherwise true once the write is queued.
+     */
+    fun askForClarification(ticket: Ticket, by: User, question: String): Boolean
 }
