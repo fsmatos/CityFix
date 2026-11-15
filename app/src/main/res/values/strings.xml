@@ -66,6 +66,9 @@
     <string name="clarification_error_blank">Write your question.</string>
     <string name="clarification_error_not_allowed">You cannot ask for clarification on this ticket now.</string>
 
+    <!-- My tickets -->
+    <string name="my_tickets_empty">You have not reported or followed any tickets yet.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Choose a category.</string>
     <string name="report_error_situation">Choose a situation.</string>

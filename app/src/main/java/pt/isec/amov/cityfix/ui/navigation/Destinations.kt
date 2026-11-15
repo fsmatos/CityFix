@@ -41,7 +41,7 @@ data object PendingValidationRoute
 @Serializable
 data object OperatorPanelRoute
 
-/** The citizen's own tickets. Placeholder until F-014. */
+/** Tickets the signed-in active citizen created or follows (F-014). */
 @Serializable
 data object MyTicketsRoute
 

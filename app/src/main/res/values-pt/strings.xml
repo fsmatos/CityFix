@@ -64,6 +64,9 @@
     <string name="clarification_error_blank">Escreva a sua pergunta.</string>
     <string name="clarification_error_not_allowed">Não pode pedir esclarecimentos nesta ocorrência agora.</string>
 
+    <!-- As minhas ocorrências -->
+    <string name="my_tickets_empty">Ainda não reportou nem segue nenhuma ocorrência.</string>
+
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>
     <string name="report_error_situation">Escolha uma situação.</string>

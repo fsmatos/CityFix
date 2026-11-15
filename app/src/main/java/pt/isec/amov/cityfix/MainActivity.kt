@@ -45,6 +45,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
+import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
@@ -73,6 +74,7 @@ import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
+import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
@@ -399,12 +401,22 @@ private fun CityFixApp(app: CityFixApplication) {
                         )
                     }
                 }
-                // Placeholders: the later tasks replace the content of these destinations.
                 composable<MyTicketsRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_my_tickets)
+                        // The guard lets only an active citizen in, so the session holds their profile.
+                        val citizenId = session.ticketsUser?.id ?: return@RequireAccess
+                        // The citizen's list already holds their own tickets (F-011); keep the ones
+                        // they created or follow, any scope or status (brief I.2.E).
+                        MyTicketsScreen(
+                            tickets = tickets.filter { it.isParticipant(citizenId) },
+                            now = System.currentTimeMillis(),
+                            onTicketClick = { id ->
+                                navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
+                            },
+                        )
                     }
                 }
+                // Placeholders: the later tasks replace the content of these destinations.
                 composable<ProfileRoute> {
                     RequireAccess(
                         role = role,
