@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import pt.isec.amov.cityfix.data.AuthRepository
@@ -41,7 +42,19 @@ class SessionViewModel(
                 // e-mail before a factor can be enrolled: both steps come before the profile.
                 !account.isEmailVerified -> flowOf(Session.NeedsEmailVerification(account.email))
                 !account.hasSecondFactor -> flowOf(Session.NeedsSecondFactor(account.email))
-                else -> users.observeUser(account.uid).map { it.toSession() }
+                // E-mail sync (D-011): after a verified change through the link, the Auth e-mail
+                // differs from users/{uid}.email, so it is copied once; the next snapshot then
+                // matches and nothing more is written. Runs whether or not Profile is opened.
+                else -> users.observeUser(account.uid)
+                    .onEach { profile ->
+                        if (profile is UserProfile.Found &&
+                            account.email.isNotBlank() &&
+                            !profile.user.email.equals(account.email, ignoreCase = true)
+                        ) {
+                            users.syncEmail(account.uid, account.email)
+                        }
+                    }
+                    .map { it.toSession() }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Session.Loading)

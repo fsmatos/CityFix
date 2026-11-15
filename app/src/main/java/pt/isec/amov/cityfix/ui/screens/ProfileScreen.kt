@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,11 @@ fun ProfileScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Picks up an e-mail changed through the link; the ViewModel runs it once per visit.
+    LaunchedEffect(Unit) {
+        viewModel.reloadAccount()
+    }
 
     // The pending camera file survives rotation and process death while the camera app is open.
     var tempCameraPath by rememberSaveable { mutableStateOf<String?>(null) }

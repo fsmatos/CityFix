@@ -48,6 +48,9 @@ class ProfileViewModel(
     /** False until the first profile snapshot has set the editable values. */
     private var initialised = false
 
+    /** True once [reloadAccount] ran for this visit. */
+    private var reloaded = false
+
     /** The stored photo when Save queued a new one; a different value means the upload finished. */
     private var photoAtSave: String? = null
 
@@ -87,6 +90,18 @@ class ProfileViewModel(
             next
         }
         initialised = true
+    }
+
+    /**
+     * Best effort, once per visit: reloads the account, so an e-mail changed through the link
+     * (maybe on another device) shows up and the session syncs it. If the link revoked this
+     * device's token, the reload signs the user out (the decision 0015 involuntary path).
+     */
+    fun reloadAccount() {
+        // The ViewModel outlives a rotation, the screen's LaunchedEffect does not.
+        if (reloaded) return
+        reloaded = true
+        viewModelScope.launch { auth.reloadAccount() }
     }
 
     /** Keeps digits only, at most [FIELD_DIGITS]; the D-010 phone rule while typing. */
