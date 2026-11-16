@@ -38,13 +38,18 @@ fun situationLabelRes(situation: Situation): Int = when (situation) {
     Situation.THEFT -> R.string.situation_theft
 }
 
-/** Clickable ticket summary (brief I.1.B); [isExpanded] also shows the description and date. */
+/**
+ * Clickable ticket summary (brief I.1.B); [isExpanded] also shows the description and date.
+ * [status] is the badge; My tickets passes `ticket.effectiveStatus(now)` so an expired RESOLVED
+ * ticket shows CLOSED (decision 0011).
+ */
 @Composable
 fun TicketCard(
     ticket: Ticket,
     isExpanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    status: TicketStatus = ticket.currentStatus,
 ) {
     val noCategory = stringResource(R.string.ticket_no_category)
 
@@ -69,7 +74,7 @@ fun TicketCard(
                     text = stringResource(situationLabelRes(ticket.situation)),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                StatusBadge(ticket.currentStatus)
+                StatusBadge(status)
                 if (isExpanded) {
                     if (ticket.description.isNotBlank()) {
                         Text(

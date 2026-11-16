@@ -5,9 +5,11 @@ import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
+import pt.isec.amov.cityfix.model.User
 
 /**
  * What a valid report did (brief I.2 Obs., decision 0002): opened a new ticket, joined an active
@@ -54,4 +56,34 @@ interface TicketsRepository {
         location: Coordinates,
         creatorId: String,
     ): ReportOutcome?
+
+    /**
+     * The thread of ticket [ticketId], oldest first, live. Only for participants and operators:
+     * never called for anonymous or pending users (brief I.1.C).
+     */
+    fun messagesFor(ticketId: String): Flow<List<Message>>
+
+    /**
+     * Adds a message by [author] to ticket [ticketId]. Returns false when the trimmed [text] is
+     * empty; otherwise true once the write is queued (it reaches the server when online).
+     */
+    fun sendMessage(ticketId: String, text: String, author: User): Boolean
+
+    /**
+     * Reopens a RESOLVED [ticket] (brief II.4) by [by] with [justification]. Returns false when
+     * the lifecycle rejects it (not a participant, not active, window over, blank justification);
+     * otherwise true once the write is queued.
+     */
+    fun reopenTicket(ticket: Ticket, by: User, justification: String): Boolean
+
+    /** Writes [ticket] as CLOSED when its 5-day reopen window has ended (brief II); otherwise nothing. */
+    fun closeExpiredTicket(ticket: Ticket)
+
+    /**
+     * A citizen's clarification request (brief II.2, F-014 Q1): [question] becomes a message by
+     * [by] and the ticket moves to INFO_REQUESTED with the question as justification, in one
+     * write. Returns false when the lifecycle rejects it (blank question, not an active
+     * participant, ticket not OPEN or IN_PROGRESS); otherwise true once the write is queued.
+     */
+    fun askForClarification(ticket: Ticket, by: User, question: String): Boolean
 }

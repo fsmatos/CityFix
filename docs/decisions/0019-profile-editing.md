@@ -1,8 +1,8 @@
-# 0017: Profile editing, credential changes and the e-mail sync
+# 0019: Profile editing, credential changes and the e-mail sync
 
 Status: accepted (D-011, Gate 1 on 2026-11-15, approved by Diogo: Q1-Q13 as recommended; Q4 yes, a draft-rules edit that is committed and not deployed). Review round 1 (2026-11-15): approve with should-fix; S1, S2 and N1-N4 fixed, and S2 added `photoUpdatedAt` (the plan's R4 fallback). Review round 2: approve. Device checks on 2026-11-16 (emulator, test numbers); the open ones are listed under "Not verified". Amends [decision 0015](0015-session-role-navigation-mfa.md) (the session writes `users/{uid}.email`; `resolveSecondFactor` also completes a re-authentication) and [decision 0016](0016-registration.md) (shared form fields, unique photo work). A suggested amendment line for [decision 0010](0010-firestore-schema.md) (Francisco's record, not edited) is in the overview's "Handover (D-011)". Code-level detail: `docs/architecture/overview.md`, "Profile (D-011)". Plan: `docs/work/D-011-profile-editing/00-plan.md`.
 
-**Numbering.** Two records already use 0015 (D-010 risk R8, still open). This record takes 0017.
+**Numbering.** Written as 0017; renumbered to 0019 on 2026-11-16 when merging `origin/main`, because F-014 had meanwhile renamed F-013's record to 0017 (and taken 0018).
 
 ## Context
 - **Brief I.2.C:** the citizen may change their profile, except name, NIF and georeferencing. **I.3.C:** the operator may change their profile, except name and NIF. **I.2.A / I.2.F:** the citizen's impact-detection choice lives in the profile, and F-015 (Francisco) reads it.

@@ -64,11 +64,14 @@ fun Ticket.closingWarningAt(): Long? {
 }
 
 /**
- * Brief II, I.3.E: statuses [by] may move this ticket to at [now]. Works on [effectiveStatus], so
- * an expired RESOLVED ticket offers nothing.
+ * Brief II, II.2, I.3.E: statuses [by] may move this ticket to at [now]. Works on [effectiveStatus],
+ * so an expired RESOLVED ticket offers nothing.
  *
- * Operator: the moves in [operatorTargets]. Citizen: OPEN (reopen) only, when ACTIVE, creator or
- * follower, and [canReopen]. Nobody moves a ticket to CLOSED by hand (see [closeIfExpired]).
+ * Operator: the moves in [operatorTargets]. Citizen, only when ACTIVE and creator or follower:
+ * OPEN (reopen) when [canReopen]; INFO_REQUESTED from OPEN or IN_PROGRESS, a clarification request
+ * whose justification is the question (F-014 Q1: brief II.2's "Pedido de Informacoes" goes both
+ * ways). The municipality's answer moves it on again (operator move, D-013).
+ * Nobody moves a ticket to CLOSED by hand (see [closeIfExpired]).
  * Empty for a projected ticket, a locked one, or a blank user id.
  */
 fun Ticket.allowedTransitions(by: User, now: Long): Set<TicketStatus> {
@@ -78,10 +81,12 @@ fun Ticket.allowedTransitions(by: User, now: Long): Set<TicketStatus> {
         is Operator -> operatorTargets(status)
         is Citizen -> {
             val isActiveCitizen = by.registrationStatus == RegistrationStatus.ACTIVE
-            if (isActiveCitizen && isParticipant(by.id) && canReopen(now)) {
-                setOf(TicketStatus.OPEN)
-            } else {
-                emptySet()
+            when {
+                !isActiveCitizen || !isParticipant(by.id) -> emptySet()
+                canReopen(now) -> setOf(TicketStatus.OPEN)
+                status == TicketStatus.OPEN || status == TicketStatus.IN_PROGRESS ->
+                    setOf(TicketStatus.INFO_REQUESTED)
+                else -> emptySet()
             }
         }
     }
@@ -148,8 +153,11 @@ fun Ticket.closeIfExpired(now: Long): Ticket? {
 private fun Ticket.isFullTicket(): Boolean =
     statusHistory.isNotEmpty() && statusHistory.last().status == currentStatus
 
-/** Option A: the creator or one of the followers (decision 0002). */
-private fun Ticket.isParticipant(userId: String): Boolean =
+/**
+ * Option A: the creator or one of the followers (decision 0002). Public since F-014: also used by
+ * the detail audience (detailAudience) and the My tickets filter.
+ */
+fun Ticket.isParticipant(userId: String): Boolean =
     userId == creatorId || userId in followerIds
 
 /**

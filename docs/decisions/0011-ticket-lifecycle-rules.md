@@ -21,13 +21,13 @@ All rules live in `model/TicketLifecycle.kt` (pure Kotlin, no imports, time alwa
 
   | From (effective) | Operator | Citizen (creator or follower, `ACTIVE`) |
   | --- | --- | --- |
-  | OPEN | INFO_REQUESTED, IN_PROGRESS | - |
+  | OPEN | INFO_REQUESTED, IN_PROGRESS | INFO_REQUESTED (clarification, F-014) |
   | INFO_REQUESTED | IN_PROGRESS | - |
-  | IN_PROGRESS | INFO_REQUESTED, RESOLVED | - |
+  | IN_PROGRESS | INFO_REQUESTED, RESOLVED | INFO_REQUESTED (clarification, F-014) |
   | RESOLVED (less than 5 days) | - | OPEN (reopen) |
   | CLOSED (stored, or RESOLVED for 5 days or more) | - | - |
 
-  - Q1: a citizen's question is a plain message; it does not set INFO_REQUESTED (that status reads "the municipality is waiting for the citizen", and moving IN_PROGRESS back would switch off D-014's geofence). Rejected: citizen OPEN -> INFO_REQUESTED. Consistent with brief I.3.E, where "pedido de dados" is an operator action; brief II.2 not checked.
+  - Q1: **Superseded by F-014 Gate 1 Q1 (brief II.2), see [0018](0018-citizen-tickets-messages-reopen.md); Diogo agreed (2026-11-15).** Original text: a citizen's question is a plain message; it does not set INFO_REQUESTED (that status reads "the municipality is waiting for the citizen", and moving IN_PROGRESS back would switch off D-014's geofence). Rejected: citizen OPEN -> INFO_REQUESTED. Consistent with brief I.3.E, where "pedido de dados" is an operator action; brief II.2 not checked.
   - Q2: the creator **and the followers** may reopen (Option A makes followers co-reporters, decision 0002). Rejected: creator only. Brief I.2.E puts reopening among the citizen's own tickets, and the I.2 Obs says several users "acompanham" a grouped ticket, so creator + followers is a reasonable reading, not literal; brief II not checked.
   - Q3: nobody moves a ticket to CLOSED by hand; it is time-based. Rejected: operators closing early (not in the task files' reading of the brief).
   - Q11: a citizen whose registration is not `ACTIVE` gets no transitions, even if a screen forgets the D-009 gate.

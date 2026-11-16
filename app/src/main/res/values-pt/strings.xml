@@ -31,6 +31,41 @@
     <string name="ticket_map_caption">Área aproximada (cerca de 1 km)</string>
     <string name="ticket_map_unavailable">Localização indisponível</string>
     <string name="cd_ticket_map">Mapa da área aproximada da ocorrência</string>
+    <string name="ticket_map_exact_title">Localização</string>
+    <string name="cd_ticket_map_exact">Mapa com a localização exata da ocorrência</string>
+    <string name="ticket_history_system">Fechada automaticamente</string>
+
+    <!-- Message thread -->
+    <string name="messages_title">Mensagens</string>
+    <string name="messages_empty">Ainda não há mensagens.</string>
+    <string name="message_author_you">Eu</string>
+    <string name="message_author_operator">Câmara Municipal</string>
+    <string name="message_author_citizen">Munícipe</string>
+    <string name="message_input_label">Mensagem</string>
+    <string name="cd_send_message">Enviar mensagem</string>
+    <string name="messages_locked">Esta ocorrência está fechada: não aceita novas mensagens.</string>
+
+    <!-- Reabrir -->
+    <string name="reopen_error_blank">Explique porque a ocorrência deve ser reaberta.</string>
+    <string name="reopen_error_not_allowed">Esta ocorrência já não pode ser reaberta.</string>
+    <string name="reopen_button">Reabrir</string>
+    <string name="reopen_dialog_title">Reabrir ocorrência</string>
+    <string name="reopen_dialog_text">Explique porque o problema não está resolvido. Uma ocorrência pode ser reaberta até 5 dias depois de resolvida.</string>
+    <string name="reopen_justification_label">Justificação</string>
+    <string name="reopen_confirm">Reabrir</string>
+    <string name="dialog_cancel">Cancelar</string>
+
+    <!-- Pedir esclarecimentos -->
+    <string name="clarification_button">Pedir esclarecimentos</string>
+    <string name="clarification_dialog_title">Pedir esclarecimentos</string>
+    <string name="clarification_dialog_text">A sua pergunta é enviada à Câmara Municipal como mensagem e a ocorrência fica a aguardar informações até haver resposta.</string>
+    <string name="clarification_question_label">Pergunta</string>
+    <string name="clarification_confirm">Enviar</string>
+    <string name="clarification_error_blank">Escreva a sua pergunta.</string>
+    <string name="clarification_error_not_allowed">Não pode pedir esclarecimentos nesta ocorrência agora.</string>
+
+    <!-- As minhas ocorrências -->
+    <string name="my_tickets_empty">Ainda não reportou nem segue nenhuma ocorrência.</string>
 
     <!-- Report form -->
     <string name="report_error_category">Escolha uma categoria.</string>

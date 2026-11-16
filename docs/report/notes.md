@@ -948,7 +948,7 @@ Decision: [0014](../decisions/0014-location-gate-grouping-map.md) (amends [0002]
 - Ask once per process (`rememberSaveable` flag) so a rotation does not re-ask.
 
 ## F-013: Image compression, thumbnails and WorkManager uploads
-Decision: [0015](../decisions/0015-media-preparation-and-uploads.md) (amends [0010](../decisions/0010-firestore-schema.md)). Code: `utils/ImageCompression.kt`, `data/AttachmentUploader.kt`, `data/UploadWorker.kt`, `data/FirestoreMapping.kt`, `data/FirestoreTicketsRepository.kt`, `CityFixApplication.kt`, `ui/components/AttachmentImage.kt`, `ui/screens/ShowScreen.kt`. Overview: "Media upload (F-013)", "Handover (F-013)".
+Decision: [0017](../decisions/0017-media-preparation-and-uploads.md) (amends [0010](../decisions/0010-firestore-schema.md)). Code: `utils/ImageCompression.kt`, `data/AttachmentUploader.kt`, `data/UploadWorker.kt`, `data/FirestoreMapping.kt`, `data/FirestoreTicketsRepository.kt`, `CityFixApplication.kt`, `ui/components/AttachmentImage.kt`, `ui/screens/ShowScreen.kt`. Overview: "Media upload (F-013)", "Handover (F-013)".
 
 **The device checks D1-D11 have not run yet.** The default Storage bucket must first be confirmed in test mode. Build and lint pass (0 errors, 22 warnings). The review approved with two should-fix items, both applied: one worker per document (S1) and stale KDocs (S2).
 
@@ -1072,10 +1072,10 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - A retry button and a message for a dropped profile photo; delete the Storage object when the Firestore update is refused; retry a transient "unauthenticated" answer once.
 - Re-submit automatically when the council domain finishes loading.
 - A map pick to adjust the citizen's location (slice 6).
-- **Housekeeping:** two decision records share the number 0015 (`0015-media-preparation-and-uploads.md`, `0015-session-role-navigation-mfa.md`). D-010 used 0016, and the authors should renumber one.
+- **Housekeeping:** two decision records share the number 0015 (`0015-media-preparation-and-uploads.md`, `0015-session-role-navigation-mfa.md`). D-010 used 0016, and the authors should renumber one. **Resolved 2026-11-15 (F-014):** F-013's record was renamed to `0017-media-preparation-and-uploads.md`; D-009 keeps 0015.
 
 ## D-011: Profile editing
-Decision: [0017](../decisions/0017-profile-editing.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (session e-mail sync, re-authentication) and [0016](../decisions/0016-registration.md) (shared fields, unique photo work), and suggests an amendment to [0010](../decisions/0010-firestore-schema.md). Code: `ui/components/AccountFields.kt`, `ui/screens/ProfileScreen.kt`, `ui/screens/ChangeCredentialScreen.kt`, `viewmodel/Profile*`, `viewmodel/CredentialChange*`, `viewmodel/SessionViewModel.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/ProfilePhotoUploader.kt`, `data/ProfilePhotoWorker.kt`, `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `firestore.rules` (draft). Overview: "Profile (D-011)", "Handover (D-011)".
+Decision: [0019](../decisions/0019-profile-editing.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (session e-mail sync, re-authentication) and [0016](../decisions/0016-registration.md) (shared fields, unique photo work), and suggests an amendment to [0010](../decisions/0010-firestore-schema.md). Code: `ui/components/AccountFields.kt`, `ui/screens/ProfileScreen.kt`, `ui/screens/ChangeCredentialScreen.kt`, `viewmodel/Profile*`, `viewmodel/CredentialChange*`, `viewmodel/SessionViewModel.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/ProfilePhotoUploader.kt`, `data/ProfilePhotoWorker.kt`, `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `firestore.rules` (draft). Overview: "Profile (D-011)", "Handover (D-011)".
 
 Brief: I.2.C (the citizen may not change name, NIF, georeferencing), I.3.C (the operator may not change name, NIF), I.2.A / I.2.F (impact detection is a profile choice).
 
@@ -1109,7 +1109,7 @@ Brief: I.2.C (the citizen may not change name, NIF, georeferencing), I.3.C (the 
 - **Beyond class (Firebase docs):** MFA re-authentication through `MultiFactorResolver`; `verifyBeforeUpdateEmail` and its out-of-band lifecycle; `enqueueUniqueWork` with `ExistingWorkPolicy.REPLACE`; Coil `memoryCacheKey` / `diskCacheKey`; Firestore rules `changedKeys().hasOnly(...)`.
 
 ### Limits to state at the defence
-- **The rules are not deployed**, so a direct write to name or NIF succeeds against the test-mode database (R8). The allow-list can be shown only in the draft (Rules Playground; not run). The draft also does not type-check the allowed fields (review N5, R2-N2): suggested `is bool` / `is string` / `is int` / phone regex terms are in decision 0017.
+- **The rules are not deployed**, so a direct write to name or NIF succeeds against the test-mode database (R8). The allow-list can be shown only in the draft (Rules Playground; not run). The draft also does not type-check the allowed fields (review N5, R2-N2): suggested `is bool` / `is string` / `is int` / phone regex terms are in decision 0019.
 - **The operator domain is enforced by the client only** for the Auth e-mail (R7): no Cloud Functions, and `isOperator()` checks only `email_verified`.
 - **No MFA phone change, no photo removal, no account deletion.**
 - **Device findings (2026-11-16):**
@@ -1139,3 +1139,31 @@ Brief: I.2.C (the citizen may not change name, NIF, georeferencing), I.3.C (the 
 - A truly once-per-account e-mail check (compare the checked `AuthAccount` by identity in the ViewModel), and collect `auth.account` in the change screen (N6).
 - A retry UI for a dropped profile photo; a two-pane landscape profile (P07).
 - (Done in D-011 itself: the `photoUpdatedAt` cache key, first listed here as "if R4 shows a stale photo".)
+
+## F-014: My tickets, message thread and reopen
+Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview: "Citizen tickets, messages and reopen (F-014)", "Handover (F-014)".
+
+### Technical solutions
+- **Messages** in the `tickets/{id}/messages` subcollection: live listener, served from the cache offline, writes queued with `document().set()` (brief IV).
+- **One batch per status change** (reopen, automatic close, clarification): ticket and history, `publicTickets` mirror, `ticketLocations.active`, dashboard counters. Status and history change together (decision 0004); rules from D-008. No server code (decision 0012).
+- **One audience function** (`detailAudience`) decides PUBLIC, REGISTERED or OPERATOR. Anonymous users never create the messages ViewModel, so they never read messages.
+- **Close on read:** an expired RESOLVED ticket is written CLOSED when a participant opens it.
+
+### Options chosen (Gate 1)
+- Brief II.2 read as: state 2 "Pedido de Informações" also covers the citizen's clarification request, so it sets INFO_REQUESTED (Diogo agreed; amends decision 0011).
+- Exact map, full history and the operator audience prepared, as the brief says (I.1.C, I.3.E, II.2, II.4).
+- Rejected: a plain message for the clarification; a top-bar icon for My tickets; an expand toggle on My tickets.
+
+### Known limits
+- Device checks D1-D15 not run yet (test accounts pending).
+- Concurrent offline changes: last write wins.
+- All followers of a ticket share one thread.
+- An operator's answer moves INFO_REQUESTED to IN_PROGRESS, even if the question was asked while OPEN (D-013 decides).
+
+### Improvement opportunities
+- Deploy security rules for messages and status writes.
+- Transactions or a `currentStatus` precondition against concurrent changes.
+- Unread counters and notifications (F-016).
+- Paginate long threads.
+- A detail listener on the single ticket instead of the list.
+- `hasPendingWrites` to mark messages not yet sent.

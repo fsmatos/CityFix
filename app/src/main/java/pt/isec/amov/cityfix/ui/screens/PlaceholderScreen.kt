@@ -25,8 +25,8 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
  * A simple message screen: decorative icon, heading, message and optional [actions]. Used for
- * the screens later tasks will build (My tickets F-014, Profile D-011, Approvals and Categories
- * D-012, Operations panel D-013) and for the account problem screen. Stateless.
+ * the screens later tasks will build (Profile D-011, Approvals and Categories D-012, Operations
+ * panel D-013) and for the account problem screen. Stateless.
  */
 @Composable
 fun PlaceholderScreen(

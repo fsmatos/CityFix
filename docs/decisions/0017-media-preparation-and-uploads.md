@@ -1,6 +1,6 @@
-# 0015: Media preparation and WorkManager uploads
+# 0017: Media preparation and WorkManager uploads
 
-Status: accepted (F-013, Gate 1 on 2026-11-14: Q1 and Q7 follow the class approach, Q4 slice 5 dropped, the other questions as recommended; review fix S1 on 2026-11-14 changed the design to one upload worker per Firestore document). Amends [decision 0010](0010-firestore-schema.md) (what `storagePath` / `thumbnailPath` / `publicTickets.thumbnails` hold, no transaction in the worker, video location). The number 0015 was free on `dev/Francisco` and on `origin/dev/Diogo` at Gate 1 (2026-11-14).
+Status: accepted (F-013, Gate 1 on 2026-11-14: Q1 and Q7 follow the class approach, Q4 slice 5 dropped, the other questions as recommended; review fix S1 on 2026-11-14 changed the design to one upload worker per Firestore document). Amends [decision 0010](0010-firestore-schema.md) (what `storagePath` / `thumbnailPath` / `publicTickets.thumbnails` hold, no transaction in the worker, video location). Numbered 0015 at Gate 1 (2026-11-14); renumbered 0017 on 2026-11-15 (F-014 Gate 1 Q15) because D-009 also used 0015 and D-010 uses 0016.
 
 ## Context
 - Brief IV: images are compressed on the device, and heavy uploads go to WorkManager and run only with a network connection. Brief V: optimise, compress and make thumbnails before sending.

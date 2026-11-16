@@ -35,7 +35,7 @@
 - `CLAUDE.md`: no change expected. The architecture map does not list screens.
 
 ## Decisions to record
-- **New `docs/decisions/0017-profile-editing.md`** (Diogo's; 0016 is the last; the 0015 clash is still open, R10). Contents:
+- **New `docs/decisions/0019-profile-editing.md`** (Diogo's; 0016 is the last; the 0015 clash is still open, R10). Contents:
   - Context: brief I.2.C / I.3.C / I.2.A-F; MFA makes re-authentication two-step; `verifyBeforeUpdateEmail` is out of band; the rules are not deployed.
   - Decision:
     - editable set per role, and `updateProfile` as an allow-list in code;
@@ -53,9 +53,9 @@
     - a session may end after the e-mail link (R2) or on other devices after a password change;
     - a revert link may unenrol MFA (R6);
     - R3, R4, R5.
-- **Amend `0015-session-role-navigation-mfa.md`** (Diogo's): a status-line note plus one Decision bullet. `SessionViewModel` writes `users/{uid}.email` when the Auth e-mail differs (D-011, decision 0017). `resolveSecondFactor` also completes re-authentications.
+- **Amend `0015-session-role-navigation-mfa.md`** (Diogo's): a status-line note plus one Decision bullet. `SessionViewModel` writes `users/{uid}.email` when the Auth e-mail differs (D-011, decision 0019). `resolveSecondFactor` also completes re-authentications.
 - **Amend `0016-registration.md`** (Diogo's): one line. The form field components moved to `ui/components/AccountFields.kt` (D-011), and the photo uploader uses unique work per uid.
-- **Decision 0010 (Francisco's; not edited):** put a suggested amendment line in the overview handover. "Amended by D-011: the owner's `users` update is an allow-list (`phone`, `photoPath`, `impactDetection` for citizens, `email` only equal to the verified token e-mail and, for operators, in the domain, `fcmTokens`); not deployed (decision 0017)." Only if slice 8 ran.
+- **Decision 0010 (Francisco's; not edited):** put a suggested amendment line in the overview handover. "Amended by D-011: the owner's `users` update is an allow-list (`phone`, `photoPath`, `impactDetection` for citizens, `email` only equal to the verified token e-mail and, for operators, in the domain, `fcmTokens`); not deployed (decision 0019)." Only if slice 8 ran.
 
 ## Report notes
 Section "D-011: Profile editing" in `docs/report/notes.md`:

@@ -117,7 +117,7 @@ Labels: -
   - strings EN/PT;
   - `firestore.rules` (draft, only if Q4 is approved).
 - No new dependency. No `model/` change: `Citizen.impactDetection`, `User.phone` and `User.photo` already exist.
-- Decision record: a new `0017-profile-editing.md`, and amendment lines for 0015 (the session's e-mail sync) and 0016 (the shared field components). See the docs plan.
+- Decision record: a new `0019-profile-editing.md`, and amendment lines for 0015 (the session's e-mail sync) and 0016 (the shared field components). See the docs plan.
 - F-015 contract: the detector runs only while `session.accessRole == CITIZEN && ((session as? Session.SignedIn)?.user as? Citizen)?.impactDetection == true`, keyed on that value (handover).
 
 ## Failure modes
@@ -153,7 +153,7 @@ Risks:
 - **R7 Operator domain is checked by the client only** for the Auth e-mail. A changed operator e-mail outside the domain would still pass `isOperator()` (it checks only `email_verified`). This would matter only with deployed rules; the draft sync rule refuses the Firestore copy.
 - **R8 Acceptance "direct write" vs test mode.** Until rules are published, any client can write any field. The check can be shown only in the draft (Playground/emulator), never on the live database.
 - **R9 Merge conflicts.** F-014 (Francisco) also edits `MainActivity.kt` and both `strings.xml`. Keep the D-011 edits inside their own `composable<>` blocks and add the strings at the end of each file.
-- **R10 Decision numbering** (D-010 R8): 0015 is used twice. This task takes 0017.
+- **R10 Decision numbering** (D-010 R8): 0015 is used twice. This task takes 0019.
 
 Open questions (for Gate 1; recommended answer in brackets):
 1. Is the profile phone the MFA factor? Should changing it re-enrol? [No. They are separate (the factor was enrolled in Account setup). Show a hint and leave MFA phone changes out of scope.]

@@ -46,6 +46,7 @@ import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Operator
+import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
@@ -78,12 +79,15 @@ import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
+import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ProfileScreen
 import pt.isec.amov.cityfix.ui.screens.RegisterScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
+import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
+import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.viewmodel.AccessRole
@@ -108,6 +112,8 @@ import pt.isec.amov.cityfix.viewmodel.ReportViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.Session
 import pt.isec.amov.cityfix.viewmodel.SessionViewModel
 import pt.isec.amov.cityfix.viewmodel.SessionViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.TicketDetailViewModel
+import pt.isec.amov.cityfix.viewmodel.TicketDetailViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.accessRole
 import pt.isec.amov.cityfix.viewmodel.canReport
 import pt.isec.amov.cityfix.viewmodel.isSignedIn
@@ -160,11 +166,11 @@ private fun CityFixApp(app: CityFixApplication) {
     }
 
     // Nobody gets the expand toggle (D-009 Gate Q7). Since F-011 an active citizen's list holds
-    // their own tickets plus the public ones and an operator's holds all, but the cards and the
-    // detail still render only the public fields for every role, so an expanded card would add
-    // only the date; brief I.1.B lists category, situation and thumbnail, and I.2.D gives citizens
-    // the anonymous features. The full views are F-014 (my tickets) and D-013's operations panel
-    // (coordinates, author, history; brief I.3.E), not this list.
+    // their own tickets plus the public ones and an operator's holds all, but the list cards
+    // render only the public fields for every role, so an expanded card would add only the date;
+    // brief I.1.B lists category, situation and thumbnail, and I.2.D gives citizens the anonymous
+    // features. A citizen's own view is the participant detail and My tickets (F-014); the
+    // operator's is D-013's operations panel (coordinates, author, history; brief I.3.E).
     // The flag and the `canExpandCards && isExpanded` below stay for that later decision.
     val canExpandCards = false
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -323,13 +329,21 @@ private fun CityFixApp(app: CityFixApplication) {
                 }
                 composable<TicketDetailRoute> { entry ->
                     val id = entry.toRoute<TicketDetailRoute>().ticketId
-                    ShowScreen(
-                        ticket = tickets.firstOrNull { it.id == id },
-                        // The detail still renders only the public fields for every role (decision
-                        // 0006), even when `tickets` holds a citizen's own or an operator's full
-                        // tickets (F-011); F-014 / D-013 add the role-specific views.
-                        audience = DetailAudience.PUBLIC,
-                    )
+                    val ticket = tickets.firstOrNull { it.id == id }
+                    val user = session.ticketsUser
+                    // Decision 0007: the view depends on who is looking. A citizen who created or
+                    // follows the ticket gets the full detail with the thread (F-014); anonymous,
+                    // pending and other citizens get the public fields and never read messages.
+                    val audience = detailAudience(user, ticket)
+                    if (user == null || audience == DetailAudience.PUBLIC) {
+                        ShowScreen(ticket = ticket, audience = audience, now = System.currentTimeMillis())
+                    } else {
+                        // Inside the destination: scoped to this entry, so leaving the ticket
+                        // removes its messages listener.
+                        val detailViewModel: TicketDetailViewModel =
+                            viewModel(factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user))
+                        TicketDetailScreen(ticket = ticket, user = user, viewModel = detailViewModel)
+                    }
                 }
                 composable<LoginRoute> {
                     val loginViewModel: LoginViewModel =
@@ -422,12 +436,22 @@ private fun CityFixApp(app: CityFixApplication) {
                         )
                     }
                 }
-                // Placeholders: the later tasks replace the content of these destinations.
                 composable<MyTicketsRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_my_tickets)
+                        // The guard lets only an active citizen in, so the session holds their profile.
+                        val citizenId = session.ticketsUser?.id ?: return@RequireAccess
+                        // The citizen's list already holds their own tickets (F-011); keep the ones
+                        // they created or follow, any scope or status (brief I.2.E).
+                        MyTicketsScreen(
+                            tickets = tickets.filter { it.isParticipant(citizenId) },
+                            now = System.currentTimeMillis(),
+                            onTicketClick = { id ->
+                                navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
+                            },
+                        )
                     }
                 }
+                // Placeholders: the later tasks replace the content of these destinations.
                 composable<ProfileRoute> {
                     RequireAccess(
                         role = role,

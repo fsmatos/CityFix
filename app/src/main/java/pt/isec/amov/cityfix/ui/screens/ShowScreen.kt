@@ -6,10 +6,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -33,16 +36,23 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.SampleTickets
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
+import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
+import pt.isec.amov.cityfix.model.Operator
+import pt.isec.amov.cityfix.model.SYSTEM_RESPONSIBLE_ID
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.User
+import pt.isec.amov.cityfix.model.effectiveStatus
+import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.StatusBadge
+import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.formatDateTime
@@ -61,19 +71,39 @@ private const val DAY_MILLIS = 86_400_000L
 enum class DetailAudience { PUBLIC, REGISTERED, OPERATOR }
 
 /**
+ * The audience for [user] on [ticket] (F-014). [user] is the session's tickets user (D-009): null
+ * for anonymous, pending and loading sessions, so they always get PUBLIC (brief I.1.C). A citizen
+ * gets REGISTERED only on a ticket they created or follow. A projected public ticket has a blank
+ * creator and no followers, so a citizen gets PUBLIC on it.
+ */
+fun detailAudience(user: User?, ticket: Ticket?): DetailAudience = when (user) {
+    null -> DetailAudience.PUBLIC
+    is Citizen ->
+        if (ticket != null && ticket.isParticipant(user.id)) DetailAudience.REGISTERED else DetailAudience.PUBLIC
+    is Operator -> DetailAudience.OPERATOR
+}
+
+/**
  * Ticket detail, or "Ticket not found" when [ticket] is null.
- * Every audience gets the header (category, situation, status badge), the photo/video tiles and the
- * approximate location. The header follows the Gate 1 Q2 decision as revised at review: brief I.1.B's
- * list fields plus the status badge already shown on the public list card.
- * REGISTERED and OPERATOR also get "Reported on", the description and the status history. Never reads author ids, follower ids, messages, responsible ids, justifications or
- * uploader ids; the anonymous projection happens upstream (decision 0006).
+ * Every audience gets the header (category, situation, status badge for [now], decision 0011) and
+ * the photo/video tiles. The header follows the Gate 1 Q2 decision as revised at review: brief
+ * I.1.B's list fields plus the status badge already shown on the public list card.
+ * PUBLIC gets the approximate location only (brief I.1.C).
+ * REGISTERED and OPERATOR (F-014) also get "Reported on", the description, the exact map and the
+ * full status history with justifications and "Closed automatically", then [participantContent]
+ * (the message thread and actions, see TicketDetailScreen). Never shows author, follower,
+ * responsible or uploader ids; the anonymous projection happens upstream (decision 0006).
+ * [participantContent] is a composable parameter (a "slot", beyond class): the caller decides what
+ * goes under the history, so this screen stays free of ViewModels.
  * Portrait: one scrolling column. Landscape: two panes side by side, each scrolling on its own.
  */
 @Composable
 fun ShowScreen(
     ticket: Ticket?,
     audience: DetailAudience,
+    now: Long,
     modifier: Modifier = Modifier,
+    participantContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val locale = configuration.locales[0]
@@ -110,6 +140,7 @@ fun ShowScreen(
             DetailsPane(
                 ticket = ticket,
                 audience = audience,
+                now = now,
                 locale = locale,
                 modifier = Modifier
                     .weight(1f)
@@ -120,6 +151,7 @@ fun ShowScreen(
                 ticket = ticket,
                 audience = audience,
                 locale = locale,
+                participantContent = participantContent,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -134,8 +166,8 @@ fun ShowScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            DetailsPane(ticket, audience, locale)
-            LocationPane(ticket, audience, locale)
+            DetailsPane(ticket, audience, now, locale)
+            LocationPane(ticket, audience, locale, participantContent = participantContent)
         }
     }
 }
@@ -145,6 +177,7 @@ fun ShowScreen(
 private fun DetailsPane(
     ticket: Ticket,
     audience: DetailAudience,
+    now: Long,
     locale: Locale,
     modifier: Modifier = Modifier,
 ) {
@@ -153,7 +186,7 @@ private fun DetailsPane(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Gate 1 Q2 (revised at review): I.1.B's list fields plus the status badge, for every audience
-        TicketHeader(ticket)
+        TicketHeader(ticket, now)
         when (audience) {
             DetailAudience.PUBLIC -> Unit
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
@@ -162,34 +195,77 @@ private fun DetailsPane(
     }
 }
 
-/** The approximate location, then the status history (not for PUBLIC). */
+/**
+ * PUBLIC: the approximate location. REGISTERED and OPERATOR: the exact location, the status
+ * history and [participantContent] (in landscape the thread scrolls under the history).
+ */
 @Composable
 private fun LocationPane(
     ticket: Ticket,
     audience: DetailAudience,
     locale: Locale,
     modifier: Modifier = Modifier,
+    participantContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // The only location read: the map shows the approximate area, never coordinates
-        CoarseLocationMap(ticket.location)
         when (audience) {
-            DetailAudience.PUBLIC -> Unit
+            // The map shows the approximate area, never coordinates (brief I.1.C)
+            DetailAudience.PUBLIC -> CoarseLocationMap(ticket.location)
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
+                // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
+                ExactLocationSection(ticket.location)
                 HorizontalDivider()
                 StatusHistorySection(ticket.statusHistory, locale)
+                participantContent()
             }
         }
     }
 }
 
-/** Category (the page heading), situation and status badge. */
+/** "Location": the exact map with a marker (participants and operators), never coordinate text. */
+@Composable
+private fun ExactLocationSection(
+    location: Coordinates,
+    modifier: Modifier = Modifier,
+) {
+    val mapDescription = stringResource(R.string.cd_ticket_map_exact)
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.ticket_map_exact_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (location == Coordinates()) {
+            Text(
+                text = stringResource(R.string.ticket_map_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            TicketMap(
+                location = location,
+                exact = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .semantics { contentDescription = mapDescription },
+            )
+        }
+    }
+}
+
+/** Category (the page heading), situation and status badge (an expired RESOLVED shows CLOSED). */
 @Composable
 private fun TicketHeader(
     ticket: Ticket,
+    now: Long,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -205,7 +281,7 @@ private fun TicketHeader(
             text = stringResource(situationLabelRes(ticket.situation)),
             style = MaterialTheme.typography.bodyMedium,
         )
-        StatusBadge(ticket.currentStatus)
+        StatusBadge(ticket.effectiveStatus(now))
     }
 }
 
@@ -271,24 +347,45 @@ private fun StatusHistorySection(
     }
 }
 
-/** One status change: badge and date/time, read by TalkBack as one item. */
+/**
+ * One status change, read by TalkBack as one item: badge and date/time, "Closed automatically" for
+ * the entry written by the app (decision 0011), and the justification of a reopen or info request.
+ * The responsible id itself is never shown.
+ */
 @Composable
 private fun HistoryRow(
     entry: StatusHistory,
     locale: Locale,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        StatusBadge(entry.status)
-        if (entry.dateTime > 0L) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            StatusBadge(entry.status)
+            if (entry.dateTime > 0L) {
+                Text(
+                    text = formatDateTime(entry.dateTime, locale),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+        if (entry.responsibleId == SYSTEM_RESPONSIBLE_ID) {
             Text(
-                text = formatDateTime(entry.dateTime, locale),
+                text = stringResource(R.string.ticket_history_system),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (entry.justification != null) {
+            Text(
+                text = entry.justification,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -392,6 +489,9 @@ private fun MediaTile(
 /** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_CREATED = 1_792_089_000_000L
 
+/** "Now" for the previews: three days after [PREVIEW_CREATED]. */
+private const val PREVIEW_NOW = PREVIEW_CREATED + 3 * DAY_MILLIS
+
 /** Raw ticket with no author ids and a rounded location; the PUBLIC preview hides description and history. */
 private val previewTicket = Ticket(
     id = "preview-1",
@@ -421,7 +521,7 @@ private val previewTicket = Ticket(
 @Composable
 private fun ShowScreenPublicPreview() {
     CityFixTheme {
-        ShowScreen(previewTicket, audience = DetailAudience.PUBLIC)
+        ShowScreen(previewTicket, audience = DetailAudience.PUBLIC, now = PREVIEW_NOW)
     }
 }
 
@@ -434,8 +534,19 @@ private fun ShowScreenFullPreview() {
     CityFixTheme {
         // One media whose upload failed, to show the "Upload failed" line.
         val failed = Attachment(id = "preview-a3", file = "preview-a3.jpg", uploadState = UploadState.FAILED)
-        val ticket = previewTicket.copy(attachments = previewTicket.attachments + failed)
-        ShowScreen(ticket, audience = DetailAudience.REGISTERED)
+        // A reopen with its justification and an automatic close, to show the history labels.
+        val history = previewTicket.statusHistory + listOf(
+            StatusHistory(TicketStatus.RESOLVED, PREVIEW_CREATED + 3 * DAY_MILLIS, null, "op-1"),
+            StatusHistory(TicketStatus.OPEN, PREVIEW_CREATED + 4 * DAY_MILLIS, "The lamps are still off.", "c-1"),
+            StatusHistory(TicketStatus.RESOLVED, PREVIEW_CREATED + 5 * DAY_MILLIS, null, "op-1"),
+            StatusHistory(TicketStatus.CLOSED, PREVIEW_CREATED + 10 * DAY_MILLIS, null, SYSTEM_RESPONSIBLE_ID),
+        )
+        val ticket = previewTicket.copy(
+            attachments = previewTicket.attachments + failed,
+            currentStatus = TicketStatus.CLOSED,
+            statusHistory = history,
+        )
+        ShowScreen(ticket, audience = DetailAudience.REGISTERED, now = PREVIEW_CREATED + 11 * DAY_MILLIS)
     }
 }
 
@@ -446,7 +557,7 @@ private fun ShowScreenFullPreview() {
 @Composable
 private fun ShowScreenNotFoundPreview() {
     CityFixTheme {
-        ShowScreen(ticket = null, audience = DetailAudience.PUBLIC)
+        ShowScreen(ticket = null, audience = DetailAudience.PUBLIC, now = PREVIEW_NOW)
     }
 }
 
@@ -455,7 +566,11 @@ private fun ShowScreenNotFoundPreview() {
 @Composable
 private fun ShowScreenEmptyHistoryPreview() {
     CityFixTheme {
-        ShowScreen(Ticket(id = "empty", categoryName = "Pavement"), audience = DetailAudience.REGISTERED)
+        ShowScreen(
+            Ticket(id = "empty", categoryName = "Pavement"),
+            audience = DetailAudience.REGISTERED,
+            now = PREVIEW_NOW,
+        )
     }
 }
 
@@ -467,6 +582,10 @@ private fun ShowScreenEmptyHistoryPreview() {
 @Composable
 private fun ShowScreenPrivacyPreview() {
     CityFixTheme {
-        ShowScreen(SampleTickets.all.first { it.id == "sample-2" }, audience = DetailAudience.PUBLIC)
+        ShowScreen(
+            SampleTickets.all.first { it.id == "sample-2" },
+            audience = DetailAudience.PUBLIC,
+            now = PREVIEW_NOW,
+        )
     }
 }

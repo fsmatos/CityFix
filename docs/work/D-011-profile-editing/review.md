@@ -41,7 +41,7 @@ else -> {
         .map { it.toSession() }
 }
 ```
-Update the KDoc comment ("checked once per account value: a sign-in or a reload, both with a fresh token"). Then add a line to decision 0017 or the 0015 amendment explaining why a later snapshot never triggers the sync.
+Update the KDoc comment ("checked once per account value: a sign-in or a reload, both with a fresh token"). Then add a line to decision 0019 or the 0015 amendment explaining why a later snapshot never triggers the sync.
 
 ### S2. The photo after Save: the pending notice may never clear, and the preview falls back to the old photo
 `ProfileViewModel.onProfile`, `save()` and `ProfileContent` (R4).
@@ -64,7 +64,7 @@ The code is consistent with the plan, but these are facts it relies on that nobo
 - R3: `EMAIL_IN_USE` under e-mail enumeration protection.
 - R4: see S2.
 
-Fix: run the device checks listed in the state log before `/write-docs`, and record each outcome (R1-R4) in the Log, so decision 0017 states observed facts. If R1 fails (for example, the session restarts and the route-scoped ViewModel is lost on CODE), keep D-011 open rather than documenting the flow as working.
+Fix: run the device checks listed in the state log before `/write-docs`, and record each outcome (R1-R4) in the Log, so decision 0019 states observed facts. If R1 fails (for example, the session restarts and the route-scoped ViewModel is lost on CODE), keep D-011 open rather than documenting the flow as working.
 
 ## Nit
 
@@ -154,4 +154,4 @@ Fix, either of these:
 When N5 is handled, also add `&& (!changedKeys().hasAny(['photoUpdatedAt']) || request.resource.data.photoUpdatedAt is int)`. `getLong("photoUpdatedAt")` on a string would throw during mapping, the same failure mode as `impactDetection`. This is draft only, so tell Francisco.
 
 #### R2-N3. Mention the two-photo case in the docs
-If the user saves photo A and then photo B before A's upload ends, `REPLACE` cancels A's worker, which is expected. If A's worker had already written, its snapshot clears `photoUploadPending` and `savedPhotoPath` while B is still uploading. For a moment the screen shows A, and the notice disappears until B's snapshot shows B. This is harmless and rare. Fix: one line in decision 0017's R4 note. No code change.
+If the user saves photo A and then photo B before A's upload ends, `REPLACE` cancels A's worker, which is expected. If A's worker had already written, its snapshot clears `photoUploadPending` and `savedPhotoPath` while B is still uploading. For a moment the screen shows A, and the notice disappears until B's snapshot shows B. This is harmless and rare. Fix: one line in decision 0019's R4 note. No code change.
