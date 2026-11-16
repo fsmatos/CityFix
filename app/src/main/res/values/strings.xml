@@ -313,4 +313,22 @@
     <string name="approvals_empty">No registrations are waiting.</string>
     <string name="approvals_nif">NIF %1$s</string>
     <string name="cd_approvals_loading">Loading the pending registrations</string>
+    <!-- D-012 Pending registration -->
+    <string name="top_bar_title_pending_citizen">Registration</string>
+    <string name="citizen_approval_nif">NIF</string>
+    <string name="citizen_approval_email">E-mail</string>
+    <string name="citizen_approval_phone">Phone</string>
+    <string name="citizen_approval_location_title">Registered location</string>
+    <string name="citizen_approval_no_location">Location not available</string>
+    <string name="citizen_approval_activate">Activate</string>
+    <string name="citizen_approval_confirm_title">Activate this registration?</string>
+    <string name="citizen_approval_confirm_text">%1$s will be able to report issues.</string>
+    <string name="citizen_approval_confirm">Activate</string>
+    <string name="citizen_approval_cancel">Cancel</string>
+    <string name="citizen_approval_already_active">This registration is already active.</string>
+    <string name="citizen_approval_not_found">This registration could not be found.</string>
+    <string name="citizen_approval_activated">Registration activated.</string>
+    <string name="cd_citizen_photo">Citizen photo</string>
+    <string name="cd_citizen_map">Map with the registered location of the citizen</string>
+    <string name="cd_citizen_approval_loading">Loading the registration</string>
 </resources>

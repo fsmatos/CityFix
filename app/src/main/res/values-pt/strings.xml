@@ -313,4 +313,22 @@
     <string name="approvals_empty">Não há registos à espera.</string>
     <string name="approvals_nif">NIF %1$s</string>
     <string name="cd_approvals_loading">A carregar os registos pendentes</string>
+    <!-- D-012 Registo pendente -->
+    <string name="top_bar_title_pending_citizen">Registo</string>
+    <string name="citizen_approval_nif">NIF</string>
+    <string name="citizen_approval_email">E-mail</string>
+    <string name="citizen_approval_phone">Telefone</string>
+    <string name="citizen_approval_location_title">Localização registada</string>
+    <string name="citizen_approval_no_location">Localização indisponível</string>
+    <string name="citizen_approval_activate">Ativar</string>
+    <string name="citizen_approval_confirm_title">Ativar este registo?</string>
+    <string name="citizen_approval_confirm_text">%1$s poderá reportar ocorrências.</string>
+    <string name="citizen_approval_confirm">Ativar</string>
+    <string name="citizen_approval_cancel">Cancelar</string>
+    <string name="citizen_approval_already_active">Este registo já está ativo.</string>
+    <string name="citizen_approval_not_found">Não foi possível encontrar este registo.</string>
+    <string name="citizen_approval_activated">Registo ativado.</string>
+    <string name="cd_citizen_photo">Fotografia do munícipe</string>
+    <string name="cd_citizen_map">Mapa com a localização registada do munícipe</string>
+    <string name="cd_citizen_approval_loading">A carregar o registo</string>
 </resources>

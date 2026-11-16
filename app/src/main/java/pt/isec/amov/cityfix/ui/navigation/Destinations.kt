@@ -65,6 +65,10 @@ data object ChangeEmailRoute
 @Serializable
 data object ApprovalsRoute
 
+/** Operator: one pending citizen's registration (D-012). Only the uid: no personal data in the back stack. */
+@Serializable
+data class PendingCitizenRoute(val citizenId: String)
+
 /** Operator: ticket categories. Placeholder until D-012. */
 @Serializable
 data object CategoriesRoute

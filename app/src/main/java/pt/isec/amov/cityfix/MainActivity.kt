@@ -60,6 +60,7 @@ import pt.isec.amov.cityfix.ui.navigation.LoginRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
 import pt.isec.amov.cityfix.ui.navigation.MyTicketsRoute
 import pt.isec.amov.cityfix.ui.navigation.OperatorPanelRoute
+import pt.isec.amov.cityfix.ui.navigation.PendingCitizenRoute
 import pt.isec.amov.cityfix.ui.navigation.PendingValidationRoute
 import pt.isec.amov.cityfix.ui.navigation.ProfileRoute
 import pt.isec.amov.cityfix.ui.navigation.RegisterRoute
@@ -73,6 +74,7 @@ import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
 import pt.isec.amov.cityfix.ui.screens.ChangeCredentialScreen
+import pt.isec.amov.cityfix.ui.screens.CitizenApprovalScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
@@ -94,6 +96,8 @@ import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
+import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.CredentialChange
 import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModel
 import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModelFactory
@@ -184,6 +188,7 @@ private fun CityFixApp(app: CityFixApplication) {
     val reportSubmittedMessage = stringResource(R.string.report_submitted)
     val reportJoinedMessage = stringResource(R.string.report_joined)
     val reportAlreadyFollowingMessage = stringResource(R.string.report_already_following)
+    val citizenActivatedMessage = stringResource(R.string.citizen_approval_activated)
     val loadingDescription = stringResource(R.string.cd_loading_session)
 
     val navController = rememberNavController()
@@ -537,7 +542,30 @@ private fun CityFixApp(app: CityFixApplication) {
                             viewModel(factory = PendingCitizensViewModelFactory(app.usersRepository))
                         PendingCitizensScreen(
                             viewModel = approvalsViewModel,
-                            onCitizenClick = {},
+                            onCitizenClick = { id ->
+                                navController.navigate(PendingCitizenRoute(id)) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                }
+                composable<PendingCitizenRoute> { entry ->
+                    RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
+                        // The guard lets only an operator in, so the session holds their profile.
+                        val operatorId = session.ticketsUser?.id ?: return@RequireAccess
+                        val citizenId = entry.toRoute<PendingCitizenRoute>().citizenId
+                        // Inside the guard: scoped to this entry, so the citizen listener ends with it.
+                        val approvalViewModel: CitizenApprovalViewModel = viewModel(
+                            factory = CitizenApprovalViewModelFactory(citizenId, operatorId, app.usersRepository),
+                        )
+                        CitizenApprovalScreen(
+                            viewModel = approvalViewModel,
+                            // As the report's onSubmitted: the write is queued, so confirm and go back.
+                            onActivated = {
+                                snackbarScope.launch {
+                                    snackbarHostState.showSnackbar(citizenActivatedMessage)
+                                }
+                                navController.navigateUp()
+                            },
                         )
                     }
                 }
@@ -604,5 +632,6 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<RegisterRoute>() -> TopBarScreen.REGISTER
     hasRoute<ChangePasswordRoute>() -> TopBarScreen.CHANGE_PASSWORD
     hasRoute<ChangeEmailRoute>() -> TopBarScreen.CHANGE_EMAIL
+    hasRoute<PendingCitizenRoute>() -> TopBarScreen.PENDING_CITIZEN
     else -> TopBarScreen.DASHBOARD
 }
