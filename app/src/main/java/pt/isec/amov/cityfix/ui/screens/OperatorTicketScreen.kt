@@ -87,6 +87,8 @@ fun OperatorTicketContent(
     modifier: Modifier = Modifier,
 ) {
     val canSend = ticket != null && !ticket.isLocked(now)
+    // "By <name>" in the history (D-013 Q3): only the people whose profile could be read.
+    val responsibleNames = state.people.mapNotNull { (id, contact) -> contact?.let { id to it.name } }.toMap()
 
     // imePadding: the message input stays above the keyboard.
     ShowScreen(
@@ -94,6 +96,7 @@ fun OperatorTicketContent(
         audience = DetailAudience.OPERATOR,
         now = now,
         modifier = modifier.imePadding(),
+        responsibleNames = responsibleNames,
     ) {
         if (ticket != null) {
             HorizontalDivider()

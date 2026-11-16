@@ -36,6 +36,8 @@
     <string name="ticket_map_exact_title">Location</string>
     <string name="cd_ticket_map_exact">Map with the exact location of the issue</string>
     <string name="ticket_history_system">Closed automatically</string>
+    <string name="ticket_history_by">By %1$s</string>
+    <string name="ticket_media_proof">Resolution proof</string>
 
     <!-- Message thread -->
     <string name="messages_title">Messages</string>

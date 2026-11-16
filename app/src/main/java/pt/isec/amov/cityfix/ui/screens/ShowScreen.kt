@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.SampleTickets
 import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentPhase
 import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
@@ -95,6 +96,8 @@ fun detailAudience(user: User?, ticket: Ticket?): DetailAudience = when (user) {
  * responsible or uploader ids; the anonymous projection happens upstream (decision 0006).
  * [participantContent] is a composable parameter (a "slot", beyond class): the caller decides what
  * goes under the history, so this screen stays free of ViewModels.
+ * [responsibleNames] (D-013): responsibleId -> name, given only by the operator's detail; a history
+ * entry whose responsible is in it shows "By <name>". Empty (every other caller): no names shown.
  * Portrait: one scrolling column. Landscape: two panes side by side, each scrolling on its own.
  */
 @Composable
@@ -103,6 +106,7 @@ fun ShowScreen(
     audience: DetailAudience,
     now: Long,
     modifier: Modifier = Modifier,
+    responsibleNames: Map<String, String> = emptyMap(),
     participantContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
@@ -151,6 +155,7 @@ fun ShowScreen(
                 ticket = ticket,
                 audience = audience,
                 locale = locale,
+                responsibleNames = responsibleNames,
                 participantContent = participantContent,
                 modifier = Modifier
                     .weight(1f)
@@ -167,7 +172,13 @@ fun ShowScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             DetailsPane(ticket, audience, now, locale)
-            LocationPane(ticket, audience, locale, participantContent = participantContent)
+            LocationPane(
+                ticket,
+                audience,
+                locale,
+                responsibleNames = responsibleNames,
+                participantContent = participantContent,
+            )
         }
     }
 }
@@ -205,6 +216,7 @@ private fun LocationPane(
     audience: DetailAudience,
     locale: Locale,
     modifier: Modifier = Modifier,
+    responsibleNames: Map<String, String> = emptyMap(),
     participantContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
@@ -218,7 +230,7 @@ private fun LocationPane(
                 // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
                 ExactLocationSection(ticket.location)
                 HorizontalDivider()
-                StatusHistorySection(ticket.statusHistory, locale)
+                StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
                 participantContent()
             }
         }
@@ -324,6 +336,7 @@ private fun StatusHistorySection(
     history: List<StatusHistory>,
     locale: Locale,
     modifier: Modifier = Modifier,
+    responsibleNames: Map<String, String> = emptyMap(),
 ) {
     Column(
         modifier = modifier,
@@ -342,14 +355,15 @@ private fun StatusHistorySection(
             )
         } else {
             // No sort: currentStatus copies the last entry (decision 0004), so the stored order is shown
-            history.forEach { entry -> HistoryRow(entry, locale) }
+            history.forEach { entry -> HistoryRow(entry, locale, responsibleNames = responsibleNames) }
         }
     }
 }
 
 /**
  * One status change, read by TalkBack as one item: badge and date/time, "Closed automatically" for
- * the entry written by the app (decision 0011), and the justification of a reopen or info request.
+ * the entry written by the app (decision 0011), "By <name>" when [responsibleNames] has the
+ * responsible (operator view only, D-013), and the justification of a reopen or info request.
  * The responsible id itself is never shown.
  */
 @Composable
@@ -357,6 +371,7 @@ private fun HistoryRow(
     entry: StatusHistory,
     locale: Locale,
     modifier: Modifier = Modifier,
+    responsibleNames: Map<String, String> = emptyMap(),
 ) {
     Column(
         modifier = modifier
@@ -379,6 +394,13 @@ private fun HistoryRow(
         if (entry.responsibleId == SYSTEM_RESPONSIBLE_ID) {
             Text(
                 text = stringResource(R.string.ticket_history_system),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        responsibleNames[entry.responsibleId]?.let { name ->
+            Text(
+                text = stringResource(R.string.ticket_history_by, name),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -427,7 +449,8 @@ private fun MediaSection(
 /**
  * Photo or video frame and its label for one attachment. Without a file (sample tickets) it shows
  * the placeholder and "Not available yet" instead of drawing a fake photo. With a file, a line says
- * when its upload is still pending or has failed (F-013); uploaded media show no line.
+ * when its upload is still pending or has failed (F-013); uploaded media show no line. The
+ * operator's proof of the finished work is labelled "Resolution proof" for every audience (D-013).
  */
 @Composable
 private fun MediaTile(
@@ -468,6 +491,14 @@ private fun MediaTile(
             text = stringResource(labelRes),
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (attachment.phase == AttachmentPhase.RESOLUTION) {
+            Text(
+                text = stringResource(R.string.ticket_media_proof),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (attachment.file.isBlank()) {
             Text(
                 text = stringResource(R.string.ticket_media_unavailable),
@@ -532,8 +563,9 @@ private fun ShowScreenPublicPreview() {
 @Composable
 private fun ShowScreenFullPreview() {
     CityFixTheme {
-        // One media whose upload failed, to show the "Upload failed" line.
+        // One media whose upload failed, to show the "Upload failed" line, and one proof (D-013).
         val failed = Attachment(id = "preview-a3", file = "preview-a3.jpg", uploadState = UploadState.FAILED)
+        val proof = Attachment(id = "preview-a4", phase = AttachmentPhase.RESOLUTION)
         // A reopen with its justification and an automatic close, to show the history labels.
         val history = previewTicket.statusHistory + listOf(
             StatusHistory(TicketStatus.RESOLVED, PREVIEW_CREATED + 3 * DAY_MILLIS, null, "op-1"),
@@ -542,11 +574,31 @@ private fun ShowScreenFullPreview() {
             StatusHistory(TicketStatus.CLOSED, PREVIEW_CREATED + 10 * DAY_MILLIS, null, SYSTEM_RESPONSIBLE_ID),
         )
         val ticket = previewTicket.copy(
-            attachments = previewTicket.attachments + failed,
+            attachments = previewTicket.attachments + failed + proof,
             currentStatus = TicketStatus.CLOSED,
             statusHistory = history,
         )
         ShowScreen(ticket, audience = DetailAudience.REGISTERED, now = PREVIEW_CREATED + 11 * DAY_MILLIS)
+    }
+}
+
+/** D-013: the operator view with names in the history ("By <name>"). */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun ShowScreenOperatorPreview() {
+    CityFixTheme {
+        val history = listOf(
+            StatusHistory(TicketStatus.OPEN, PREVIEW_CREATED, null, "c-1"),
+            StatusHistory(TicketStatus.INFO_REQUESTED, PREVIEW_CREATED + DAY_MILLIS, "Which lamp posts?", "op-1"),
+            StatusHistory(TicketStatus.IN_PROGRESS, PREVIEW_CREATED + 2 * DAY_MILLIS, null, "op-1"),
+        )
+        ShowScreen(
+            previewTicket.copy(statusHistory = history),
+            audience = DetailAudience.OPERATOR,
+            now = PREVIEW_NOW,
+            responsibleNames = mapOf("c-1" to "Citizen One", "op-1" to "Operator One"),
+        )
     }
 }
 
