@@ -1218,3 +1218,54 @@ Brief: I.3.D (view a registration with name, georeferencing and NIF, and activat
 - Server-side unique category names (a `categoryNames/{lowercase}` index document written in a transaction, like `nifs`).
 - Lenient `toProfile()` (`runCatching` per document) and closing the confirm dialog when the citizen stops being PENDING (R2-N1, R2-N2).
 - Refresh the selected category's name in the report form at submit (R4).
+
+## D-013: Operations panel and lifecycle
+Decision: [0021](../decisions/0021-operator-panel-and-lifecycle.md). It amends [0011](../decisions/0011-ticket-lifecycle-rules.md) (D-013 is the operator caller, no INFO_REQUESTED -> OPEN) and [0020](../decisions/0020-operator-approvals-and-categories.md) (the panel reads `allCategories()`), and suggests amendments to [0017](../decisions/0017-media-preparation-and-uploads.md) and [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Code: `model/TicketFilter.kt`, `model/TicketLifecycle.kt`, `viewmodel/OperatorPanel*`, `viewmodel/OperatorTicket*`, `ui/screens/OperatorPanelScreen.kt`, `ui/screens/OperatorTicketScreen.kt`, `ui/screens/ShowScreen.kt`, `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `MainActivity.kt`. Overview: "Operations panel and lifecycle (D-013)", "Handover (D-013)".
+
+Brief: I.3.E (operations panel with every report, coordinates, the author's contacts and the full history with media; status changes with timestamps, request for information, start of work, photo/video of the finished work), II.2-II.5 (transition order and the locked CLOSED state; section II not checked in the PDF).
+
+### Technical solutions
+- **One source of truth for tickets.** The panel and the detail read the shared `TicketsViewModel` list (already `allTickets()` for an operator), so no second listener is opened and the detail updates live when any device changes the status. The filter is a pure function on the **effective** status: an expired RESOLVED ticket counts as CLOSED with no write.
+- **Every action goes through D-008's `transition`.** The UI offers only `allowedTransitions(operator, now)`, and the repository runs `transition` again before writing, so a stale screen or a forged call cannot store an invalid move. One batch per move keeps `tickets`, `publicTickets`, `ticketLocations` and `stats/summary` consistent (decision 0004).
+- **Request information = status + message in one batch** (reusing `askForClarification`): the text is the history justification and appears in the citizen's thread as "Municipality".
+- **Offline-safe resolve.** The proof is compressed locally (F-013), the batch waits in the Firestore cache, and WorkManager uploads with a network constraint, even after the app is closed. The proof is appended with `FieldValue.arrayUnion`, so the resolve does not overwrite another device's upload update of the same array. A dry run of the transition before any file work means a rejected move prepares nothing.
+- **Privacy by construction, not only by hiding.** The author's and followers' contacts are read live from `users/{uid}` only inside the operator branch of the detail destination, in a ViewModel that is never created for a citizen; the history names map is empty for everyone else.
+- **A D-014 hook in the pure model:** `needsOperatorGeofence(now)` (effectively IN_PROGRESS, real location), so the geofence needs no extra signal.
+
+### Options chosen and why (Gate 1, 2026-11-16)
+- **Methods in Francisco's repository (Q2)** instead of a second repository: `startWork` and `resolveTicket` over his `commitStatusChange`, so the batch and counter logic exist once. Small additive edits to his files, agreed through the handover.
+- **No new route (Q1):** one detail route, one view per role (decision 0007's idea); tickets opened from the panel or the public list land on the same screen.
+- **Panel on the shared list (Q5)**, pure filter in `model/`.
+- **Start work with a confirmation and optional note (Q6)**, because there is no undo; **one ViewModel per screen (Q7)**, with its own thread.
+- **Names in the history for operators only (Q3, Q13); "Resolution proof" label for everyone (Q4)** (not personal data).
+- **No INFO_REQUESTED -> OPEN (Q8):** the brief's order; the operator answers in the thread.
+- **No rules edit, no `resolvedAt` (Q9); 1 to 3 proof media, no video recording (Q11); optional map and joiners' reports only if time remained (Q12): not done.**
+- **Rejected:** a separate operator repository with its own batch; a generic `changeStatus(to)` (could skip proof or the message); `addResolutionProof` as a separate write; a second `allTickets()` listener; a new detail route; rewriting the whole `attachments` array.
+
+### Class material vs beyond class
+- **As in class:** Navigation with an argument (`TicketDetailRoute(ticketId)`), ViewModel + `StateFlow` + a plain factory (Contacts_#3), `LazyColumn` with keys, `FilterChip` and the exposed dropdown, `AlertDialog`, `TakePicture` + `FileProvider` and `PickVisualMedia` (P09), Coil, the Maps Compose marker, WorkManager `CoroutineWorker` with constraints (slides 08).
+- **Beyond class:** Firestore batches with `FieldValue.increment` and `FieldValue.arrayUnion`, snapshot listeners as flows, the composable slot in `ShowScreen`, `stateDescription` / `clearAndSetSemantics` so TalkBack reads the "Private" label once with the card.
+
+### Limits to state at the defence
+- **The rules are not deployed (R4):** only the app stops a citizen from changing status or seeing contacts. The draft rules would even refuse the resolve batch, because it writes no `resolvedAt` (F-014's reopen has the same problem); changing them needs Diogo's OK.
+- **Concurrent status changes are last-write-wins** (no transaction: transactions fail offline). F-013's attachments race is unchanged.
+- **Process death loses the proof draft**, and its local copies stay on the device (review N5); only rotation is covered. Files may also be orphaned if the operator leaves during preparation.
+- **`onCleared` deletes the draft's files on the main thread** (review N2): `viewModelScope` is already cancelled there and there is no application scope; at most 3 small local files.
+- No video recording, no upload retry or progress; `PlaceholderScreen` kept (still used by the pending-validation screen).
+- **Not done:** the panel map (slice 8) and the joiners' reports in the operator detail (slice 9).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the seven slices and both review rounds: 0 errors, 22 warnings (baseline, none new); EN/PT key parity. Slice 1's filter checked by hand with a 3-ticket table (state log).
+- Two review rounds: round 1 approve with should-fix (S1, the Resolve section outliving its move; N1-N6), S1 and N1, N3, N4, N6 fixed, N2 kept with a comment, N5 recorded as a limit; round 2 approve, no new findings.
+- **Device checks: none run yet (D1-D11 open).** They need two devices (operator + citizen) and airplane mode for the offline resolve: panel and "Private"; filters, sort, rotation; detail contacts and "Contact not available"; no contacts or names for citizens and anonymous users; buttons per status; Request information live on the citizen's device; Start work; Resolve and the console fields; offline resolve with the app closed; closed tickets read-only; rotation and landscape.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy rules matching these batches (accept a missing `resolvedAt`, or write it with `serverTimestamp()` on resolve).
+- A transaction or a precondition on `currentStatus` when online, against concurrent changes.
+- Ticket assignment to operators.
+- Tap-to-call and e-mail intents on the contacts.
+- The panel map with marker clustering (slice 8) and the joiners' reports (slice 9).
+- Counts per status on the filter chips.
+- Keep the proof draft in `SavedStateHandle` (paths only) so process death does not orphan files; an application scope for cleanup off the main thread.

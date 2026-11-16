@@ -1,6 +1,6 @@
 # D-013: Operator: operations panel and ticket lifecycle
 
-Owner: Diogo (`dev/Diogo`) · Layer: `ui` / `viewmodel` / `data` · Phase 2 · Status: to do · Target: 2026-11-18
+Owner: Diogo (`dev/Diogo`) · Layer: `ui` / `viewmodel` / `data` · Phase 2 · Status: code done, reviewed, device checks pending (2026-11-16) · Target: 2026-11-18
 Depends on: D-008, F-011, F-013 · Uses: F-014's message thread · Blocks: D-014
 
 ## Goal
@@ -28,3 +28,10 @@ New `ui/screens/OperatorPanelScreen.kt`, `ui/screens/OperatorTicketScreen.kt`, `
 
 ## References
 Brief I.3.E, II; D-008; decisions 0004, 0007, 0010.
+
+## Status notes
+- 2026-11-16: Gate 1 approved by Diogo with Q1-Q13 as recommended (`docs/work/D-013-operator-panel-lifecycle/00-plan.md`). Slices 1-7 committed (`ae0bc42`..`bc74b4f`), review round 1 fixes (`a5f4df1`, `12334ec`), round 2 approve. Decision [0021](../../decisions/0021-operator-panel-and-lifecycle.md).
+- Deviations from this task file (Gate 1): no `operatorTickets` (the operator's list is already `allTickets()`); no `addResolutionProof` (the proof goes with the RESOLVED transition, D-008); no `changeStatus` (explicit `startWork` and `resolveTicket` instead, plus `askForClarification` reused for Request information); no new detail route (operator branch of `TicketDetailRoute`, Q1); no `OperatorTicketsViewModel` (`OperatorPanelViewModel` and `OperatorTicketViewModel` instead); `PlaceholderScreen` kept.
+- Optional work not done: the panel map (slice 8) and the joiners' reports (slice 9).
+- Known limits, not fixed: proof draft lost on process death with its files left on the device (N5); `onCleared` deletes on the main thread (N2); the draft rules would refuse the resolve batch (no `resolvedAt`; not deployed, Q9); concurrent status changes last-write-wins.
+- Device checks D1-D11 not run (two devices and airplane mode needed); the acceptance boxes above stay unticked until they pass. D12 (build + lint per slice) done.
