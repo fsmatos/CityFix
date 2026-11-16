@@ -79,3 +79,53 @@ After Activate, the local write reaches the detail's listener while the screen a
 - Tell Francisco about the `toCategoryDocument()` KDoc line (Q1) and R4 (a rename while a citizen's form is open keeps the old name in that new ticket).
 - State that the server does not enforce "only operators write categories / activate", because the rules are not deployed (R1).
 - The device checks listed in `state.md` are all still to do. These need a real device or emulator: the two-device activation, the offline Activate, rotation with each dialog open (after S1), and the category deactivate/rename effect on the report form and on old tickets.
+
+## Round 2
+
+Scope: `git diff dfeeed6..HEAD` (`3d24e4a` S1-S3, `2fe52a2` N1/N2/N5/N6, `54fb58a` state log). N3 and N4 intentionally unchanged, as recorded in `state.md`.
+
+Verify (2026-11-16): `./gradlew assembleDebug` BUILD SUCCESSFUL; `./gradlew lint` 0 errors, 22 warnings (AndroidGradlePluginVersion 1, GradleDependency 5, NewerVersionAvailable 7, RedundantLabel 1, UnusedResources 7, UseKtx 1). Same as the baseline. EN/PT parity: every key in `values/` is in `values-pt/` apart from the three `translatable="false"` ones (`app_name`, `setup_phone_prefix`, `setup_phone_display`). The changed `cd_category_active` is changed in both files.
+
+### Verdict
+**Approve.** S1-S3 and N1, N2, N5 and N6 are resolved, and the fixes cause no regressions. Two new nits (R2-N1, R2-N2) are both rare edge cases. They are optional before the device checks.
+
+Round 1 findings:
+- **S1 resolved.** `LaunchedEffect { requestFocus() }` is now inside the `text` slot, after the `OutlinedTextField` that carries `focusRequester`, so it runs in the dialog window's composition once the field is attached. `LaunchedEffect(Unit)` restarts only when the dialog re-enters composition (rotation, reopening), which is the intended behaviour. The device check (Add, Edit, rotate with the dialog open) is still to do.
+- **S2 resolved.** `activate` returns unless `confirming && canActivate` and sets `confirming = false, activated = true` before it writes. A second `onConfirm` in the same frame reads `confirming == false` and returns, so the app writes once, shows one snackbar and calls `navigateUp()` once. `onActivateClick` also refuses while `activated`, so the dialog cannot be reopened during the exit.
+- **S3 resolved.** "Active: Pavement" / "Ativa: Pavimento" plus `stateDescription` "Inactive"/"Inativa" no longer contradict each other.
+- **N1 resolved.** The FAB is hidden while `isLoading`, and `onAddClick` also returns then, so the check is in both the UI and the ViewModel. Edit is only reachable from rows, which only exist once loaded. Remaining limit (not a finding): offline with a cold cache, Firestore emits an empty `fromCache` snapshot, so `isLoading` becomes false with an empty list and a duplicate of a server-side category is still possible. Duplicates from two operators at once are not prevented either. The server would have to enforce uniqueness; mention this in the docs together with R1.
+- **N2 resolved as asked**, but see R2-N1: `toProfile()` can still throw on the same kind of document.
+- **N5 resolved.** `Card(onClick)` merges its descendants itself. The `semantics` import is still used by the loading indicator, so no unused import is left.
+- **N6 resolved.** The new state is sound:
+  - `activated` is set in the same `update` as `confirming = false`, before the write. `showAlreadyActive = !canActivate && !activated`, so when the listener delivers the local ACTIVE write the detail keeps the Activate button (disabled: `enabled = canActivate && !activated`) instead of switching to "already active".
+  - An activation by another operator still shows "already active", because `activated` is false on this screen.
+  - `activated` is never reset, which is correct: the ViewModel is scoped to the `PendingCitizenRoute` entry that is being popped.
+  - The state stays an immutable data class with derived getters. `CitizenDetails` takes the whole `CitizenApprovalUiState`, which is acceptable for a private stateless composable, and the previews still target `CitizenApprovalContent`.
+
+### Blocking
+None.
+
+### Should-fix
+None.
+
+### Nit
+
+**R2-N1. `toProfile()` still reads typed fields strictly, so N2's failure mode is only partly closed** (`FirestoreUsersRepository.toProfile`, and through it `pendingCitizens`).
+The implementer's remark is correct. `getLong("photoUpdatedAt")` throws when a hand-made console document stores that field as a Timestamp or a string. The same is true of `getString` (`name`, `nif`, `email`, `phone`, `photoPath`, `role`, `registrationStatus`), `getGeoPoint` and `getBoolean` on a wrong type. Inside `pendingCitizens()` the exception reaches the `.catch`, which emits an empty list and ends the listener: the same symptom N2 described.
+Classification: **Nit, pre-existing, not a D-012 regression.** The line comes from D-011 (`f592488`). The app itself always writes a Long (ProfilePhotoWorker), and only a document edited by hand in the console can trigger the exception. The same strict mapping also feeds `observeUser`, the session listener, and that is out of scope here.
+Fix, scoped to D-012: make the list skip a bad document instead of dying, in one line:
+```kotlin
+.mapNotNull { doc -> (runCatching { doc.toProfile() }.getOrNull() as? UserProfile.Found)?.user as? Citizen }
+```
+Optionally also read `photoUpdatedAt` leniently, as N2 did for `createdAt`: `(get("photoUpdatedAt") as? Number)?.toLong()`. If neither is done, record the limitation in the docs.
+
+**R2-N2. The confirm dialog stays open, with a dead Activate, if another operator activates the citizen while it is open** (`CitizenApprovalViewModel.activate` / `CitizenApprovalContent`).
+The listener turns `canActivate` false, but `confirming` stays true, so the dialog remains over "already active". Tapping Activate then returns early without closing the dialog, and only Cancel or a tap outside closes it. This was already true in round 1 and was not introduced by the S2 fix. It is rare: it needs two operators acting on the same citizen at the same moment.
+Fix (either one):
+- in the listener branch for a citizen, `state.copy(citizen = user, isLoading = false, notFound = false, confirming = state.confirming && user.registrationStatus == RegistrationStatus.PENDING)`;
+- or in `activate`: `if (!state.confirming) return; if (!state.canActivate) { _uiState.update { it.copy(confirming = false) }; return }`.
+
+### For the docs phase (additions)
+- N1's remaining limit (offline cold cache, two operators at once): the app checks for duplicate names only on the client.
+- R2-N1, if it is not fixed: a hand-edited `users` document with wrong field types empties the approvals list until the screen is reopened.
+- Device checks to add: S1 (Add, Edit, rotate with the dialog open) and S2 (fast double tap on Activate in the dialog). The rest are still pending from round 1.
