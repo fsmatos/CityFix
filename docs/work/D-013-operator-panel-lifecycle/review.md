@@ -43,3 +43,22 @@ None.
 ## Still to do (not review findings)
 - Device checks D1-D11 (by hand, two devices, airplane-mode resolve).
 - Tell Francisco about the additive edits to `TicketsRepository`, `FirestoreTicketsRepository`, `FirestoreMapping` and `ShowScreen` (state log, slices 4-6).
+
+## Round 2
+
+Range: `cbf6324..HEAD` (`a5f4df1` S1, `12334ec` N1/N2/N3/N4/N6, `169c32c` state log). Reviewed 2026-11-16.
+
+**Verdict: approve.** No new findings.
+
+Verify: `./gradlew assembleDebug` pass; `./gradlew lint` 0 errors / 22 warnings (baseline). No string changes.
+
+- **S1 resolved** (`OperatorTicketScreen.kt`, `showResolve`): the section is shown only while `RESOLVED in moves` or during this operator's own save (`isResolving`). Another user's move or a CLOSED ticket hides it and brings back `ActionsRow` (empty when locked). The hidden draft is not deleted from the screen, so no file that belongs to an upload can be removed. Leftovers go with Cancel or `onCleared`. If the ticket returns to IN_PROGRESS while the entry is still open, the section reappears with the same draft. That is reasonable and needs no change.
+- **N1 resolved:** `OperatorDialog.target` gates the dialog in the stateless content. The stateful half dismisses it via `LaunchedEffect(dialogGone)`. The operator's own successful confirm still closes the dialog synchronously first, so it is never dismissed twice.
+- **N2 accepted as recorded:** the deletes stay on the main thread, and the comment gives the reason (`viewModelScope` is cancelled, there is no application scope, at most 3 files). Defensible at the defence.
+- **N3 resolved:** `stateDescription = "Private"` goes on the `TicketCard` modifier, which `TicketCard` applies to the clickable `Card`, so it is read with the card. The visible label is `clearAndSetSemantics {}`, so it is not read twice. Francisco's `TicketCard` is unchanged.
+- **N4 resolved as recorded:** the field is empty while the selected id is not listed, and "All categories" only shows when no filter is set.
+- **N5:** unchanged, a docs-phase known limit as proposed.
+- **N6 resolved:** `resolve()` checks `allowedTransitions` first and shows `operator_action_error_not_allowed`. `resolve_error_failed` is still used when preparation fails. The repository check is still there.
+- **No regressions:**
+  - Repository, mapping, `ShowScreen` and `MainActivity` are untouched in this range, so the privacy branch, transition enforcement and the resolve batch are as in round 1.
+  - `OperatorDialog` gained a constructor parameter only.
