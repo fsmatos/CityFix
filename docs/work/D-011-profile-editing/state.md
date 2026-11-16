@@ -1,6 +1,6 @@
 # D-011: Profile editing
 Branch: dev/Diogo · Base: 7440821
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-15 | 8 slices committed; build + lint pass on every Kotlin slice (0 errors / 22 warnings, no new ids); device checks pending (see log) |
 | Review | done | 2026-11-15 | Round 1: approve with should-fix (S1-S3, N1-N6). Round 2 (`f085729..HEAD`): approve; S1, S2, N1-N4 resolved; 0 Blocking, 0 new Should-fix, 3 Nits (R2-N1 sync re-checks on resubscription, R2-N2 `photoUpdatedAt` type check with N5, R2-N3 two-photo note); S3 device checks still open; build + lint 0 errors / 22 warnings |
 | Docs | done | 2026-11-16 | New decision 0017; amendment lines in 0015 and 0016; overview (Layers, routes, top bar, app shell, Auth and session, Firebase rules, new "Profile (D-011)" + "Handover (D-011)", Roles, D-010 handover F-015 fix); report notes D-011 section; task file status notes (no box ticked). No code or rules edited; not committed |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-16 | 497764b to origin/dev/Diogo |
 | Merged | pending | | |
 
 ## Log
@@ -71,3 +71,4 @@ Append-only.
   - Francisco must be told that `firestore.rules` changed (slice 8, `3b3dfb1`; shared, not deployed): recorded in the overview handover and the task file.
   - Task acceptance boxes: none ticked (direct write only in the undeployed draft; F-015 missing, impact checked through the session value only; the change screens not checked in landscape).
   - Still open: console checks (Diogo), Register with a photo, two-device case, old password refused, change screens in landscape, TalkBack "read only", Rules Playground.
+- 2026-11-16 Push: verify OK (assembleDebug, lint 0 errors / 22 warnings); dev/Diogo pushed to origin at 497764b. Not merged into main.
