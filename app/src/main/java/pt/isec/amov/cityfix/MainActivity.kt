@@ -84,6 +84,7 @@ import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.OperatorPanelScreen
+import pt.isec.amov.cityfix.ui.screens.OperatorTicketScreen
 import pt.isec.amov.cityfix.ui.screens.PendingCitizensScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.ProfileScreen
@@ -113,6 +114,8 @@ import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
+import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
@@ -350,6 +353,14 @@ private fun CityFixApp(app: CityFixApplication) {
                     val audience = detailAudience(user, ticket)
                     if (user == null || audience == DetailAudience.PUBLIC) {
                         ShowScreen(ticket = ticket, audience = audience, now = System.currentTimeMillis())
+                    } else if (user is Operator) {
+                        // D-013 Q1: the operator's own view of the same route (contacts, actions).
+                        // Inside the branch: scoped to this entry, so the messages and profile
+                        // listeners end with it, and never created for a citizen.
+                        val operatorViewModel: OperatorTicketViewModel = viewModel(
+                            factory = OperatorTicketViewModelFactory(app.ticketsRepository, app.usersRepository, id, user),
+                        )
+                        OperatorTicketScreen(ticket = ticket, operator = user, viewModel = operatorViewModel)
                     } else {
                         // Inside the destination: scoped to this entry, so leaving the ticket
                         // removes its messages listener.

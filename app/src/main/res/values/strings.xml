@@ -358,4 +358,12 @@
     <string name="operator_panel_empty">No tickets yet.</string>
     <string name="operator_panel_no_match">No tickets match these filters.</string>
     <string name="cd_operator_panel_sort">Sort by report date: %1$s. Double tap to reverse.</string>
+    <!-- D-013 operator ticket detail -->
+    <string name="operator_ticket_contacts_title">Contacts</string>
+    <string name="operator_ticket_author">Author</string>
+    <string name="operator_ticket_followers">Followers</string>
+    <string name="operator_ticket_no_followers">No followers.</string>
+    <string name="operator_ticket_contact_unavailable">Contact not available</string>
+    <string name="operator_ticket_contact_loading">Loading…</string>
+    <string name="operator_ticket_phone">+351 %1$s</string>
 </resources>

@@ -358,4 +358,12 @@
     <string name="operator_panel_empty">Ainda não há ocorrências.</string>
     <string name="operator_panel_no_match">Nenhuma ocorrência corresponde a estes filtros.</string>
     <string name="cd_operator_panel_sort">Ordenar por data de registo: %1$s. Toque duas vezes para inverter.</string>
+    <!-- D-013 detalhe da ocorrência para o operador -->
+    <string name="operator_ticket_contacts_title">Contactos</string>
+    <string name="operator_ticket_author">Autor</string>
+    <string name="operator_ticket_followers">Seguidores</string>
+    <string name="operator_ticket_no_followers">Sem seguidores.</string>
+    <string name="operator_ticket_contact_unavailable">Contacto indisponível</string>
+    <string name="operator_ticket_contact_loading">A carregar…</string>
+    <string name="operator_ticket_phone">+351 %1$s</string>
 </resources>
