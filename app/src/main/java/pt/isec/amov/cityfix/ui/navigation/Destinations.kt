@@ -41,7 +41,7 @@ data class ForgotPasswordRoute(val email: String = "")
 @Serializable
 data object PendingValidationRoute
 
-/** Operator home. Placeholder until D-013's operations panel. */
+/** Operator home: the operations panel (D-013). */
 @Serializable
 data object OperatorPanelRoute
 

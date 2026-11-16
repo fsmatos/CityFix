@@ -347,4 +347,15 @@
     <string name="cd_category_edit">Edit %1$s</string>
     <string name="cd_category_active">Active: %1$s</string>
     <string name="cd_categories_loading">Loading the categories</string>
+    <!-- D-013 operations panel -->
+    <string name="operator_panel_filter_all">All</string>
+    <string name="operator_panel_category_label">Category</string>
+    <string name="operator_panel_category_all">All categories</string>
+    <string name="operator_panel_category_inactive">%1$s (inactive)</string>
+    <string name="operator_panel_sort_newest">Newest first</string>
+    <string name="operator_panel_sort_oldest">Oldest first</string>
+    <string name="operator_panel_private">Private</string>
+    <string name="operator_panel_empty">No tickets yet.</string>
+    <string name="operator_panel_no_match">No tickets match these filters.</string>
+    <string name="cd_operator_panel_sort">Sort by report date: %1$s. Double tap to reverse.</string>
 </resources>
