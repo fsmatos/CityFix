@@ -61,7 +61,7 @@ data object ChangePasswordRoute
 @Serializable
 data object ChangeEmailRoute
 
-/** Operator: citizen registrations to validate. Placeholder until D-012. */
+/** Operator: citizen registrations to validate (D-012). */
 @Serializable
 data object ApprovalsRoute
 

@@ -309,4 +309,8 @@
     <string name="credential_error_email_same">Este já é o seu e-mail.</string>
     <string name="credential_email_link_sent">Enviámos uma ligação para %1$s. O seu e-mail muda quando a abrir; pode ter de iniciar sessão de novo com o novo endereço.</string>
     <string name="top_bar_title_change_email">Alterar e-mail</string>
+    <!-- D-012 Aprovação de registos -->
+    <string name="approvals_empty">Não há registos à espera.</string>
+    <string name="approvals_nif">NIF %1$s</string>
+    <string name="cd_approvals_loading">A carregar os registos pendentes</string>
 </resources>

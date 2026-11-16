@@ -80,6 +80,7 @@ import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
+import pt.isec.amov.cityfix.ui.screens.PendingCitizensScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
 import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
 import pt.isec.amov.cityfix.ui.screens.ProfileScreen
@@ -103,6 +104,8 @@ import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
+import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
@@ -529,7 +532,13 @@ private fun CityFixApp(app: CityFixApplication) {
                 }
                 composable<ApprovalsRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_approvals)
+                        // Inside the guard: scoped to this entry, so the users listener ends with it.
+                        val approvalsViewModel: PendingCitizensViewModel =
+                            viewModel(factory = PendingCitizensViewModelFactory(app.usersRepository))
+                        PendingCitizensScreen(
+                            viewModel = approvalsViewModel,
+                            onCitizenClick = {},
+                        )
                     }
                 }
                 composable<CategoriesRoute> {

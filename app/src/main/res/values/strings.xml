@@ -309,4 +309,8 @@
     <string name="credential_error_email_same">This is already your e-mail.</string>
     <string name="credential_email_link_sent">We sent a link to %1$s. Your e-mail changes when you open it; you may have to log in again with the new address.</string>
     <string name="top_bar_title_change_email">Change e-mail</string>
+    <!-- D-012 Registration approvals -->
+    <string name="approvals_empty">No registrations are waiting.</string>
+    <string name="approvals_nif">NIF %1$s</string>
+    <string name="cd_approvals_loading">Loading the pending registrations</string>
 </resources>
