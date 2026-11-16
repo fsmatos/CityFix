@@ -245,6 +245,18 @@ class FirestoreTicketsRepository(
     }
 
     /**
+     * The operator starts work (brief II.3, D-013): D-008's transition to IN_PROGRESS with the
+     * optional [note] as justification, written with commitStatusChange. False when the
+     * lifecycle rejects the move.
+     */
+    override fun startWork(ticket: Ticket, by: User, note: String?): Boolean {
+        val after = ticket.transition(TicketStatus.IN_PROGRESS, by, System.currentTimeMillis(), note)
+            ?: return false
+        commitStatusChange(ticket, after)
+        return true
+    }
+
+    /**
      * One batch for a status change from [before] to [after] (decisions 0010, 0013, 0014):
      * the ticket's status fields, the publicTickets mirror for a PUBLIC ticket, whether
      * ticketLocations still groups (`active`), the stats/summary counters and, when given,

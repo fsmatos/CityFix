@@ -84,6 +84,15 @@ interface TicketsRepository {
      * [by] and the ticket moves to INFO_REQUESTED with the question as justification, in one
      * write. Returns false when the lifecycle rejects it (blank question, not an active
      * participant, ticket not OPEN or IN_PROGRESS); otherwise true once the write is queued.
+     * Also the operator's request for information (D-013): same batch, the text is the
+     * justification and a message by the operator.
      */
     fun askForClarification(ticket: Ticket, by: User, question: String): Boolean
+
+    /**
+     * The operator starts work (brief II.3, I.3.E, D-013): IN_PROGRESS with an optional [note] as
+     * justification, one batch (ticket, publicTickets status, ticketLocations, stats). Returns
+     * false when the lifecycle rejects it; otherwise true once the write is queued.
+     */
+    fun startWork(ticket: Ticket, by: User, note: String? = null): Boolean
 }

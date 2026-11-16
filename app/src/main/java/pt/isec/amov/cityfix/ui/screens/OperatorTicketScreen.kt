@@ -2,11 +2,17 @@ package pt.isec.amov.cityfix.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,9 +32,11 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.MessageThread
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.viewmodel.OperatorDialog
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketUiState
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
 import pt.isec.amov.cityfix.viewmodel.PersonContact
@@ -67,14 +75,22 @@ fun OperatorTicketScreen(
         state = state,
         onDraftChange = viewModel::onDraftChange,
         onSendClick = viewModel::sendMessage,
+        onRequestInfoClick = viewModel::onRequestInfoClick,
+        onStartWorkClick = viewModel::onStartWorkClick,
+        onDialogTextChange = viewModel::onDialogTextChange,
+        onDialogConfirm = { ticket?.let(viewModel::confirmDialog) },
+        onDialogDismiss = viewModel::onDialogDismiss,
         modifier = modifier,
     )
 }
 
 /**
  * Stateless operator detail: ShowScreen with the OPERATOR audience (description, exact map, full
- * history, all media) and, in its slot, the contacts and the message thread. A closed ticket is
- * read-only: no new messages (brief II).
+ * history, all media) and, in its slot, the actions, the contacts and the message thread.
+ *
+ * The actions are exactly allowedTransitions(operator, now) (D-008): INFO_REQUESTED -> "Request
+ * information", IN_PROGRESS -> "Start work". A closed ticket offers none and takes no new
+ * messages (brief II).
  */
 @Composable
 fun OperatorTicketContent(
@@ -84,8 +100,14 @@ fun OperatorTicketContent(
     state: OperatorTicketUiState,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onRequestInfoClick: () -> Unit,
+    onStartWorkClick: () -> Unit,
+    onDialogTextChange: (String) -> Unit,
+    onDialogConfirm: () -> Unit,
+    onDialogDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val moves = ticket?.allowedTransitions(operator, now).orEmpty()
     val canSend = ticket != null && !ticket.isLocked(now)
     // "By <name>" in the history (D-013 Q3): only the people whose profile could be read.
     val responsibleNames = state.people.mapNotNull { (id, contact) -> contact?.let { id to it.name } }.toMap()
@@ -98,6 +120,13 @@ fun OperatorTicketContent(
         modifier = modifier.imePadding(),
         responsibleNames = responsibleNames,
     ) {
+        if (moves.isNotEmpty()) {
+            ActionsRow(
+                moves = moves,
+                onRequestInfoClick = onRequestInfoClick,
+                onStartWorkClick = onStartWorkClick,
+            )
+        }
         if (ticket != null) {
             HorizontalDivider()
             ContactsSection(ticket = ticket, people = state.people)
@@ -112,6 +141,97 @@ fun OperatorTicketContent(
             onSendClick = onSendClick,
         )
     }
+
+    if (state.openDialog != null) {
+        OperatorTextDialog(
+            dialog = state.openDialog,
+            text = state.dialogText,
+            errorRes = state.dialogError,
+            onTextChange = onDialogTextChange,
+            onConfirm = onDialogConfirm,
+            onDismiss = onDialogDismiss,
+        )
+    }
+}
+
+/** One button per operator move offered now; wraps to a second line when the pane is narrow. */
+@Composable
+private fun ActionsRow(
+    moves: Set<TicketStatus>,
+    onRequestInfoClick: () -> Unit,
+    onStartWorkClick: () -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (TicketStatus.IN_PROGRESS in moves) {
+            Button(onClick = onStartWorkClick) {
+                Text(stringResource(R.string.operator_action_start_work))
+            }
+        }
+        if (TicketStatus.INFO_REQUESTED in moves) {
+            OutlinedButton(onClick = onRequestInfoClick) {
+                Text(stringResource(R.string.operator_action_request_info))
+            }
+        }
+    }
+}
+
+/**
+ * The request-information or start-work dialog (AlertDialog, as F-014's TextDialog) with one
+ * text field: the required request or the optional note. The error, if any, is under the field.
+ */
+@Composable
+private fun OperatorTextDialog(
+    dialog: OperatorDialog,
+    text: String,
+    errorRes: Int?,
+    onTextChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val titleRes: Int
+    val messageRes: Int
+    val labelRes: Int
+    val confirmRes: Int
+    when (dialog) {
+        OperatorDialog.REQUEST_INFO -> {
+            titleRes = R.string.operator_request_info_title
+            messageRes = R.string.operator_request_info_text
+            labelRes = R.string.operator_request_info_label
+            confirmRes = R.string.operator_request_info_confirm
+        }
+        OperatorDialog.START_WORK -> {
+            titleRes = R.string.operator_start_work_title
+            messageRes = R.string.operator_start_work_text
+            labelRes = R.string.operator_start_work_label
+            confirmRes = R.string.operator_start_work_confirm
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(messageRes))
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = onTextChange,
+                    label = { Text(stringResource(labelRes)) },
+                    isError = errorRes != null,
+                    supportingText = errorRes?.let { { Text(stringResource(it)) } },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(confirmRes)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
 }
 
 /** "Contacts": the author and each follower (brief I.3.E). Operators only. */
@@ -236,6 +356,11 @@ private fun PreviewContent(ticket: Ticket?, now: Long, state: OperatorTicketUiSt
             state = state,
             onDraftChange = {},
             onSendClick = {},
+            onRequestInfoClick = {},
+            onStartWorkClick = {},
+            onDialogTextChange = {},
+            onDialogConfirm = {},
+            onDialogDismiss = {},
         )
     }
 }

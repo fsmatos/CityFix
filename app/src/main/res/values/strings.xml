@@ -368,4 +368,17 @@
     <string name="operator_ticket_contact_unavailable">Contact not available</string>
     <string name="operator_ticket_contact_loading">Loading…</string>
     <string name="operator_ticket_phone">+351 %1$s</string>
+    <!-- D-013 operator actions -->
+    <string name="operator_action_request_info">Request information</string>
+    <string name="operator_action_start_work">Start work</string>
+    <string name="operator_request_info_title">Request information</string>
+    <string name="operator_request_info_text">The citizen sees this message and the ticket waits for their answer.</string>
+    <string name="operator_request_info_label">What do you need?</string>
+    <string name="operator_request_info_confirm">Send</string>
+    <string name="operator_request_info_error_blank">Write what you need to know.</string>
+    <string name="operator_start_work_title">Start work?</string>
+    <string name="operator_start_work_text">The ticket moves to In progress and the citizens see the change.</string>
+    <string name="operator_start_work_label">Note (optional)</string>
+    <string name="operator_start_work_confirm">Start work</string>
+    <string name="operator_action_error_not_allowed">This action is no longer available.</string>
 </resources>

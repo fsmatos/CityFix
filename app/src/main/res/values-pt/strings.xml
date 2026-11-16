@@ -368,4 +368,17 @@
     <string name="operator_ticket_contact_unavailable">Contacto indisponível</string>
     <string name="operator_ticket_contact_loading">A carregar…</string>
     <string name="operator_ticket_phone">+351 %1$s</string>
+    <!-- D-013 ações do operador -->
+    <string name="operator_action_request_info">Pedir informações</string>
+    <string name="operator_action_start_work">Iniciar trabalhos</string>
+    <string name="operator_request_info_title">Pedir informações</string>
+    <string name="operator_request_info_text">O munícipe vê esta mensagem e a ocorrência fica a aguardar a resposta.</string>
+    <string name="operator_request_info_label">O que precisa de saber?</string>
+    <string name="operator_request_info_confirm">Enviar</string>
+    <string name="operator_request_info_error_blank">Escreva o que precisa de saber.</string>
+    <string name="operator_start_work_title">Iniciar trabalhos?</string>
+    <string name="operator_start_work_text">A ocorrência passa a Em resolução e os munícipes veem a alteração.</string>
+    <string name="operator_start_work_label">Nota (opcional)</string>
+    <string name="operator_start_work_confirm">Iniciar</string>
+    <string name="operator_action_error_not_allowed">Esta ação já não está disponível.</string>
 </resources>
