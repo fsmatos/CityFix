@@ -381,4 +381,16 @@
     <string name="operator_start_work_label">Nota (opcional)</string>
     <string name="operator_start_work_confirm">Iniciar</string>
     <string name="operator_action_error_not_allowed">Esta ação já não está disponível.</string>
+    <!-- D-013 resolver com prova -->
+    <string name="operator_action_resolve">Resolver</string>
+    <string name="resolve_title">Prova do trabalho concluído</string>
+    <string name="resolve_hint">Adicione pelo menos uma fotografia ou vídeo (até %1$d).</string>
+    <string name="resolve_add_gallery">Adicionar da galeria</string>
+    <string name="resolve_take_photo">Tirar fotografia</string>
+    <string name="resolve_note_label">Nota (opcional)</string>
+    <string name="resolve_confirm">Confirmar resolução</string>
+    <string name="resolve_cancel">Cancelar</string>
+    <string name="resolve_error_failed">Não foi possível preparar a prova, ou esta ocorrência já não pode ser resolvida.</string>
+    <string name="resolve_camera_unavailable">Não foi possível usar a câmara.</string>
+    <string name="cd_resolve_busy">A guardar a resolução</string>
 </resources>

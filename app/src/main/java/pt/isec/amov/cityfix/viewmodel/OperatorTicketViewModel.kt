@@ -1,23 +1,32 @@
 package pt.isec.amov.cityfix.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UserProfile
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.SYSTEM_RESPONSIBLE_ID
 import pt.isec.amov.cityfix.model.Ticket
+import pt.isec.amov.cityfix.utils.FileUtils
+import java.io.File
 
 /**
  * The operator's detail of ticket [ticketId] (brief I.3.E, D-013): the message thread, the
- * contacts of the people on the ticket and the lifecycle actions (request information, start work). Created inside the operator branch of the ticket detail
+ * contacts of the people on the ticket and the lifecycle actions (request information, start
+ * work, resolve with proof). Created inside the operator branch of the ticket detail
  * destination, so it exists only for an operator and its listeners end with the entry.
  *
  * [operator] is fixed: a role change clears the back stack (D-009). The ticket is not stored
@@ -26,6 +35,7 @@ import pt.isec.amov.cityfix.model.Ticket
 class OperatorTicketViewModel(
     private val tickets: TicketsRepository,
     private val users: UsersRepository,
+    private val attachmentStorage: AttachmentStorage,
     private val ticketId: String,
     private val operator: Operator,
 ) : ViewModel() {
@@ -116,9 +126,117 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(openDialog = null, dialogText = "") }
     }
 
+    /** Opens the Resolve section (brief I.3.E: photo/video of the finished work). */
+    fun onResolveClick() {
+        _uiState.update { it.copy(resolving = true, resolveError = null) }
+    }
+
+    /** Closes the Resolve section and deletes the draft's local copies (nothing was written). */
+    fun onCancelResolve() {
+        val draft = _uiState.value.proof
+        _uiState.update { it.copy(resolving = false, proof = emptyList(), resolveNote = "", resolveError = null) }
+        deleteFiles(draft)
+    }
+
+    fun onResolveNoteChange(text: String) {
+        _uiState.update { it.copy(resolveNote = text) }
+    }
+
+    /**
+     * Copies the picked media into filesDir/images off the main thread (as ReportViewModel),
+     * keeping at most [MAX_PROOF_ATTACHMENTS]; extra or failed files show a notice.
+     */
+    fun onMediaPicked(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        val accepted = uris.take(MAX_PROOF_ATTACHMENTS - _uiState.value.proof.size)
+        if (accepted.isEmpty()) return
+        _uiState.update { it.copy(isCopying = true, resolveError = null) }
+        viewModelScope.launch {
+            try {
+                val paths = attachmentStorage.copyToInternalStorage(accepted)
+                val fits = paths.take(MAX_PROOF_ATTACHMENTS - _uiState.value.proof.size)
+                paths.drop(fits.size).forEach { File(it).delete() }
+                val notice = when {
+                    paths.size < accepted.size -> R.string.report_attachment_copy_failed
+                    fits.size < paths.size || accepted.size < uris.size -> R.string.report_attachments_limit
+                    else -> null
+                }
+                _uiState.update { it.copy(proof = it.proof + fits.map(::proofFor), resolveError = notice) }
+            } finally {
+                _uiState.update { it.copy(isCopying = false) }
+            }
+        }
+    }
+
+    /** A camera photo already saved at [path]; deleted when no slot is left. */
+    fun onPhotoTaken(path: String) {
+        if (_uiState.value.proof.size >= MAX_PROOF_ATTACHMENTS) {
+            File(path).delete()
+            _uiState.update { it.copy(resolveError = R.string.report_attachments_limit) }
+            return
+        }
+        _uiState.update { it.copy(proof = it.proof + proofFor(path), resolveError = null) }
+    }
+
+    fun onCameraUnavailable() {
+        _uiState.update { it.copy(resolveError = R.string.resolve_camera_unavailable) }
+    }
+
+    /** Removes one proof from the draft and deletes its local copy. */
+    fun onRemoveProof(attachment: Attachment) {
+        _uiState.update { it.copy(proof = it.proof - attachment) }
+        deleteFiles(listOf(attachment))
+    }
+
+    /**
+     * Resolves [ticket], the current one from the list, with the draft proof (resolveTicket:
+     * prepare, one batch, background upload). isResolving is set before the launch, so a second
+     * tap does nothing. On success the draft is cleared without deleting the files: they now
+     * belong to the upload. On failure the draft stays with an error.
+     */
+    fun resolve(ticket: Ticket) {
+        val state = _uiState.value
+        if (!state.canConfirmResolve) return
+        _uiState.update { it.copy(isResolving = true, resolveError = null) }
+        viewModelScope.launch {
+            val ok = tickets.resolveTicket(ticket, operator, state.proof, state.resolveNote.ifBlank { null })
+            if (ok) {
+                _uiState.update {
+                    it.copy(resolving = false, proof = emptyList(), resolveNote = "", isResolving = false)
+                }
+            } else {
+                _uiState.update { it.copy(isResolving = false, resolveError = R.string.resolve_error_failed) }
+            }
+        }
+    }
+
+    /**
+     * Leaving without resolving discards the draft: its files have no ticket to belong to. After
+     * a successful resolve the draft is already empty, so the uploaded files are kept.
+     */
+    override fun onCleared() {
+        // viewModelScope is already cancelled here; a few small files, deleted as ReportViewModel does.
+        _uiState.value.proof.forEach { File(it.file).delete() }
+    }
+
     /** Writes [ticket] as CLOSED if its reopen window has ended (as F-014); nothing otherwise. */
     fun closeIfExpired(ticket: Ticket) {
         tickets.closeExpiredTicket(ticket)
+    }
+
+    /** A draft proof entry for a local copy; the type comes from the file name (FileUtils). */
+    private fun proofFor(path: String): Attachment = Attachment(
+        id = File(path).name,
+        type = if (FileUtils.isVideoPath(path)) AttachmentType.VIDEO else AttachmentType.IMAGE,
+        file = path,
+    )
+
+    /** Deletes the local copies of [attachments] off the main thread. */
+    private fun deleteFiles(attachments: List<Attachment>) {
+        if (attachments.isEmpty()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { attachments.forEach { File(it.file).delete() } }
+        }
     }
 
     /** Opens [dialog] with an empty text and no error. */

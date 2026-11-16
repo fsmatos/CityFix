@@ -95,4 +95,13 @@ interface TicketsRepository {
      * false when the lifecycle rejects it; otherwise true once the write is queued.
      */
     fun startWork(ticket: Ticket, by: User, note: String? = null): Boolean
+
+    /**
+     * The operator resolves [ticket] with [proof] (brief I.3.E: photo/video of the finished work,
+     * D-013): prepares each file (AttachmentUploader), then one batch with RESOLVED, the proof
+     * appended (phase RESOLUTION) and the companions, then one upload worker. Returns false when
+     * the lifecycle rejects it or no proof could be prepared; nothing is written then. Otherwise
+     * true once the write is queued.
+     */
+    suspend fun resolveTicket(ticket: Ticket, by: User, proof: List<Attachment>, note: String? = null): Boolean
 }

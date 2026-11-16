@@ -381,4 +381,16 @@
     <string name="operator_start_work_label">Note (optional)</string>
     <string name="operator_start_work_confirm">Start work</string>
     <string name="operator_action_error_not_allowed">This action is no longer available.</string>
+    <!-- D-013 resolve with proof -->
+    <string name="operator_action_resolve">Resolve</string>
+    <string name="resolve_title">Proof of the finished work</string>
+    <string name="resolve_hint" tools:ignore="PluralsCandidate">Add at least one photo or video (up to %1$d).</string>
+    <string name="resolve_add_gallery">Add from gallery</string>
+    <string name="resolve_take_photo">Take a photo</string>
+    <string name="resolve_note_label">Note (optional)</string>
+    <string name="resolve_confirm">Confirm resolution</string>
+    <string name="resolve_cancel">Cancel</string>
+    <string name="resolve_error_failed">The proof could not be prepared, or this ticket can no longer be resolved.</string>
+    <string name="resolve_camera_unavailable">The camera could not be used.</string>
+    <string name="cd_resolve_busy">Saving the resolution</string>
 </resources>

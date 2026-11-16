@@ -1,12 +1,22 @@
 package pt.isec.amov.cityfix.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.net.Uri
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -16,14 +26,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Operator
@@ -34,19 +51,24 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
+import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.MessageThread
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.FileUtils
+import pt.isec.amov.cityfix.viewmodel.MAX_PROOF_ATTACHMENTS
 import pt.isec.amov.cityfix.viewmodel.OperatorDialog
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketUiState
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
 import pt.isec.amov.cityfix.viewmodel.PersonContact
+import java.io.File
 
 /**
  * Stateful operator ticket detail (brief I.3.E, D-013): collects [viewModel] and passes everything
  * to [OperatorTicketContent]. Only for an operator (the operator branch of the detail destination).
  *
  * Writes an expired RESOLVED ticket as CLOSED once (as F-014), and keeps one profile listener per
- * person on the ticket (creator, followers, history responsibles).
+ * person on the ticket (creator, followers, history responsibles). Holds the gallery and camera
+ * launchers for the resolution proof, as ReportScreen does.
  */
 @Composable
 fun OperatorTicketScreen(
@@ -57,6 +79,26 @@ fun OperatorTicketScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val now = System.currentTimeMillis()
+    val context = LocalContext.current
+
+    // The pending photo survives rotation and process death while the camera app is open.
+    var tempCameraPath by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Launchers stay here, above ShowScreen's orientation branch: their saved key is
+    // position-based, so inside a pane a rotation with the picker or camera open would lose the result.
+    val pickSeveral = rememberLauncherForActivityResult(
+        remember { PickMultipleVisualMedia() },
+    ) { uris -> viewModel.onMediaPicked(uris) }
+    val pickOne = rememberLauncherForActivityResult(
+        remember { PickVisualMedia() },
+    ) { uri -> viewModel.onMediaPicked(listOfNotNull(uri)) }
+    val takePhoto = rememberLauncherForActivityResult(
+        remember { TakePicture() },
+    ) { success ->
+        val path = tempCameraPath
+        tempCameraPath = null
+        if (path != null) attachCaptured(viewModel, path, success)
+    }
 
     LaunchedEffect(ticket) {
         ticket?.let(viewModel::closeIfExpired)
@@ -80,8 +122,58 @@ fun OperatorTicketScreen(
         onDialogTextChange = viewModel::onDialogTextChange,
         onDialogConfirm = { ticket?.let(viewModel::confirmDialog) },
         onDialogDismiss = viewModel::onDialogDismiss,
+        onResolveClick = viewModel::onResolveClick,
+        onAddFromGalleryClick = {
+            val remaining = MAX_PROOF_ATTACHMENTS - state.proof.size
+            // maxItems must be above 1, so the last free slot uses the single picker.
+            if (remaining > 1) {
+                pickSeveral.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo, maxItems = remaining))
+            } else if (remaining == 1) {
+                pickOne.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
+            }
+        },
+        onTakePhotoClick = {
+            // A second tap before the camera opens would overwrite the path and orphan its file.
+            if (tempCameraPath == null) {
+                val (file, uri) = FileUtils.createTempImageFile(context)
+                tempCameraPath = file.absolutePath
+                if (!launchCamera(takePhoto, uri)) {
+                    tempCameraPath = null
+                    file.delete()
+                    viewModel.onCameraUnavailable()
+                }
+            }
+        },
+        onRemoveProof = viewModel::onRemoveProof,
+        onResolveNoteChange = viewModel::onResolveNoteChange,
+        onCancelResolve = viewModel::onCancelResolve,
+        onConfirmResolve = { ticket?.let(viewModel::resolve) },
         modifier = modifier,
     )
+}
+
+/** False when there is no camera app, or Android refuses the launch (copied from ReportScreen). */
+private fun launchCamera(
+    takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
+    uri: Uri,
+): Boolean = try {
+    takePhoto.launch(uri)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
+} catch (_: SecurityException) {
+    false
+}
+
+/** A cancelled capture deletes its file silently; an empty "success" also shows the notice. */
+private fun attachCaptured(viewModel: OperatorTicketViewModel, path: String, success: Boolean) {
+    val file = File(path)
+    if (success && file.length() > 0) {
+        viewModel.onPhotoTaken(path)
+    } else {
+        file.delete()
+        if (success) viewModel.onCameraUnavailable()
+    }
 }
 
 /**
@@ -89,8 +181,8 @@ fun OperatorTicketScreen(
  * history, all media) and, in its slot, the actions, the contacts and the message thread.
  *
  * The actions are exactly allowedTransitions(operator, now) (D-008): INFO_REQUESTED -> "Request
- * information", IN_PROGRESS -> "Start work". A closed ticket offers none and takes no new
- * messages (brief II).
+ * information", IN_PROGRESS -> "Start work", RESOLVED -> "Resolve", which opens the proof section
+ * in their place. A closed ticket offers none and takes no new messages (brief II).
  */
 @Composable
 fun OperatorTicketContent(
@@ -105,6 +197,13 @@ fun OperatorTicketContent(
     onDialogTextChange: (String) -> Unit,
     onDialogConfirm: () -> Unit,
     onDialogDismiss: () -> Unit,
+    onResolveClick: () -> Unit,
+    onAddFromGalleryClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onRemoveProof: (Attachment) -> Unit,
+    onResolveNoteChange: (String) -> Unit,
+    onCancelResolve: () -> Unit,
+    onConfirmResolve: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val moves = ticket?.allowedTransitions(operator, now).orEmpty()
@@ -120,11 +219,22 @@ fun OperatorTicketContent(
         modifier = modifier.imePadding(),
         responsibleNames = responsibleNames,
     ) {
-        if (moves.isNotEmpty()) {
+        if (state.resolving) {
+            ResolveSection(
+                state = state,
+                onAddFromGalleryClick = onAddFromGalleryClick,
+                onTakePhotoClick = onTakePhotoClick,
+                onRemoveProof = onRemoveProof,
+                onNoteChange = onResolveNoteChange,
+                onCancel = onCancelResolve,
+                onConfirm = onConfirmResolve,
+            )
+        } else if (moves.isNotEmpty()) {
             ActionsRow(
                 moves = moves,
                 onRequestInfoClick = onRequestInfoClick,
                 onStartWorkClick = onStartWorkClick,
+                onResolveClick = onResolveClick,
             )
         }
         if (ticket != null) {
@@ -160,6 +270,7 @@ private fun ActionsRow(
     moves: Set<TicketStatus>,
     onRequestInfoClick: () -> Unit,
     onStartWorkClick: () -> Unit,
+    onResolveClick: () -> Unit,
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -170,9 +281,99 @@ private fun ActionsRow(
                 Text(stringResource(R.string.operator_action_start_work))
             }
         }
+        if (TicketStatus.RESOLVED in moves) {
+            Button(onClick = onResolveClick) {
+                Text(stringResource(R.string.operator_action_resolve))
+            }
+        }
         if (TicketStatus.INFO_REQUESTED in moves) {
             OutlinedButton(onClick = onRequestInfoClick) {
                 Text(stringResource(R.string.operator_action_request_info))
+            }
+        }
+    }
+}
+
+/**
+ * "Proof of the finished work" (brief I.3.E): 1 to 3 photos or videos from the gallery or the
+ * camera, an optional note, and Confirm, enabled only with at least one proof (no resolution
+ * without proof). The gallery has its own height cap, so it is safe inside the scrolling detail.
+ */
+@Composable
+private fun ResolveSection(
+    state: OperatorTicketUiState,
+    onAddFromGalleryClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onRemoveProof: (Attachment) -> Unit,
+    onNoteChange: (String) -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val busyDescription = stringResource(R.string.cd_resolve_busy)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.resolve_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = stringResource(R.string.resolve_hint, MAX_PROOF_ATTACHMENTS),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.proof.isNotEmpty()) {
+            AttachmentGallery(
+                attachments = state.proof,
+                onRemove = onRemoveProof,
+                removeEnabled = !state.isResolving,
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedButton(onClick = onAddFromGalleryClick, enabled = state.canAddProof) {
+                Text(stringResource(R.string.resolve_add_gallery))
+            }
+            OutlinedButton(onClick = onTakePhotoClick, enabled = state.canAddProof) {
+                Text(stringResource(R.string.resolve_take_photo))
+            }
+        }
+        OutlinedTextField(
+            value = state.resolveNote,
+            onValueChange = onNoteChange,
+            label = { Text(stringResource(R.string.resolve_note_label)) },
+            enabled = !state.isResolving,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (state.resolveError != null) {
+            Text(
+                text = stringResource(state.resolveError),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextButton(onClick = onCancel, enabled = !state.isCopying && !state.isResolving) {
+                Text(stringResource(R.string.resolve_cancel))
+            }
+            Button(onClick = onConfirm, enabled = state.canConfirmResolve) {
+                if (state.isResolving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .semantics { contentDescription = busyDescription },
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(stringResource(R.string.resolve_confirm))
+                }
             }
         }
     }
@@ -361,6 +562,13 @@ private fun PreviewContent(ticket: Ticket?, now: Long, state: OperatorTicketUiSt
             onDialogTextChange = {},
             onDialogConfirm = {},
             onDialogDismiss = {},
+            onResolveClick = {},
+            onAddFromGalleryClick = {},
+            onTakePhotoClick = {},
+            onRemoveProof = {},
+            onResolveNoteChange = {},
+            onCancelResolve = {},
+            onConfirmResolve = {},
         )
     }
 }

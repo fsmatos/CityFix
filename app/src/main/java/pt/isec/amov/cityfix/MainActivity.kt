@@ -358,7 +358,13 @@ private fun CityFixApp(app: CityFixApplication) {
                         // Inside the branch: scoped to this entry, so the messages and profile
                         // listeners end with it, and never created for a citizen.
                         val operatorViewModel: OperatorTicketViewModel = viewModel(
-                            factory = OperatorTicketViewModelFactory(app.ticketsRepository, app.usersRepository, id, user),
+                            factory = OperatorTicketViewModelFactory(
+                                app.ticketsRepository,
+                                app.usersRepository,
+                                app.attachmentStorage,
+                                id,
+                                user,
+                            ),
                         )
                         OperatorTicketScreen(ticket = ticket, operator = user, viewModel = operatorViewModel)
                     } else {

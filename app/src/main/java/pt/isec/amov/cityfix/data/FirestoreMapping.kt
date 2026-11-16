@@ -161,8 +161,11 @@ private fun StatusHistory.toDocument(): Map<String, Any> {
     return map
 }
 
-/** One `attachments` entry; `storagePath` is Attachment.file, `thumbnailPath` only when set. */
-private fun Attachment.toDocument(): Map<String, Any> {
+/**
+ * One `attachments` entry; `storagePath` is Attachment.file, `thumbnailPath` only when set.
+ * Internal: also used by the resolve batch's arrayUnion (D-013).
+ */
+internal fun Attachment.toDocument(): Map<String, Any> {
     val map = hashMapOf<String, Any>(
         "id" to id,
         "type" to type.name,

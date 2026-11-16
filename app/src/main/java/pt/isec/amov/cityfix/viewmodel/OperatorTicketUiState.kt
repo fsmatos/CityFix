@@ -1,7 +1,11 @@
 package pt.isec.amov.cityfix.viewmodel
 
 import androidx.annotation.StringRes
+import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Message
+
+/** Proof media per resolution (D-013 Q11): 1 to 3 photos or videos. */
+const val MAX_PROOF_ATTACHMENTS = 3
 
 /**
  * What the operator sees of one person (brief I.3.E: the author's contacts). Built only inside
@@ -39,4 +43,18 @@ data class OperatorTicketUiState(
     /** The request text or the start-work note typed in the dialog. */
     val dialogText: String = "",
     @StringRes val dialogError: Int? = null,
-)
+    /** The Resolve section is open. */
+    val resolving: Boolean = false,
+    /** Local copies of the proof picked or taken, not prepared yet. */
+    val proof: List<Attachment> = emptyList(),
+    val resolveNote: String = "",
+    val isCopying: Boolean = false,
+    /** True from Confirm until the batch is queued, so a second tap does nothing. */
+    val isResolving: Boolean = false,
+    @StringRes val resolveError: Int? = null,
+) {
+    val canAddProof: Boolean get() = proof.size < MAX_PROOF_ATTACHMENTS && !isCopying && !isResolving
+
+    /** Brief I.3.E: no resolution without proof media. */
+    val canConfirmResolve: Boolean get() = proof.isNotEmpty() && !isCopying && !isResolving
+}
