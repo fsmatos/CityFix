@@ -16,8 +16,10 @@ import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.AuthRepository
+import pt.isec.amov.cityfix.data.CategoriesRepository
 import pt.isec.amov.cityfix.data.DebugSeed
 import pt.isec.amov.cityfix.data.FirebaseAuthRepository
+import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
@@ -75,6 +77,9 @@ class CityFixApplication : Application() {
     val usersRepository: UsersRepository by lazy {
         FirestoreUsersRepository(firestore, auth, profilePhotoUploader)
     }
+
+    /** Category management for operators (D-012), built from [firestore] so the cache settings apply. */
+    val categoriesRepository: CategoriesRepository by lazy { FirestoreCategoriesRepository(firestore) }
 
     override fun onCreate() {
         super.onCreate()

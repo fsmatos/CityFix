@@ -144,7 +144,7 @@ internal fun messageDocument(text: String, sentAt: Long, author: User): Map<Stri
     "byOperator" to (author is Operator),
 )
 
-/** The `categories/{id}` document (debug seed only; operators manage categories in D-012). */
+/** The `categories/{id}` document (debug seed and CategoriesRepository, D-012). */
 internal fun Category.toCategoryDocument(): Map<String, Any?> = hashMapOf(
     "name" to name,
     "active" to active,
