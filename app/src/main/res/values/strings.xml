@@ -331,4 +331,20 @@
     <string name="cd_citizen_photo">Citizen photo</string>
     <string name="cd_citizen_map">Map with the registered location of the citizen</string>
     <string name="cd_citizen_approval_loading">Loading the registration</string>
+    <!-- D-012 Categories -->
+    <string name="categories_add">Add category</string>
+    <string name="categories_active">Active</string>
+    <string name="categories_inactive">Inactive</string>
+    <string name="categories_empty">No categories yet.</string>
+    <string name="categories_dialog_new">New category</string>
+    <string name="categories_dialog_edit">Edit category</string>
+    <string name="categories_name_label">Name</string>
+    <string name="categories_save">Save</string>
+    <string name="categories_cancel">Cancel</string>
+    <string name="categories_error_blank">Enter a name.</string>
+    <string name="categories_error_too_long">The name is too long (maximum %1$d).</string>
+    <string name="categories_error_duplicate">A category with this name already exists.</string>
+    <string name="cd_category_edit">Edit %1$s</string>
+    <string name="cd_category_active">%1$s active</string>
+    <string name="cd_categories_loading">Loading the categories</string>
 </resources>

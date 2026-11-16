@@ -331,4 +331,20 @@
     <string name="cd_citizen_photo">Fotografia do munícipe</string>
     <string name="cd_citizen_map">Mapa com a localização registada do munícipe</string>
     <string name="cd_citizen_approval_loading">A carregar o registo</string>
+    <!-- D-012 Categorias -->
+    <string name="categories_add">Adicionar categoria</string>
+    <string name="categories_active">Ativa</string>
+    <string name="categories_inactive">Inativa</string>
+    <string name="categories_empty">Ainda não há categorias.</string>
+    <string name="categories_dialog_new">Nova categoria</string>
+    <string name="categories_dialog_edit">Editar categoria</string>
+    <string name="categories_name_label">Nome</string>
+    <string name="categories_save">Guardar</string>
+    <string name="categories_cancel">Cancelar</string>
+    <string name="categories_error_blank">Indique um nome.</string>
+    <string name="categories_error_too_long">O nome é demasiado longo (máximo %1$d).</string>
+    <string name="categories_error_duplicate">Já existe uma categoria com este nome.</string>
+    <string name="cd_category_edit">Editar %1$s</string>
+    <string name="cd_category_active">%1$s ativa</string>
+    <string name="cd_categories_loading">A carregar as categorias</string>
 </resources>

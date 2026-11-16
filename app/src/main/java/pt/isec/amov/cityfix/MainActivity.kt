@@ -73,6 +73,7 @@ import pt.isec.amov.cityfix.ui.navigation.homeFor
 import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
+import pt.isec.amov.cityfix.ui.screens.CategoriesScreen
 import pt.isec.amov.cityfix.ui.screens.ChangeCredentialScreen
 import pt.isec.amov.cityfix.ui.screens.CitizenApprovalScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
@@ -96,6 +97,8 @@ import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CategoriesViewModel
+import pt.isec.amov.cityfix.viewmodel.CategoriesViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.CredentialChange
@@ -571,7 +574,10 @@ private fun CityFixApp(app: CityFixApplication) {
                 }
                 composable<CategoriesRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_categories)
+                        // Inside the guard: the only category writes come from this ViewModel.
+                        val categoriesViewModel: CategoriesViewModel =
+                            viewModel(factory = CategoriesViewModelFactory(app.categoriesRepository))
+                        CategoriesScreen(viewModel = categoriesViewModel)
                     }
                 }
             }

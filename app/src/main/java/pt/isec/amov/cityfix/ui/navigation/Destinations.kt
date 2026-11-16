@@ -69,7 +69,7 @@ data object ApprovalsRoute
 @Serializable
 data class PendingCitizenRoute(val citizenId: String)
 
-/** Operator: ticket categories. Placeholder until D-012. */
+/** Operator: ticket categories (D-012). */
 @Serializable
 data object CategoriesRoute
 
