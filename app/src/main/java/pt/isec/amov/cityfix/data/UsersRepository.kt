@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix.data
 
 import kotlinx.coroutines.flow.Flow
+import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.User
 
@@ -64,7 +65,8 @@ data class ProfileChanges(
 )
 
 /**
- * User profiles: read (D-009), registration (D-010) and profile editing (D-011).
+ * User profiles: read (D-009), registration (D-010), profile editing (D-011) and operator
+ * validation (D-012).
  * [FirestoreUsersRepository] is the implementation.
  */
 interface UsersRepository {
@@ -91,4 +93,16 @@ interface UsersRepository {
 
     /** Copies the Auth e-mail into users/{uid}.email (after a verified change). Not awaited. */
     fun syncEmail(uid: String, email: String)
+
+    /**
+     * Citizens whose registration waits for validation (brief I.3.D), oldest first, live.
+     * Operators only (the draft rules let only them list users). An error gives an empty list.
+     */
+    fun pendingCitizens(): Flow<List<Citizen>>
+
+    /**
+     * Activates [citizenId]: registrationStatus ACTIVE, validatedBy [operatorId], validatedAt now
+     * (epoch ms). Only these three fields (draft validation rule). Not awaited: queued offline.
+     */
+    fun activateCitizen(citizenId: String, operatorId: String)
 }

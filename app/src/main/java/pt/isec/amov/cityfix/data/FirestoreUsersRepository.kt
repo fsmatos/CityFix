@@ -128,6 +128,34 @@ class FirestoreUsersRepository(
             .addOnFailureListener { Log.w(TAG, "e-mail sync refused", it) }
     }
 
+    override fun pendingCitizens(): Flow<List<Citizen>> =
+        // One equality filter is enough: operators have no registrationStatus, and toProfile()
+        // drops anything that is not a citizen. Sorted here by createdAt (oldest first) rather
+        // than with orderBy, which together with the filter would need a composite index.
+        firestore.collection(USERS)
+            .whereEqualTo("registrationStatus", RegistrationStatus.PENDING.name)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.documents
+                    .sortedBy { it.getLong("createdAt") ?: 0L }
+                    .mapNotNull { (it.toProfile() as? UserProfile.Found)?.user as? Citizen }
+            }
+            .catch {
+                Log.w(TAG, "pending citizens failed", it)
+                emit(emptyList())
+            }
+
+    override fun activateCitizen(citizenId: String, operatorId: String) {
+        // Exactly the three keys of the draft validation rule. Not awaited, as updateProfile.
+        val fields = mapOf(
+            "registrationStatus" to RegistrationStatus.ACTIVE.name,
+            "validatedBy" to operatorId,
+            "validatedAt" to System.currentTimeMillis(),
+        )
+        firestore.collection(USERS).document(citizenId).update(fields)
+            .addOnFailureListener { Log.w(TAG, "activation refused", it) }
+    }
+
     /**
      * The `users/{uid}` fields of decision 0010 and the draft create rule. No `photoPath` (set by
      * the upload later) and no `validatedBy` / `validatedAt` (set by the operator who validates).
