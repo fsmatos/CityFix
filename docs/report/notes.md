@@ -1167,3 +1167,54 @@ Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview
 - Paginate long threads.
 - A detail listener on the single ticket instead of the list.
 - `hasPendingWrites` to mark messages not yet sent.
+
+## D-012: Approvals and categories
+Decision: [0020](../decisions/0020-operator-approvals-and-categories.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (the placeholders become real screens; new `PendingCitizenRoute`) and suggests amendments to [0010](../decisions/0010-firestore-schema.md) and [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md). Code: `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/CategoriesRepository.kt`, `data/FirestoreCategoriesRepository.kt`, `viewmodel/PendingCitizens*`, `viewmodel/CitizenApproval*`, `viewmodel/Categories*`, `ui/screens/PendingCitizensScreen.kt`, `ui/screens/CitizenApprovalScreen.kt`, `ui/screens/CategoriesScreen.kt`, `MainActivity.kt`. Overview: "Approvals and categories (D-012)", "Handover (D-012)".
+
+Brief: I.3.D (view a registration with name, georeferencing and NIF, and activate it; the wording is the task file's, the PDF was not reread, plan R6), I.3.E (create, activate, deactivate and edit categories; citizens report only on active ones).
+
+### Technical solutions
+- **Activation without a push or a restart.** The citizen's session already listens to `users/{uid}` (D-009). When the operator writes `registrationStatus: "ACTIVE"`, the citizen's snapshot turns the role from `PENDING_CITIZEN` into `CITIZEN`, the role redirect opens the dashboard and "+" appears. No code was added on the citizen's side: a good defence example of the reactive design (state flows from the database to the UI, not commands between devices).
+- **The pending list as a live query.** One equality filter (`registrationStatus == "PENDING"`) and `snapshots()`, so a new registration or another operator's activation shows without a refresh. The oldest-first order is a client-side sort on `createdAt`; an `orderBy` on a second field would need a composite index, one filter uses the automatic one.
+- **One write with exactly the rule's three keys.** `registrationStatus`, `validatedBy` (the operator's uid) and `validatedAt` (epoch ms), the shape the draft rule allows; idempotent, so two operators cannot corrupt it.
+- **Category changes never rewrite tickets.** A ticket keeps its `categoryName` snapshot (decision 0003), so a rename or deactivation is one small write on `categories/{id}`; old tickets still show their name. The report form's `activeCategories()` listener follows the change live: a deactivated category leaves the open form, a renamed one shows its new name.
+- **Admin writes work offline.** None of the writes is awaited: they go to the persistent cache, the listeners show them at once, and Firestore sends them when online (as F-011 and D-011).
+- **Guarding a double tap in the ViewModel.** `activate()` needs the confirm dialog open and closes it before writing, so a fast double tap writes, shows the snackbar and goes back once (review S2). Validation and the editor dialog also live in the ViewModel, so rotation keeps the typed name.
+
+### Options chosen and why (Gate 1, 2026-11-16)
+- **Activate only, no Reject (Q2):** the brief asks only to activate; a REJECTED status needs a new enum value, a session state and a citizen screen. A wrong registration stays pending (console delete).
+- **Detail with contact data and photo (Q3):** name, NIF and the map (brief) plus e-mail, phone and photo, so the operator can check a doubtful registration.
+- **Oldest first (Q4)**, a queue; **a confirmation dialog (Q5)**, because there is no undo; **`validatedAt` as client epoch ms (Q6)**, like every other time in the app.
+- **A separate `CategoriesRepository` (Q1):** Diogo's new files, so Francisco's `TicketsRepository` and report form are untouched; only a KDoc line in his mapping file changed.
+- **Name rules (Q7):** trimmed, required, at most 40 characters, unique ignoring case (inactive ones included). **No delete (Q8):** deactivation is the safe delete.
+- **No `SavedStateHandle` (Q9), no rules edit (Q10), title "Registration" (Q11), pending citizens still not gated (Q12).**
+- **An extra detail route and two ViewModels** instead of the task's single `OperatorAdminViewModel`: the same list -> detail pattern as tickets, each listener scoped to its own screen.
+- **Rejected:** Reject / REJECTED; one admin ViewModel; a list/detail two-pane with in-ViewModel selection (needs a `BackHandler`, Up behaves differently per orientation); writes in `TicketsRepository`; category delete; a server timestamp for `validatedAt`; a second `role` filter.
+
+### Class material vs beyond class
+- **As in class:** type-safe Navigation routes with an argument (`PendingCitizenRoute(citizenId)`, `toRoute`); ViewModel + `StateFlow` + a plain `ViewModelProvider.Factory` (Contacts_#3); `LazyColumn` with keys; `AlertDialog` and the FAB (P08); `@StringRes` validation errors (P08); the Maps Compose marker (Contacts_#3, F-012's `TicketMap`); `Collator` sorting and the two-pane landscape (P07).
+- **Beyond class (Firebase docs):** Firestore `snapshots()` flows on a query, not only on a document; not-awaited writes queued in the persistent cache; `toggleable(role = Role.Switch)` with a state description for TalkBack.
+
+### Limits to state at the defence
+- **The rules are not deployed (R1).** Only the app (menu, `RequireAccess`, ViewModels inside the guard, one write path) stops a citizen from writing categories or activating themselves; against the test-mode database any client could. The draft rules show the server design, and even they check the validation's changed keys, not the values (review N3; suggested terms in decision 0020).
+- **Duplicate names** are possible offline with an empty cache or with two operators at once: the check is client-side (R5).
+- **No Reject and no category delete** (by choice).
+- **A rename while a citizen's form is open** keeps the old name on that new ticket (R4, Francisco's form).
+- **A hand-edited wrong-typed `users` document** makes the strict `toProfile()` throw, which empties the pending list and ends its listener until the screen is reopened (R2-N1, pre-existing mapping).
+- **The confirm dialog stays open** if another operator activates the same citizen meanwhile (R2-N2, rare).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the five slices and both review rounds: 0 errors, 22 warnings (the baseline ids, none new). EN and PT key sets equal apart from the three non-translatable keys.
+- Two review rounds: round 1 approve with should-fix (S1 dialog focus crash risk, S2 double tap, S3 switch description; N1-N6), all should-fixes and N1, N2, N5, N6 fixed; round 2 approve (two nits, R2-N1 and R2-N2, recorded as limits).
+- **Device checks: none run yet.** Still open: the list and empty state; the detail and map; Activate and the console fields; the **two-device activation** (citizen waiting screen -> dashboard with "+", report submitted); Activate offline; double tap on Activate; category add / rename / toggle; validation errors; the report form after a deactivation and a rename, with old tickets keeping their name; rotation with each dialog open; landscape; citizens and anonymous users sent home.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy the rules, with a tightened `categories` block (`keys().hasOnly(['name', 'active'])`, `name is string && name.size() > 0`, `active is bool`, `delete: if false`) and the validation value checks (N3).
+- A Reject with a reason, shown to the citizen, and a notification on activation or rejection (F-016).
+- Category delete with a "used by N tickets" check.
+- A list/detail two-pane for approvals in landscape.
+- Server-side unique category names (a `categoryNames/{lowercase}` index document written in a transaction, like `nifs`).
+- Lenient `toProfile()` (`runCatching` per document) and closing the confirm dialog when the citizen stops being PENDING (R2-N1, R2-N2).
+- Refresh the selected category's name in the report form at submit (R4).
