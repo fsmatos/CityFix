@@ -1027,7 +1027,7 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - **Role-prefixed NIF ids** (`CITIZEN_<nif>`, `OPERATOR_<nif>`): a citizen and an operator may share one NIF, as "unique for the role" reads.
 - **`photoPath` = the https download URL (Q4)**, as F-013 does for ticket media. Profile and validation screens load it with Coil directly.
 - **Council domain read from `municipality/main` (Q9)**, not a constant. The council's data stays in one document, as the domain model's `Municipio.dominioEmail` says.
-- **The impact switch is only stored** (`impactDetection`); D-014 uses it.
+- **The impact switch is only stored** (`impactDetection`); F-015 (Francisco) uses it. (This line first said D-014; corrected by D-011.)
 - **Phone: mobile or landline (Q6)**; **password: 8 characters with a letter and a digit, plus a confirmation (Q7)**; **NIF: any valid check digit (Q5)**, not only individuals' prefixes.
 - **Rejected:** ViewModel orchestration of two repositories (Q13; the cleanup rule would depend on a screen's scope); an inline upload (blocks on a slow network, breaks "uploads through WorkManager"); a batch (no read, so no uniqueness); deferring the operator document (local store, two paths); the map pick (slice 6, skipped).
 
@@ -1073,3 +1073,69 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - Re-submit automatically when the council domain finishes loading.
 - A map pick to adjust the citizen's location (slice 6).
 - **Housekeeping:** two decision records share the number 0015 (`0015-media-preparation-and-uploads.md`, `0015-session-role-navigation-mfa.md`). D-010 used 0016, and the authors should renumber one.
+
+## D-011: Profile editing
+Decision: [0017](../decisions/0017-profile-editing.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (session e-mail sync, re-authentication) and [0016](../decisions/0016-registration.md) (shared fields, unique photo work), and suggests an amendment to [0010](../decisions/0010-firestore-schema.md). Code: `ui/components/AccountFields.kt`, `ui/screens/ProfileScreen.kt`, `ui/screens/ChangeCredentialScreen.kt`, `viewmodel/Profile*`, `viewmodel/CredentialChange*`, `viewmodel/SessionViewModel.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/ProfilePhotoUploader.kt`, `data/ProfilePhotoWorker.kt`, `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `firestore.rules` (draft). Overview: "Profile (D-011)", "Handover (D-011)".
+
+Brief: I.2.C (the citizen may not change name, NIF, georeferencing), I.3.C (the operator may not change name, NIF), I.2.A / I.2.F (impact detection is a profile choice).
+
+### Technical solutions
+- **Shared stateless field components.** The Register fields moved to `ui/components/AccountFields.kt` (`AccountTextField` with a new `readOnly` flag, `PasswordField`, `ImpactDetectionRow`, `ProfilePhotoPicker`). Register and Profile use the same components; the locked fields on Profile are the same text field with `readOnly = true`, so there is no keyboard and TalkBack says "read only". The move was a pure refactor (slice 1), checked by the reviewer as verbatim.
+- **An allow-list in code.** `updateProfile` builds its map only from `phone` and, for a `Citizen`, `impactDetection`; the photo goes through the worker; the e-mail has its own path. Name, NIF and georeferencing have no write path at all.
+- **Save without `await()`.** The Firestore `update()` is queued in the local cache and returns at once, also offline (as F-011's report batch). The `users/{uid}` snapshot listener that feeds the session sees the cached write immediately, so the impact setting changes in `Session.SignedIn.user` the moment Save is pressed, without a network.
+- **Two listeners, one cache.** Profile listens to `users/{uid}` itself, next to the session's listener; both are served by the same cache, so this costs no extra server reads. The editable values are taken from the first snapshot only, so later snapshots (the photo worker, an operator's validation) never overwrite what the user types.
+- **Re-authentication of an MFA account.** `reauthenticate(EmailAuthProvider.getCredential(email, password))` throws `FirebaseAuthMultiFactorException`, exactly as sign-in does. The same resolver flow (hint -> `PhoneAuthOptions` with the MFA session -> `verifyPhoneNumber` -> SMS code -> `PhoneMultiFactorGenerator.getAssertion` -> `resolver.resolveSignIn`) completes it, then `updatePassword` or `verifyBeforeUpdateEmail` runs at once. The `signIn` code was refactored to share one private `challengeOf(e)`.
+- **The e-mail change and why the Firestore copy is synced from the session.** `verifyBeforeUpdateEmail` only sends a link; the Auth e-mail changes whenever the link is opened, maybe on another device. The session owns both values (the Auth account and the profile), so it compares them on the first profile snapshot after each sign-in or reload and writes `users/{uid}.email` when they differ. It runs whether or not Profile is reopened, which D-012 needs (the operator sees the current contact e-mail).
+- **A sync that cannot loop.** The first version compared on every snapshot. The review found two loops: a stale second device writing the old e-mail back against the up-to-date one, and a refused write retrying without end (the listener reverts the cache, the next snapshot mismatches again). Checking only the first snapshot of each account branch removes both. A good defence example of a reactive feedback loop.
+- **WorkManager unique work for the photo.** `enqueueUniqueWork("profile_photo_<uid>", REPLACE, ...)`: a newer photo cancels an older upload, so two quick saves cannot finish in the wrong order.
+- **A cache key for an overwritten image.** The photo is overwritten at the same Storage path, so its download URL may not change, and Coil keys its memory and disk caches by URL. The worker also writes `photoUpdatedAt`, and Profile uses `"<url>#<photoUpdatedAt>"` as the Coil cache key; the "uploading" notice clears on that version, not on the URL.
+- **Back during a running change.** A `changing` flag makes Back do nothing while `updatePassword` / `verifyBeforeUpdateEmail` runs, so the form cannot be resubmitted mid-change (review N1).
+
+### Options chosen and why (Gate 1, 2026-11-15)
+- **Profile phone separate from the SMS factor (Q1).** The phone is contact data from registration; the factor was enrolled in Account setup and D-010 never prefilled it, so the two may already differ. Re-enrolling on a phone change would add two SMS flows and an unenrolment, with a lockout risk, for something the brief does not ask. A hint under the field says so.
+- **Password + SMS for every re-authentication (Q2):** Firebase requires it for an enrolled account.
+- **Sync from the session plus a reload on Profile (Q3):** see above.
+- **Draft rules allow-list (Q4):** the old deny-list forbade any `email` change, so the sync would be refused once the rules are deployed. Not deployed (Q5).
+- **One Save for phone, photo and impact (Q6)**, rather than a switch that writes at once: one write path.
+- **No stored-photo removal (Q7):** it would need a Storage delete.
+- **Unique work with REPLACE (Q8).**
+- **Pending citizens may edit and see the switch (Q9);** the detector runs only for active citizens.
+- **Routes, not dialogs, for the e-mail and password changes (Q10):** the non-serialisable `MultiFactorResolver` and rotation are easier in a route-scoped ViewModel, as on Login. One ViewModel serves both routes (`CredentialChange { EMAIL, PASSWORD }`).
+- **Single centred column in landscape (Q11), a Log out button on Profile (Q12), coordinates only for the georeferencing (Q13).**
+- **Rejected:** an immediate impact switch; dialogs; syncing from the Profile ViewModel (would not run unless Profile is reopened); a `pendingEmail` field (a second source of truth); MFA re-enrolment; photo removal; a two-pane landscape.
+
+### Class material vs beyond class
+- **As in class:** P08 form state with `@StringRes` errors and a computed validity; P09 `PickVisualMedia` and `TakePicture` with the FileProvider; the WorkManager pattern of slides 08 / P10 (`CoroutineWorker`, network constraint); type-safe Navigation routes; `SavedStateHandle` through the factory's `CreationExtras`.
+- **Beyond class (Firebase docs):** MFA re-authentication through `MultiFactorResolver`; `verifyBeforeUpdateEmail` and its out-of-band lifecycle; `enqueueUniqueWork` with `ExistingWorkPolicy.REPLACE`; Coil `memoryCacheKey` / `diskCacheKey`; Firestore rules `changedKeys().hasOnly(...)`.
+
+### Limits to state at the defence
+- **The rules are not deployed**, so a direct write to name or NIF succeeds against the test-mode database (R8). The allow-list can be shown only in the draft (Rules Playground; not run). The draft also does not type-check the allowed fields (review N5, R2-N2): suggested `is bool` / `is string` / `is int` / phone regex terms are in decision 0017.
+- **The operator domain is enforced by the client only** for the Auth e-mail (R7): no Cloud Functions, and `isOperator()` checks only `email_verified`.
+- **No MFA phone change, no photo removal, no account deletion.**
+- **Device findings (2026-11-16):**
+  - R1: the session survives the MFA re-authentication; Profile is still signed in after a password change.
+  - R2: opening the e-mail link signs this device out at the next reload (reopening Profile), and the user lands on the anonymous dashboard **without a message**.
+  - R3: e-mail enumeration protection hides "address already in use" at request time; the app says the link was sent, and the clash can only show when the link is opened.
+  - R4: the `photoUpdatedAt` cache key works; the new photo shows after an overwrite.
+  - R6 (revert link may unenrol MFA) comes from the Firebase docs and was not tried.
+- **The e-mail check runs once per subscription (R2-N1).** After more than 5 s in the background the session flow resubscribes (`WhileSubscribed(5_000)`), so a second device with a stale account can write the old e-mail once per return to the foreground, until its token is refused. No loop; accepted. The `SessionViewModel` KDoc says this cannot happen and should be reworded.
+- **`currentEmail` is read once** in the change screen (N6). **Two photos saved before the first upload ends** can briefly show the first one (R2-N3).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` before every Kotlin commit and after both review rounds: 0 errors, 22 warnings (the baseline ids, none new). EN and PT key sets equal.
+- Two review rounds: round 1 approve with should-fix (S1 the sync loop, S2 the stale photo, S3 the device checks; N1-N6), round 2 approve (3 nits).
+- **Device checks run (2026-11-16, emulator, test numbers, PT locale):** read-only fields; phone error and Save online; Save offline with a rotation before Save; landscape; camera and gallery photo with the new image shown after upload; wrong current password; the full password change with the SMS code and Back right after Confirm; the e-mail checks before Firebase; an address already in use (R3); the e-mail link and the sign-out (R2); login with the new e-mail and the new password.
+- **Impact detection** was checked through the session/profile value only (switched off offline, still off after reopening Profile); F-015 does not exist yet, so the detector stopping is not shown.
+- **Still open:** the console values (`phone`, `impactDetection`, `photoPath` + `photoUpdatedAt`, `users/{uid}.email` after the change); Register with a photo after the worker change; two devices on one account; the old password refused at login; the Rules Playground.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy the rules with the allow-list, plus the type checks (N5, R2-N2).
+- A Cloud Function (or a blocking function) to enforce the operator domain on the Auth e-mail.
+- An MFA phone change with re-enrolment (enrol new, unenrol old, both after re-authentication).
+- Photo removal with a Storage delete.
+- A message after the involuntary sign-out caused by the e-mail link ("Your e-mail changed; sign in with the new address").
+- A truly once-per-account e-mail check (compare the checked `AuthAccount` by identity in the ViewModel), and collect `auth.account` in the change screen (N6).
+- A retry UI for a dropped profile photo; a two-pane landscape profile (P07).
+- (Done in D-011 itself: the `photoUpdatedAt` cache key, first listed here as "if R4 shows a stale photo".)

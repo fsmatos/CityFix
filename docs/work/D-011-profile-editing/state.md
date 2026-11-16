@@ -9,7 +9,7 @@ Remote: not pushed
 | Gate 1: plan approved | done | 2026-11-15 | Approved by Diogo; Q1-Q13 as recommended; Q4 yes (draft rules edit in slice 8, commit only, not deployed) |
 | Code | done | 2026-11-15 | 8 slices committed; build + lint pass on every Kotlin slice (0 errors / 22 warnings, no new ids); device checks pending (see log) |
 | Review | done | 2026-11-15 | Round 1: approve with should-fix (S1-S3, N1-N6). Round 2 (`f085729..HEAD`): approve; S1, S2, N1-N4 resolved; 0 Blocking, 0 new Should-fix, 3 Nits (R2-N1 sync re-checks on resubscription, R2-N2 `photoUpdatedAt` type check with N5, R2-N3 two-photo note); S3 device checks still open; build + lint 0 errors / 22 warnings |
-| Docs | pending | | |
+| Docs | done | 2026-11-16 | New decision 0017; amendment lines in 0015 and 0016; overview (Layers, routes, top bar, app shell, Auth and session, Firebase rules, new "Profile (D-011)" + "Handover (D-011)", Roles, D-010 handover F-015 fix); report notes D-011 section; task file status notes (no box ticked). No code or rules edited; not committed |
 | Pushed | pending | | |
 | Merged | pending | | |
 
@@ -60,3 +60,14 @@ Append-only.
   - Login after the e-mail change: Diogo signed in with `+cidadao1b`, the new password and the SMS code (this also checks the new password at the next login). The PENDING screen opened; Profile shows `diogo.abrantes24+cidadao1b@gmail.com`. Profile's e-mail field comes from the Auth account (`ProfileViewModel.kt:42`), so whether `users/{uid}.email` was synced must be checked in the console (pending, Diogo).
   - New nit found on device (R2 follow-up): after the link is opened, the next reload signs the user out to the anonymous dashboard with no message; a short "Your e-mail changed, sign in with the new address" notice would help. Docs phase / later.
   - Not run: two-device e-mail case (needs a second device); Register with a photo after the S2 worker change; old password refused at login (optional step, not reported).
+- 2026-11-16 Docs: docs-writer ran `03-docs-plan.md`. Files: new `docs/decisions/0017-profile-editing.md`; `0015-session-role-navigation-mfa.md` (status-line amendment + one Decision bullet: session e-mail sync, `resolveSecondFactor` completes a re-authentication, the R2-N1 edge); `0016-registration.md` (status-line amendment: `AccountFields.kt`, unique photo work, `photoUpdatedAt`); `docs/architecture/overview.md` (Layers, route table, top bar, app shell state table, Auth and session, Firebase "D-011 and the rules", new "Profile (D-011)" with the device results and failure table, new "Handover (D-011)", Roles); `docs/report/notes.md` (new D-011 section; the D-010 line "D-014 uses it" corrected to F-015); task file status line and "Status notes". Items from the review and device checks, all documented, none fixed in code:
+  - N5 + R2-N2: the draft owner rule does not type-check `phone` / `impactDetection` / `photoPath` / `photoUpdatedAt`; suggested terms in 0017 Consequences (phone regex aligned with `isPortuguesePhone`, `^[29][0-9]{8}$`, instead of the review's `^[0-9]{9}$`). `firestore.rules` not edited.
+  - N6: `currentEmail` read once in `CredentialChangeViewModel` (0017, overview, follow-up).
+  - R2-N1: recorded as once per subscription (`WhileSubscribed(5_000)` resubscription and `retry()` restart the check), so a stale second device can write the old e-mail once per return to the foreground or cold start until its token is refused; accepted edge. The `SessionViewModel` KDoc over-claims; reword (or identity check) is a follow-up. Code not edited.
+  - R2-N3: two photos saved before the first upload ends (0017, overview failure table).
+  - Device findings R1-R4 written as observed facts; the R2 "signed out with no message" nit is a follow-up. Whether the photo overwrite kept the same URL was not recorded.
+  - D-010 handover corrected: impact detection is F-015 (Francisco), not D-014; F-015 gets the exact condition `session.accessRole == AccessRole.CITIZEN && ((session as? Session.SignedIn)?.user as? Citizen)?.impactDetection == true`, keyed in the `DisposableEffect`. F-015's task file not edited.
+  - Decision 0010 (Francisco's): suggested amendment line only, in "Handover (D-011)"; not edited.
+  - Francisco must be told that `firestore.rules` changed (slice 8, `3b3dfb1`; shared, not deployed): recorded in the overview handover and the task file.
+  - Task acceptance boxes: none ticked (direct write only in the undeployed draft; F-015 missing, impact checked through the session value only; the change screens not checked in landscape).
+  - Still open: console checks (Diogo), Register with a photo, two-device case, old password refused, change screens in landscape, TalkBack "read only", Rules Playground.
