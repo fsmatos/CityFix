@@ -220,7 +220,12 @@ fun OperatorTicketContent(
         modifier = modifier.imePadding(),
         responsibleNames = responsibleNames,
     ) {
-        if (state.resolving) {
+        // Only while Resolve is still offered (review S1): the ticket updates live, so another
+        // user's move hides the section and brings back the remaining actions. isResolving keeps
+        // it during this operator's own save, when the cached ticket is already RESOLVED. The
+        // hidden draft is kept (not deleted here); onCleared removes it when the screen leaves.
+        val showResolve = state.resolving && (TicketStatus.RESOLVED in moves || state.isResolving)
+        if (showResolve) {
             ResolveSection(
                 state = state,
                 onAddFromGalleryClick = onAddFromGalleryClick,
