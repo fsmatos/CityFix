@@ -129,14 +129,17 @@ fun CategoriesContent(
                 }
             }
         }
-        ExtendedFloatingActionButton(
-            onClick = onAddClick,
-            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.categories_add)) },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-        )
+        // Hidden until the first snapshot: the duplicate check needs the loaded list.
+        if (!state.isLoading) {
+            ExtendedFloatingActionButton(
+                onClick = onAddClick,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.categories_add)) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            )
+        }
     }
 
     state.editor?.let { editor ->

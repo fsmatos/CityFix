@@ -93,14 +93,12 @@ fun PendingCitizensContent(
     }
 }
 
-/** One pending citizen: name and NIF, read by TalkBack as one item. */
+/** One pending citizen: name and NIF, read by TalkBack as one item (a clickable Card merges them). */
 @Composable
 private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics(mergeDescendants = true) { },
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = citizen.name, style = MaterialTheme.typography.titleMedium)

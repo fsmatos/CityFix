@@ -137,7 +137,9 @@ class FirestoreUsersRepository(
             .snapshots()
             .map { snapshot ->
                 snapshot.documents
-                    .sortedBy { it.getLong("createdAt") ?: 0L }
+                    // Read leniently: getLong would throw on a hand-made console document with a
+                    // Timestamp or a string here, and the .catch below would end the listener.
+                    .sortedBy { (it.get("createdAt") as? Number)?.toLong() ?: 0L }
                     .mapNotNull { (it.toProfile() as? UserProfile.Found)?.user as? Citizen }
             }
             .catch {

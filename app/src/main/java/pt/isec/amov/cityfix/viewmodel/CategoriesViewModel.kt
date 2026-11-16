@@ -31,6 +31,8 @@ class CategoriesViewModel(private val repository: CategoriesRepository) : ViewMo
     }
 
     fun onAddClick() {
+        // The duplicate check needs the loaded list (the screen also hides Add until then).
+        if (_uiState.value.isLoading) return
         _uiState.update { it.copy(editor = CategoryEditor()) }
     }
 

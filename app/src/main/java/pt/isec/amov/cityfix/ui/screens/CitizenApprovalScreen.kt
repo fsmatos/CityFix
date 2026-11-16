@@ -117,7 +117,7 @@ fun CitizenApprovalContent(
         ) {
             CitizenDetails(
                 citizen = citizen,
-                canActivate = state.canActivate,
+                state = state,
                 onActivateClick = onActivateClick,
                 modifier = Modifier
                     .weight(1f)
@@ -140,7 +140,7 @@ fun CitizenApprovalContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CitizenDetails(citizen, state.canActivate, onActivateClick)
+            CitizenDetails(citizen, state, onActivateClick)
             CitizenLocation(citizen.georeferencing)
         }
     }
@@ -164,11 +164,14 @@ fun CitizenApprovalContent(
     }
 }
 
-/** Photo, name (the page heading), NIF, e-mail, phone, then Activate or "already active". */
+/**
+ * Photo, name (the page heading), NIF, e-mail, phone, then Activate or "already active". After
+ * this screen's own activation the button stays, disabled, while the screen closes.
+ */
 @Composable
 private fun CitizenDetails(
     citizen: Citizen,
-    canActivate: Boolean,
+    state: CitizenApprovalUiState,
     onActivateClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -200,16 +203,20 @@ private fun CitizenDetails(
                 stringResource(R.string.setup_phone_display, citizen.phone),
             )
         }
-        if (canActivate) {
-            Button(onClick = onActivateClick, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.citizen_approval_activate))
-            }
-        } else {
+        if (state.showAlreadyActive) {
             Text(
                 text = stringResource(R.string.citizen_approval_already_active),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        } else {
+            Button(
+                onClick = onActivateClick,
+                enabled = state.canActivate && !state.activated,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.citizen_approval_activate))
+            }
         }
     }
 }

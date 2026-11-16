@@ -46,7 +46,8 @@ class CitizenApprovalViewModel(
 
     /** Opens the confirmation dialog: the app has no undo (Q5). */
     fun onActivateClick() {
-        if (_uiState.value.canActivate) _uiState.update { it.copy(confirming = true) }
+        val state = _uiState.value
+        if (state.canActivate && !state.activated) _uiState.update { it.copy(confirming = true) }
     }
 
     fun onDismissConfirm() {
@@ -62,7 +63,7 @@ class CitizenApprovalViewModel(
     fun activate(onActivated: () -> Unit) {
         val state = _uiState.value
         if (!state.confirming || !state.canActivate) return
-        _uiState.update { it.copy(confirming = false) }
+        _uiState.update { it.copy(confirming = false, activated = true) }
         users.activateCitizen(citizenId, operatorId)
         onActivated()
     }
