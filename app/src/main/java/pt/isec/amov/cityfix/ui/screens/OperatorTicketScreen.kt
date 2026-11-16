@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Message
 import pt.isec.amov.cityfix.model.Operator
@@ -454,11 +455,13 @@ private fun ContactsSection(
         Text(
             text = stringResource(R.string.operator_ticket_author),
             style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.semantics { heading() },
         )
         ContactRow(id = ticket.creatorId, people = people)
         Text(
             text = stringResource(R.string.operator_ticket_followers),
             style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.semantics { heading() },
         )
         if (ticket.followerIds.isEmpty()) {
             Text(
@@ -583,5 +586,144 @@ private fun OperatorTicketOpenPreview() {
         previewOpen,
         PREVIEW_T0 + DAY,
         OperatorTicketUiState(messages = previewMessages, people = previewPeople),
+    )
+}
+
+private val previewInfoRequested = previewOpen.copy(
+    currentStatus = TicketStatus.INFO_REQUESTED,
+    statusHistory = previewOpen.statusHistory +
+        StatusHistory(TicketStatus.INFO_REQUESTED, PREVIEW_T0 + DAY, "Which bench, the left or the right one?", "op-1"),
+)
+
+private val previewInProgress = previewOpen.copy(
+    currentStatus = TicketStatus.IN_PROGRESS,
+    statusHistory = previewOpen.statusHistory +
+        StatusHistory(TicketStatus.IN_PROGRESS, PREVIEW_T0 + DAY, null, "op-1"),
+)
+
+/** RESOLVED at t0 + 2 d: shown CLOSED from t0 + 7 d (5-day window). */
+private val previewResolved = previewInProgress.copy(
+    currentStatus = TicketStatus.RESOLVED,
+    statusHistory = previewInProgress.statusHistory +
+        StatusHistory(TicketStatus.RESOLVED, PREVIEW_T0 + 2 * DAY, null, "op-1"),
+)
+
+/** INFO_REQUESTED: only Start work. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun OperatorTicketInfoRequestedPreview() {
+    PreviewContent(previewInfoRequested, PREVIEW_T0 + 2 * DAY, OperatorTicketUiState(people = previewPeople))
+}
+
+/** IN_PROGRESS: Resolve and Request information. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Composable
+private fun OperatorTicketInProgressPreview() {
+    PreviewContent(previewInProgress, PREVIEW_T0 + 2 * DAY, OperatorTicketUiState(people = previewPeople))
+}
+
+/** Resolve section with no proof: Confirm disabled. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun OperatorTicketResolveEmptyPreview() {
+    PreviewContent(
+        previewInProgress,
+        PREVIEW_T0 + 2 * DAY,
+        OperatorTicketUiState(people = previewPeople, resolving = true),
+    )
+}
+
+/** Resolve section with two proofs and a note: Confirm enabled. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
+@Composable
+private fun OperatorTicketResolveWithProofPreview() {
+    PreviewContent(
+        previewInProgress,
+        PREVIEW_T0 + 2 * DAY,
+        OperatorTicketUiState(
+            people = previewPeople,
+            resolving = true,
+            proof = listOf(
+                Attachment(id = "proof-1"),
+                Attachment(id = "proof-2", type = AttachmentType.VIDEO),
+            ),
+            resolveNote = "Bench replaced.",
+        ),
+    )
+}
+
+/** Resolve section after a failed confirm. */
+@Preview(showBackground = true)
+@Composable
+private fun OperatorTicketResolveErrorPreview() {
+    PreviewContent(
+        previewInProgress,
+        PREVIEW_T0 + 2 * DAY,
+        OperatorTicketUiState(
+            people = previewPeople,
+            resolving = true,
+            proof = listOf(Attachment(id = "proof-1")),
+            resolveError = R.string.resolve_error_failed,
+        ),
+    )
+}
+
+/** Request information dialog after Send with a blank text. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun OperatorTicketRequestInfoErrorPreview() {
+    PreviewContent(
+        previewOpen,
+        PREVIEW_T0 + DAY,
+        OperatorTicketUiState(
+            people = previewPeople,
+            openDialog = OperatorDialog.REQUEST_INFO,
+            dialogError = R.string.operator_request_info_error_blank,
+        ),
+    )
+}
+
+/** Start work dialog with a note typed. */
+@Preview(showBackground = true)
+@Composable
+private fun OperatorTicketStartWorkPreview() {
+    PreviewContent(
+        previewOpen,
+        PREVIEW_T0 + DAY,
+        OperatorTicketUiState(people = previewPeople, openDialog = OperatorDialog.START_WORK, dialogText = "Team on site Monday."),
+    )
+}
+
+/** RESOLVED inside the window: no actions, thread still open. */
+@Preview(showBackground = true)
+@Composable
+private fun OperatorTicketResolvedPreview() {
+    PreviewContent(previewResolved, PREVIEW_T0 + 4 * DAY, OperatorTicketUiState(messages = previewMessages, people = previewPeople))
+}
+
+/** Six days after RESOLVED: shown CLOSED, no actions, locked thread. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun OperatorTicketClosedPreview() {
+    PreviewContent(previewResolved, PREVIEW_T0 + 8 * DAY, OperatorTicketUiState(messages = previewMessages, people = previewPeople))
+}
+
+/** Offline with nothing cached: every contact unavailable. */
+@Preview(showBackground = true)
+@Preview(showBackground = true, locale = "pt")
+@Composable
+private fun OperatorTicketContactsUnavailablePreview() {
+    PreviewContent(
+        previewOpen,
+        PREVIEW_T0 + DAY,
+        OperatorTicketUiState(people = mapOf("c-1" to null, "c-2" to null, "c-3" to null)),
     )
 }
