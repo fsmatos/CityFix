@@ -20,6 +20,8 @@ import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.SYSTEM_RESPONSIBLE_ID
 import pt.isec.amov.cityfix.model.Ticket
+import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.utils.FileUtils
 import java.io.File
 
@@ -197,6 +199,11 @@ class OperatorTicketViewModel(
     fun resolve(ticket: Ticket) {
         val state = _uiState.value
         if (!state.canConfirmResolve) return
+        // Review N6: a move that is no longer allowed gets its own message, not the combined one.
+        if (TicketStatus.RESOLVED !in ticket.allowedTransitions(operator, System.currentTimeMillis())) {
+            _uiState.update { it.copy(resolveError = R.string.operator_action_error_not_allowed) }
+            return
+        }
         _uiState.update { it.copy(isResolving = true, resolveError = null) }
         viewModelScope.launch {
             val ok = tickets.resolveTicket(ticket, operator, state.proof, state.resolveNote.ifBlank { null })
@@ -215,7 +222,9 @@ class OperatorTicketViewModel(
      * a successful resolve the draft is already empty, so the uploaded files are kept.
      */
     override fun onCleared() {
-        // viewModelScope is already cancelled here; a few small files, deleted as ReportViewModel does.
+        // Kept on the main thread on purpose (review N2): viewModelScope is already cancelled here,
+        // so a coroutine launched on it would never run, and the app has no application scope.
+        // It is at most MAX_PROOF_ATTACHMENTS local deletes (usually none), as in ReportViewModel.
         _uiState.value.proof.forEach { File(it.file).delete() }
     }
 

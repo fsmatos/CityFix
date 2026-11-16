@@ -104,6 +104,13 @@ fun OperatorTicketScreen(
     LaunchedEffect(ticket) {
         ticket?.let(viewModel::closeIfExpired)
     }
+    // Review N1: a dialog whose move is no longer offered (another user changed the status) closes.
+    val openDialog = state.openDialog
+    val dialogGone = openDialog != null &&
+        openDialog.target !in ticket?.allowedTransitions(operator, now).orEmpty()
+    LaunchedEffect(dialogGone) {
+        if (dialogGone) viewModel.onDialogDismiss()
+    }
     val ids = ticket?.let { t ->
         setOf(t.creatorId) + t.followerIds + t.statusHistory.map { it.responsibleId }
     }.orEmpty()
@@ -258,7 +265,8 @@ fun OperatorTicketContent(
         )
     }
 
-    if (state.openDialog != null) {
+    // Only while its move is still offered (review N1); the stateful half then dismisses it.
+    if (state.openDialog != null && state.openDialog.target in moves) {
         OperatorTextDialog(
             dialog = state.openDialog,
             text = state.dialogText,

@@ -3,6 +3,7 @@ package pt.isec.amov.cityfix.viewmodel
 import androidx.annotation.StringRes
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.Message
+import pt.isec.amov.cityfix.model.TicketStatus
 
 /** Proof media per resolution (D-013 Q11): 1 to 3 photos or videos. */
 const val MAX_PROOF_ATTACHMENTS = 3
@@ -19,13 +20,16 @@ data class PersonContact(
     val isOperator: Boolean,
 )
 
-/** The operator actions that open a dialog first (D-013). */
-enum class OperatorDialog {
+/**
+ * The operator actions that open a dialog first (D-013). [target] is the status the action moves
+ * the ticket to: the dialog is shown only while that move is still allowed (review N1).
+ */
+enum class OperatorDialog(val target: TicketStatus) {
     /** Brief II.2, I.3.E: ask the citizen for information; the text is also a message. */
-    REQUEST_INFO,
+    REQUEST_INFO(TicketStatus.INFO_REQUESTED),
 
     /** Brief II.3: move to In progress, with an optional note (no undo, so it asks first, Q6). */
-    START_WORK,
+    START_WORK(TicketStatus.IN_PROGRESS),
 }
 
 /**

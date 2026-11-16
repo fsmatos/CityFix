@@ -35,8 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -134,19 +136,30 @@ fun OperatorPanelContent(
                 }
             }
             items(shown, key = { it.id }) { ticket ->
+                val isPrivate = ticket.scope == Scope.PRIVATE
+                val privateLabel = stringResource(R.string.operator_panel_private)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Review N3: TalkBack reads "Private" as part of the card (the clickable item);
+                    // the visible label below is then hidden from it, so it is not read twice.
                     TicketCard(
                         ticket = ticket,
                         isExpanded = true,
                         onClick = { onTicketClick(ticket.id) },
                         status = ticket.effectiveStatus(now),
+                        modifier = if (isPrivate) {
+                            Modifier.semantics { stateDescription = privateLabel }
+                        } else {
+                            Modifier
+                        },
                     )
-                    if (ticket.scope == Scope.PRIVATE) {
+                    if (isPrivate) {
                         Text(
-                            text = stringResource(R.string.operator_panel_private),
+                            text = privateLabel,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 12.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .clearAndSetSemantics { },
                         )
                     }
                 }
@@ -209,7 +222,8 @@ private fun FilterHeader(
 
 /**
  * Read-only dropdown: "All categories" plus every category, inactive ones marked, so tickets of a
- * deactivated category can still be found. A selected id that is no longer listed shows "All".
+ * deactivated category can still be found. A selected id that is not in the list yet (categories
+ * still loading) shows an empty field, never "All categories" while a filter is active (review N4).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,7 +241,11 @@ private fun CategoryFilter(
         onExpandedChange = { expanded = it },
     ) {
         OutlinedTextField(
-            value = selected?.let { categoryLabel(it) } ?: allLabel,
+            value = when {
+                selectedId == null -> allLabel
+                selected != null -> categoryLabel(selected)
+                else -> ""
+            },
             onValueChange = {},
             readOnly = true,
             singleLine = true,
