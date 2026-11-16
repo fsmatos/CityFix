@@ -218,9 +218,6 @@ private fun CategoryEditorDialog(
         else -> stringResource(error)
     }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -248,6 +245,11 @@ private fun CategoryEditorDialog(
                     .focusRequester(focusRequester)
                     .semantics { if (errorText != null) error(errorText) },
             )
+            // Here, not before AlertDialog: the text slot is composed in the dialog's own window,
+            // so only from inside it is the field (and its FocusRequester) surely attached.
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
         },
         confirmButton = {
             TextButton(onClick = onSave) {

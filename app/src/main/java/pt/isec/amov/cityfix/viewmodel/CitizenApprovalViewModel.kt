@@ -55,10 +55,13 @@ class CitizenApprovalViewModel(
 
     /**
      * Writes the activation (not awaited, so it is queued offline) and calls [onActivated], which
-     * shows the snackbar and goes back to the list. Does nothing unless the citizen is PENDING.
+     * shows the snackbar and goes back to the list. Does nothing unless the confirmation dialog is
+     * open and the citizen is PENDING. Closing the dialog first makes a second tap on Activate
+     * (before the dialog disappears) return here, so it writes, shows and goes back only once.
      */
     fun activate(onActivated: () -> Unit) {
-        if (!_uiState.value.canActivate) return
+        val state = _uiState.value
+        if (!state.confirming || !state.canActivate) return
         _uiState.update { it.copy(confirming = false) }
         users.activateCitizen(citizenId, operatorId)
         onActivated()

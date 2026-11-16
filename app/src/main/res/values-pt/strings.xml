@@ -345,6 +345,6 @@
     <string name="categories_error_too_long">O nome é demasiado longo (máximo %1$d).</string>
     <string name="categories_error_duplicate">Já existe uma categoria com este nome.</string>
     <string name="cd_category_edit">Editar %1$s</string>
-    <string name="cd_category_active">%1$s ativa</string>
+    <string name="cd_category_active">Ativa: %1$s</string>
     <string name="cd_categories_loading">A carregar as categorias</string>
 </resources>
