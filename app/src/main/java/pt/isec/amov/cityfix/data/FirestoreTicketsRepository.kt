@@ -27,6 +27,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.canRecordOperatorNearby
 import pt.isec.amov.cityfix.model.closeIfExpired
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
@@ -287,6 +288,19 @@ class FirestoreTicketsRepository(
             uploader.enqueue("$TICKETS/${after.id}", after.id, false)
         }
         true
+    }
+
+    /**
+     * Sets only `lastOperatorNearbyAt` on the ticket (D-014); false when canRecordOperatorNearby
+     * rejects it. Not awaited, as in sendMessage: offline the update is queued; failures are only
+     * logged, without the location.
+     */
+    override fun recordOperatorNearby(ticket: Ticket, now: Long): Boolean {
+        if (!ticket.canRecordOperatorNearby(now)) return false
+        firestore.collection(TICKETS).document(ticket.id)
+            .update("lastOperatorNearbyAt", now)
+            .addOnFailureListener { Log.w(TAG, "nearby not saved", it) }
+        return true
     }
 
     /**

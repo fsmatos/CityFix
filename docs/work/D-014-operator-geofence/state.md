@@ -35,3 +35,5 @@ Remote: origin/dev/Diogo
   | last = now - 60 min | gap = 1 h | true |
   | last = now + 1 min | negative gap | false |
   | last = null | never recorded | true |
+- 2026-11-17 Code slice 1 commit: f48ea59.
+- 2026-11-17 Code slice 2: `TicketsRepository.recordOperatorNearby(ticket, now): Boolean` (after `resolveTicket`, KDoc as planned) and its `FirestoreTicketsRepository` implementation: `canRecordOperatorNearby` guard, then a single-field `update("lastOperatorNearbyAt", now)`, not awaited, failure logged without coordinates. Both files are Francisco's (additive only). Verify: assembleDebug pass; lint 0 errors / 22 warnings. Deviation: the plan says to tell Francisco before committing; the implementer agent cannot contact him, so Diogo must tell him (signature above; why: the write is the seam F-016 reads, decision Q4 puts it in the repository).

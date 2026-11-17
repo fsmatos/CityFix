@@ -104,4 +104,12 @@ interface TicketsRepository {
      * true once the write is queued.
      */
     suspend fun resolveTicket(ticket: Ticket, by: User, proof: List<Attachment>, note: String? = null): Boolean
+
+    /**
+     * Records that an operator is within 20 m of [ticket] (brief I.3 Obs, II.3; D-014): sets only
+     * tickets/{id}.lastOperatorNearbyAt = [now]. No operator id or location is written. False when
+     * canRecordOperatorNearby(now) is false; otherwise true once the write is queued. F-016 turns it
+     * into the participants' notification.
+     */
+    fun recordOperatorNearby(ticket: Ticket, now: Long): Boolean
 }
