@@ -7,7 +7,7 @@ Remote: origin/dev/Diogo
 | Start | done | 2026-11-17 | Task file `docs/tasks/phase-2/D-014-operator-geofence.md` |
 | Plan | done | 2026-11-17 | 00/01/03 written; 11 open questions for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-17 | Approved by Diogo; Q1-Q11 as recommended; slices 1-5 required, 5b-8 only if time remains by 2026-11-19 |
-| Code | done | 2026-11-17 | Slices 1-5 done (f48ea59, 5c1714b, 7bcd3ba, c2324a9, slice 5 commit); optional 5b-8 not started; device checks D1-D10 left to Diogo |
+| Code | done | 2026-11-17 | Slices 1-5 done (f48ea59, 5c1714b, 7bcd3ba, c2324a9, 7efaeb4); optional 5b-8 not started; device checks D1-D10 left to Diogo |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -45,5 +45,6 @@ Remote: origin/dev/Diogo
 - 2026-11-17 Code slice 5: `CityFixApp` (`MainActivity.kt`) creates `OperatorProximityViewModel`, keeps `hasPrecise` (refreshed by `LifecycleResumeEffect` and in the start-up permission callback) and runs `LaunchedEffect(operator?.id, hasPrecise) { repeatOnLifecycle(STARTED) { watch(ticketsViewModel.tickets) } }`; an operator without precise location gets one `Log.i` (no coordinates), no UI (Q10). New file-level `TAG = "CityFixApp"`. Verify: assembleDebug pass; lint 0 errors / 22 warnings. Note: the plan's "Do not touch" lists `MainActivity`'s permission callback as F-016's area, but slice 5 explicitly asks to refresh `hasPrecise` there; I added only that one line (`hasPrecise = hasPreciseLocationPermission(context)`) and changed nothing else in the callback or the F-012 request.
 - 2026-11-17 Code end: required slices 1-5 done; optional 5b, 6, 7, 8 not implemented (not in scope of this run). `firestore.rules`, `storage.rules`, `google-services.json` and Gradle files untouched; nothing pushed.
   - Left for Diogo by hand: device checks D1-D10 (two emulators, `adb emu geo fix`); D5 needs a temporary debug-shortened `PROXIMITY_ALERT_INTERVAL_MS` (do not commit it). D11 depends on F-016 or slice 8.
-  - Tell Francisco: new `TicketsRepository.recordOperatorNearby(ticket, now): Boolean` and field `tickets/{id}.lastOperatorNearbyAt` (Long, time only) as the F-016 seam; no rule allows the update yet (5b not done), so on the server the write may be rejected by the draft rules if they are ever deployed as is.
+  - Tell Francisco: new `TicketsRepository.recordOperatorNearby(ticket, now): Boolean` and field `tickets/{id}.lastOperatorNearbyAt` (Long, time only) as the F-016 seam; no rule in the draft `firestore.rules` allows an update that changes only `lastOperatorNearbyAt` (5b not done), so if those rules are deployed as is the server rejects the write (the local cache keeps it; the failure is only logged). Slice 5b, or an equivalent rule, is needed before deploy.
   - Francisco-owned files touched (additive only): `data/FirestoreMapping.kt` (one line in `toTicket()`), `data/TicketsRepository.kt` (new method), `data/FirestoreTicketsRepository.kt` (implementation + import), `data/LocationRepository.kt` (`locationUpdates`, KDoc line, companion). Not touched: `utils/LocationPermissions.kt` (only imported).
+- 2026-11-17 Code slice 5 commit: 7efaeb4.
