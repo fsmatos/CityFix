@@ -18,6 +18,15 @@ class OperatorProximityViewModel(
     private val ticketsRepository: TicketsRepository,
 ) : ViewModel() {
 
+    /** Operator the two sets below belong to; another operator starts them empty. */
+    private var watchedOperatorId: String? = null
+
+    /**
+     * Ids of the tickets inside the 20 m circle on the last fix. Kept here, not in [watch], so a
+     * rotation or Home and return does not count the operator as entering again.
+     */
+    private val inside = mutableSetOf<String>()
+
     /**
      * Ticket id -> time this device last recorded it. Survives rotation; lost on process death,
      * where the stored lastOperatorNearbyAt still applies the 1 h throttle.
@@ -27,10 +36,14 @@ class OperatorProximityViewModel(
     /**
      * Runs until cancelled (CityFixApp calls it inside repeatOnLifecycle). Reads [tickets].value on
      * each fix. Only an entry counts: a ticket already inside on the previous fix is skipped, so
-     * staying near it writes nothing. The set of tickets inside starts empty on every call.
+     * staying near it writes nothing. The sets are cleared only when [operatorId] changes.
      */
-    suspend fun watch(tickets: StateFlow<List<Ticket>>) {
-        val inside = mutableSetOf<String>()
+    suspend fun watch(operatorId: String, tickets: StateFlow<List<Ticket>>) {
+        if (operatorId != watchedOperatorId) {
+            watchedOperatorId = operatorId
+            inside.clear()
+            recentlyRecorded.clear()
+        }
         locationRepository.locationUpdates().collect { fix ->
             val now = System.currentTimeMillis()
             val current = tickets.value.insideOperatorGeofence(fix, now)

@@ -13,7 +13,10 @@ const val OPERATOR_GEOFENCE_RADIUS_METERS = 20.0
 /** At most one proximity record per ticket per hour, so participants are not flooded (D-014 Q6). */
 const val PROXIMITY_ALERT_INTERVAL_MS: Long = 60L * 60 * 1000
 
-/** True when [at] is within [OPERATOR_GEOFENCE_RADIUS_METERS] of this ticket's location (Haversine). */
+/**
+ * True when [at] is within [OPERATOR_GEOFENCE_RADIUS_METERS] of this ticket's location
+ * (Haversine).
+ */
 fun Ticket.isWithinOperatorGeofence(at: Coordinates): Boolean =
     haversineMeters(location.latitude, location.longitude, at.latitude, at.longitude) <=
         OPERATOR_GEOFENCE_RADIUS_METERS

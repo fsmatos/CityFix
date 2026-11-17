@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Looper
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -29,8 +30,8 @@ class LocationRepository(context: Context) {
     /**
      * One current fix, or null when there is no location permission or no fix (location off).
      * Beyond P10, which receives continuous updates in a service: getCurrentLocation asks for a
-     * single fix and await() waits for it without a callback. [locationUpdates] gives continuous fixes
-     * while collected (D-014).
+     * single fix and await() waits for it without a callback. [locationUpdates] gives continuous
+     * fixes while collected (D-014).
      */
     suspend fun currentLocation(): Coordinates? {
         // Written out instead of hasLocationPermission(): lint's MissingPermission check only
@@ -45,14 +46,16 @@ class LocationRepository(context: Context) {
     }
 
     /**
-     * Continuous precise fixes every [intervalMs] while collected (D-014, brief II.3); empty without
-     * FINE. Fixes less accurate than [MAX_FIX_ACCURACY_METERS] are dropped, since a 20 m check needs
-     * a precise position. Collecting stops the updates when cancelled (awaitClose). As P10, but
-     * without a service: the caller collects only while the app is in the foreground.
+     * Continuous precise fixes every [intervalMs] while collected (D-014, brief II.3); empty
+     * without FINE. Fixes less accurate than [MAX_FIX_ACCURACY_METERS] are dropped, since a 20 m
+     * check needs a precise position. Collecting stops the updates when cancelled (awaitClose). As
+     * P10, but without a service: the caller collects only while the app is in the foreground. If
+     * the updates cannot start (for example no Play services), the flow ends after a log line.
      */
     fun locationUpdates(intervalMs: Long = 5_000): Flow<Coordinates> {
         // Written out, as in currentLocation, for lint's MissingPermission check.
-        val fine = ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
+        val fine =
+            ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
         if (fine != PackageManager.PERMISSION_GRANTED) return emptyFlow()
         // Gate 1 Q11: every 5 s, but accept fixes other apps request as often as every 2 s.
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
@@ -67,11 +70,19 @@ class LocationRepository(context: Context) {
                 }
             }
             client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+                .addOnFailureListener {
+                    // No coordinates in the log. close() without the exception, so the
+                    // collector ends quietly instead of crashing.
+                    Log.w(TAG, "location updates not started", it)
+                    close()
+                }
             awaitClose { client.removeLocationUpdates(callback) }
         }
     }
 
     private companion object {
+        const val TAG = "LocationRepository"
+
         /** Fixes with a larger accuracy radius (metres) are too coarse for the 20 m geofence. */
         const val MAX_FIX_ACCURACY_METERS = 25f
 

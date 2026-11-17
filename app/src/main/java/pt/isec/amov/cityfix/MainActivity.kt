@@ -252,7 +252,8 @@ private fun CityFixApp(app: CityFixApplication) {
     }
 
     // D-014: whether precise location is granted, for the operator's 20 m watch below. Read again
-    // on every resume (the user may change it in Settings) and after the start-up request.
+    // on every resume: the user may change it in Settings, and the start-up permission dialog
+    // pauses and resumes the activity, so its answer is picked up here too.
     val context = LocalContext.current
     var hasPrecise by remember { mutableStateOf(hasPreciseLocationPermission(context)) }
     LifecycleResumeEffect(Unit) {
@@ -269,7 +270,6 @@ private fun CityFixApp(app: CityFixApplication) {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         gateViewModel.onPermissionResult(permissions.values.any { it })
-        hasPrecise = hasPreciseLocationPermission(context)
     }
     LaunchedEffect(Unit) {
         locationPermissionRequest.launch(LOCATION_PERMISSIONS)
@@ -288,7 +288,7 @@ private fun CityFixApp(app: CityFixApplication) {
     LaunchedEffect(operator?.id, hasPrecise) {
         if (operator != null && hasPrecise) {
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                proximityViewModel.watch(ticketsViewModel.tickets)
+                proximityViewModel.watch(operator.id, ticketsViewModel.tickets)
             }
         } else if (operator != null) {
             // Q10: no UI; the operator keeps working without the proximity alert.
