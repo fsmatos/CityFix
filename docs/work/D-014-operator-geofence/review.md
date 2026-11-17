@@ -68,3 +68,47 @@ The map is scoped to the activity's ViewModel, so it outlives Log out and a chan
 ### N5. Long lines
 The new KDoc in `model/Ticket.kt` is 130 characters, and `LocationRepository.locationUpdates` has a 106-character `val fine = ...` line. Several other added lines run to 101-104 characters.
 **Fix:** wrap them to about 100 characters, as in the surrounding code.
+
+## Round 2
+
+Range: `484824c..HEAD` (ec1cc8e S1/S2, e807967 N1-N5, 63d5a23 docs). Reviewed 2026-11-17.
+
+**Verdict: approve.** All round 1 code findings are resolved and no regression was found. S3 stays open as a process step for Diogo (tell Francisco, confirm the Q9 contract, draft rules) before `/push-task`. Two new nits, both documentation only.
+
+Verify (run by the reviewer): `./gradlew assembleDebug` pass; `./gradlew lint` 0 errors / 22 warnings (baseline; no warning in a D-014 file).
+
+### Round 1 findings
+| Finding | Status | Evidence |
+| --- | --- | --- |
+| S1 projected ticket | resolved | `canRecordOperatorNearby` returns false on an empty `statusHistory`; `insideOperatorGeofence` filters on `statusHistory.isNotEmpty()`. A projection now never enters `inside` nor reaches the repository. Hand-check row added in `state.md`. |
+| S2 min interval | resolved | `.setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MS)` (2 000 ms) in `locationUpdates`, with a Q11 comment. |
+| S3 hand-offs | open (process) | Not a code fix. Still to do by Diogo before push; recorded in the Log. |
+| N1 rotation re-entry | resolved | `inside` is a ViewModel property, cleared only when `operatorId` changes. See R2-N2 for the trade-off it introduces. |
+| N2 duplicate `hasPrecise` | resolved | Line removed; `git diff f1515bf..HEAD` shows the `RequestMultiplePermissions` callback is back to its F-012 form. Comment above `hasPrecise` explains why the resume effect is enough. |
+| N3 silent failure | resolved | `addOnFailureListener { Log.w(TAG, ..., it); close() }`, no coordinates. |
+| N4 `recentlyRecorded` growth | resolved | Cleared with `inside` when the operator id changes. |
+| N5 long lines | resolved | The D-014 lines are wrapped to 100 characters or less. |
+
+### Regression checks
+- **`watch(operatorId, tickets)` and state reset.** `CityFixApp` passes `operator.id` (smart-cast inside `operator != null`). `LaunchedEffect(operator?.id, hasPrecise)` cancels the old coroutine before it starts the new one, and `repeatOnLifecycle` runs one block at a time, all on the main dispatcher. So `inside` and `recentlyRecorded` are never changed by two collectors at once. Log out, then log in as the same operator, keeps both sets. That is safe: the first snapshot after `setUser` is empty or a projection, which S1 now filters out, so `inside` is cleared on the next fix and the real entry is still caught, with the throttle kept. A different operator starts with empty sets, as intended.
+- **Removing `hasPrecise` from the permission callback.** The runtime permission dialog is a separate, translucent activity, so `MainActivity` gets ON_PAUSE and then ON_RESUME. `LifecycleResumeEffect` then reads `checkSelfPermission` again, and it is already up to date. When no dialog is shown (already granted, or "don't ask again"), the permission did not change, so the value from `remember` is still correct. No regression.
+- **The failure listener closes the flow.** `close()` ends the `callbackFlow`, `awaitClose` removes the callback (harmless), `collect` returns, and `watch` returns normally. `repeatOnLifecycle` runs it again only on the next STARTED, so there is no busy retry loop. If the flow is already cancelled, `close()` returns false and does nothing. No crash path.
+- **Francisco's files.** `LocationRepository.kt` (F-012) gets an additive builder call, a failure listener, a `TAG` and a constant in the private companion, and a KDoc rewrap. `TicketsRepository.kt` (F-008) gets a KDoc rewrap only. No existing behaviour changed in either.
+- **Ownership of `TicketPrivacy.kt`.** `git log --diff-filter=A` shows Diogo created it (f0272b8, D-003). The plan (`00-plan.md`, "Changed (Diogo)") and `overview.md` ("Diogo's files changed by F-011/F-013") also list it as Diogo's. Francisco only made KDoc edits to it (090fba9, 3b86ec1). See R2-N1.
+- **Privacy, i18n, accessibility, orientation.** Still no new UI, no new strings and no coordinates in any log. The rotation behaviour has improved (N1).
+
+### Blocking
+None.
+
+### Should-fix
+None new. S3 from round 1 still applies (process).
+
+### Nit
+
+#### R2-N1. `state.md` lists `TicketPrivacy.kt` as Francisco's file
+The "Review round 1 fixes, nits" Log entry says "Francisco's files touched again (additive or comment-only): `LocationRepository.kt`, `TicketsRepository.kt`, `TicketPrivacy.kt`". `TicketPrivacy.kt` is Diogo's (D-003, f0272b8), which `00-plan.md` and `overview.md` confirm. This matters when Diogo tells Francisco which of his files changed (S3).
+**Fix:** in the docs phase, or with a new Log line (the Log is append-only), record that `TicketPrivacy.kt` is Diogo's and that only `LocationRepository.kt` and `TicketsRepository.kt` are Francisco's in round 1.
+
+#### R2-N2. The kept `inside` set can miss an entry made while the app was in the background
+`inside` now survives Home and return. Take an operator at ticket A who presses Home, leaves, comes back to A later and reopens the app. The first fix still has A in `inside`, so that arrival is not recorded. In round 1 it would have been recorded. This follows from the N1 fix and fits Gate 1 Q1 (foreground only), and it is easy to defend, but nothing records it. The same applies to the KDoc on `inside`, which lists Home and return as a benefit only.
+**Fix:** state this as a known limit in the docs phase (overview / report, "foreground only" section), for example: "An entry is counted only if the operator was seen outside the circle while the app was in the foreground." Optionally add that sentence to the `inside` KDoc. No code change is needed.
