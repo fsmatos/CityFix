@@ -13,6 +13,7 @@ When an operator comes within 20 m of an active ticket (IN_PROGRESS), alert its 
 
 ## What to build
 - **Operator side:** Android Geofencing API (`GeofencingClient`) with 20 m circles around the IN_PROGRESS tickets (max 100), refreshed when the list changes, plus a `BroadcastReceiver` for ENTER events. Alternative: a location Flow from F-012 with a distance check while the app runs (simpler; decide at Gate 1 and note the trade-off in the report).
+  - **Chosen at Gate 1 (2026-11-17, Q1): the foreground location Flow** (`LocationRepository.locationUpdates()` + Haversine 20 m check in `OperatorProximityViewModel`), no Geofencing API and no `ACCESS_BACKGROUND_LOCATION` (Q2; optional slices 6-7 not done). The record is `tickets/{id}.lastOperatorNearbyAt` (Q3), throttled to one per ticket per hour with an entry edge. Delivery to the citizens is F-016's. See decision 0022 and `docs/work/D-014-operator-geofence/`.
 - **Permissions:** `ACCESS_BACKGROUND_LOCATION` requested separately after foreground location, with an explanation (Android 10+ rules).
 - **On enter:** write a `proximityAlerts` entry (ticket id, time, no operator location) or update `tickets/{id}.lastOperatorNearbyAt`; F-016's delivery turns it into a notification for the creator and followers. Throttle: at most one alert per ticket per hour.
 - **Hook (exists since D-013):** `Ticket.needsOperatorGeofence(now)` in `model/TicketLifecycle.kt` (effectively IN_PROGRESS and a real location); filter the operator's shared `tickets` with it.

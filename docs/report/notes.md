@@ -1269,3 +1269,64 @@ Brief: I.3.E (operations panel with every report, coordinates, the author's cont
 - The panel map with marker clustering (slice 8) and the joiners' reports (slice 9).
 - Counts per status on the filter chips.
 - Keep the proof draft in `SavedStateHandle` (paths only) so process death does not orphan files; an application scope for cleanup off the main thread.
+
+## D-014: Operator 20 m geofence and proximity alert
+Decision: [0022](../decisions/0022-operator-proximity-alert.md). It adds the optional `tickets/{id}.lastOperatorNearbyAt` to the Firestore layout ([0010](../decisions/0010-firestore-schema.md), suggested amendment line only) and keeps [0012](../decisions/0012-firebase-plan-notifications-close-maps.md)'s "no Cloud Functions". Code: `model/OperatorProximity.kt`, `model/Ticket.kt`, `model/TicketPrivacy.kt`, `viewmodel/OperatorProximityViewModel.kt` (+ factory), `MainActivity.kt`, `data/LocationRepository.kt`, `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`. Overview: "Operator proximity (D-014)", "Handover (D-014)".
+
+Brief (wording from the task file; the PDF was not reread in this task): I.3 Obs and II.3, an operator within 20 m of an IN_PROGRESS ticket alerts its authors; III, the proximity alert is a notification (delivered by F-016); V, background location among the permissions (**not covered**, see below).
+
+### Technical solutions
+- **Continuous location as a Flow, not a service.** `LocationRepository.locationUpdates()` wraps P10's `requestLocationUpdates` in a `callbackFlow`; `awaitClose` removes the callback, so cancelling the collector is the only "stop" needed. The collector runs under `repeatOnLifecycle(STARTED)`, so the GPS is on only while the operator has the app open.
+- **Exact 20 m check in pure Kotlin.** Haversine on each fix against every ticket that `needsOperatorGeofence` (D-013's hook: effectively IN_PROGRESS, real location), inclusive at 20 m. Fixes less accurate than 25 m are dropped, so a poor fix cannot put the operator inside a 20 m circle.
+- **Entry edge plus an hourly throttle.** Only an outside -> inside change records anything; the stored `lastOperatorNearbyAt` is a throttle shared by all operators (1 h), and an in-memory map covers the gap before the local cache echoes the write. The edge state lives in a ViewModel, so rotation is not a new entry.
+- **One field as the seam to the notifications.** The citizens already listen to their full tickets (`participantTickets`), so a single field on the ticket reaches them with no new listener, query, index or read rule. F-016 turns a fresh, increased value into a local notification (five-point contract in the overview).
+- **Offline by default.** The single-field `update` is not awaited; it lands in the Firestore cache at once (the operator's own list sees it, so no second write) and syncs later.
+
+### Options compared (Gate 1 Q1): Geofencing API vs a foreground Flow
+| | Geofencing API (`GeofencingClient` + `BroadcastReceiver`) | Foreground Flow + Haversine (chosen) |
+| --- | --- | --- |
+| Works with the app closed or the screen off | Yes (OS-managed, up to 100 geofences per app) | No |
+| Accuracy at 20 m | Poor: Google recommends a radius of at least 100-150 m; a 20 m circle can miss or fire late | Exact distance on each fix, poor fixes filtered |
+| ENTER latency | About 2-3 min (the OS batches fixes) | One interval (about 5 s) |
+| Permission | `ACCESS_BACKGROUND_LOCATION` ("Allow all the time", Android 10+; its own settings screen on 11+) | FINE only, already requested at start |
+| Lifecycle code | Register / remove on every list change and logout; lost on reboot and app update (BOOT receiver or re-register); receiver with `goAsync()` | One flow under `repeatOnLifecycle` |
+| Emulator testing | Needs Play location services; routes work with a delay | `adb emu geo fix`, immediate |
+| Brief V | Covered | Not covered |
+
+- **Why the Flow for the deadline:** it meets the 20 m rule exactly, is quick to test with two emulators and short to explain at the defence.
+- **The hybrid as an improvement:** geofences on top for the background, calling the same pure rule and the same repository write, so the stored throttle removes duplicates between the two paths.
+- **Rejected:** a location foreground service (P10's `ProximityService`: persistent notification, `FOREGROUND_SERVICE_LOCATION`, overlaps F-016's channel work); Cloud Functions (decision 0012); a `proximityAlerts` collection (second listener, `whereIn` limit of 30, new rules, a query for the throttle); a server timestamp (null in the cache offline, breaks the throttle); storing the operator id or position; recording whenever inside (three alerts for three hours on site).
+
+### Privacy by design
+- Only a time is stored. No operator id, coordinates or distance leave the operator's device; logcat has no coordinates.
+- Anonymous users never read `tickets`; `publicTickets` gets an explicit 7-key copy, so the field cannot reach it; `toAnonymousView()` clears it as well.
+- A projected (anonymous) ticket can never be written: the rule requires a non-empty history (review S1).
+
+### Throttle without a server
+- The stored field (shared by every operator), the in-memory map and the entry edge.
+- Limits: two operators entering at once while offline can both write (last write wins); device clock skew moves the hour. F-016's freshness and "last notified" checks are the second line.
+
+### Class material vs beyond class
+- **As in class:** P10's `FusedLocationProviderClient.requestLocationUpdates` and `LocationCallback`; `checkSelfPermission` (class 02); ViewModel + factory (Contacts_#3).
+- **Beyond class:** `callbackFlow` + `awaitClose` instead of a service; `repeatOnLifecycle(STARTED)` inside a `LaunchedEffect` keyed on the operator and the permission; `LifecycleResumeEffect` to re-read the permission after Settings; the Haversine distance check and the accuracy filter; a single-field Firestore `update` as a cross-device signal.
+
+### Limits to state at the defence
+- **Foreground only.** Brief V's background location is not covered: nothing is recorded with the app closed, in the background or with the screen off (Gate 1 Q1/Q2).
+- **An arrival made while the app was in the background is not counted** (review R2-N2): an entry counts only if the operator was seen outside the circle while the app was in the foreground. Pressing Home at ticket A, walking away, coming back to A and reopening the app gives no record. This is the price of not counting rotation or Home-and-return as new entries (review N1).
+- **No delivery yet:** the citizen's notification is F-016's; without it, D-014 is verified in the console only.
+- **The draft rules would refuse the write:** no rule allows an update of only `lastOperatorNearbyAt`. Test mode accepts it; a rule is needed before any deploy (needs Diogo's OK).
+- Client-side throttle (offline operators, clock skew); an operator without precise location just gets no alert (log only, Q10); every signed-in operator is watched while the app is open.
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the five slices and both review rounds: 0 errors, 22 warnings (baseline, none new). The pure rules checked by hand with a table (15 m in, 25 m out, exactly 20 m in, statuses, (0, 0), 59 / 60 min, future value, null, projected ticket) in the state log.
+- Two review rounds: round 1 approve with should-fixes (S1 projected ticket, S2 missing 2 s minimum interval, S3 hand-offs; N1-N5), S1, S2 and N1-N5 fixed; round 2 approve, two docs nits (R2-N1 file ownership, R2-N2 the background-arrival limit), handled in the docs.
+- **Device checks: none run yet (D1-D11 open).** Two emulators and `adb emu geo fix`: entry from 100 m to 15 m, no record for other statuses or at 25 m, throttle within the hour, a second operator, staying inside (debug-shortened interval), Home / return / Log out, citizens and anonymous, permission states, offline, no coordinates anywhere, and the notification (F-016).
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Background coverage: the Geofencing API on top (hybrid, with an operator-only rationale for `ACCESS_BACKGROUND_LOCATION`), or a location foreground service while the operator is "on duty".
+- A server-side throttle: deployed rules (operator only, IN_PROGRESS, `hasOnly(['lastOperatorNearbyAt'])`, at least 1 h after the old value) or a Cloud Function.
+- A per-operator "on duty" switch, and a note on the panel when precise location is missing.
+- Adaptive update intervals (slower when far from every active ticket) to save battery.
+- Count a background arrival by forgetting `inside` after a long time in the background.
