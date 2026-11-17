@@ -524,7 +524,7 @@ private fun CityFixApp(app: CityFixApplication) {
                         )
                     }
                 }
-                // Placeholders: the later tasks replace the content of these destinations.
+                // Profile and credential changes: any signed-in user with a profile.
                 composable<ProfileRoute> {
                     RequireAccess(
                         role = role,

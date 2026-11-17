@@ -205,7 +205,6 @@
     <string name="menu_approvals">Registration approvals</string>
     <string name="menu_categories">Categories</string>
     <string name="menu_log_out">Log out</string>
-    <string name="placeholder_message">Coming soon.</string>
     <string name="pending_title">Your registration is waiting for validation</string>
     <string name="pending_message">The council must validate your registration before you can report issues. Meanwhile you can browse the public issues.</string>
     <string name="pending_browse">Browse public issues</string>

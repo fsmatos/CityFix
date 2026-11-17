@@ -24,15 +24,14 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
- * A simple message screen: decorative icon, heading, message and optional [actions]. Used for
- * the screens later tasks will build (Profile D-011, Approvals and Categories D-012, Operations
- * panel D-013) and for the account problem screen. Stateless.
+ * A simple message screen: decorative icon, heading, message and optional [actions]. Used by
+ * Pending validation and Account problem. Stateless.
  */
 @Composable
 fun PlaceholderScreen(
     @StringRes titleRes: Int,
+    @StringRes messageRes: Int,
     modifier: Modifier = Modifier,
-    @StringRes messageRes: Int = R.string.placeholder_message,
     actions: @Composable ColumnScope.() -> Unit = {},
 ) {
     FormColumn(modifier = modifier) {
@@ -95,7 +94,7 @@ fun AccountProblemScreen(
 @Composable
 private fun PlaceholderPreview() {
     CityFixTheme {
-        PlaceholderScreen(titleRes = R.string.top_bar_title_operator_panel)
+        PlaceholderScreen(titleRes = R.string.pending_title, messageRes = R.string.pending_message)
     }
 }
 

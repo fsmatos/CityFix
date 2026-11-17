@@ -207,7 +207,6 @@
     <string name="menu_approvals">Validação de registos</string>
     <string name="menu_categories">Categorias</string>
     <string name="menu_log_out">Terminar sessão</string>
-    <string name="placeholder_message">Brevemente.</string>
     <string name="pending_title">O seu registo aguarda validação</string>
     <string name="pending_message">A autarquia tem de validar o seu registo antes de poder reportar ocorrências. Entretanto, pode consultar as ocorrências públicas.</string>
     <string name="pending_browse">Ver ocorrências públicas</string>
