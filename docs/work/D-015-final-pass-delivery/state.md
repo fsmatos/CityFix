@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | pending | 2026-11-17 | Slices 1-3 done (6c0fbf0, a3fe6fb, ade184a); slices 4-6 wait for the F-015/F-016/F-017 merges |
 | Review | done | 2026-11-17 | Slices 1-3: approve with should-fix (0 blocking, 2 should-fix, 3 nits); see review.md |
 | Docs | pending | 2026-11-17 | Partial: slices 1-3 documented (overview incl. review S2, decision 0013, task file, report notes); the rest after slices 4-6 |
-| Pushed | done | 2026-11-17 | b06c052 to origin/dev/Diogo (slices 1-3; slices 4-6 pending) |
+| Pushed | done | 2026-11-17 | a36297b to origin/dev/Diogo (slices 1-3 + device checks; slices 4-6 pending) |
 | Merged | | | |
 
 ## Log
@@ -52,3 +52,4 @@ Remote: origin/dev/Diogo
   - D-014 (operator signed in by Diogo; ticket "Street light out on Rua Alexandre Herculano", IN_PROGRESS, location set by Diogo to 40.2075, -8.4210): D1 pass (100 m, 25 m: nothing; 15 m: `lastOperatorNearbyAt` set ~15:57, no other field changed); D2 partly (25 m wrote nothing; other statuses not run); D3 pass (out/in twice at 15:59-16:00, value unchanged); D10 pass (no coordinates in the app's Logcat). D4-D9, D11 not run.
   - Findings (no code change): category names are English seed data ("Public lighting", "Pavement"...) and show in English in PT; rename or delete them in the console (Q4 clean-up). The map's TalkBack label "Mapa do Google Maps" comes from the Maps SDK in the system language, not from our strings; improvement for the report. Map tiles load on this machine's debug key, which does not prove R4.
   - Not run: TalkBack spoken order, contrast, registered-citizen screens (report, my tickets), operator screens other than the panel, notifications (F-016 not merged).
+- 2026-11-17 Push: verify passed (assembleDebug; lint 0 errors / 14 warnings); pushed `a257d1d..a36297b` (device check results) to `origin/dev/Diogo`. No PR, `main` untouched.
