@@ -48,4 +48,4 @@ Stand-in user replaced by the D-009 session on 2026-11-14 (`46ee41f`), see decis
 - `toTicket()` ignores the Firestore `resolvedAt`; the model's `Ticket.resolvedAt()` uses the RESOLVED history entry. D-013/F-014 decide whether to map it (decision 0010 says clients compute the window from it).
 - Until F-013, `publicTickets.thumbnails` is empty and `storagePath` holds a local path, so other devices show the card placeholder. **Done by F-013 (2026-11-14, [decision 0017](0017-media-preparation-and-uploads.md)):** once uploaded, entries hold download URLs and the worker adds the public thumbnails; other devices still see the placeholder while an entry is PENDING.
 - Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database; D-015 decides whether to clean it.
-- `currentUser`, `reporterId` and `DebugSeed` are temporary: D-009 replaces the first two, D-015 removes the seed.
+- `currentUser`, `reporterId` and `DebugSeed` are temporary: D-009 replaces the first two, D-015 removes the seed. (D-015, 2026-11-17: seed removed, `6c0fbf0`; the stand-in users are deleted by hand in the console and the tickets kept, Q4, not done yet.)

@@ -872,7 +872,7 @@ Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (
 - Device checks D1-D10 not run yet.
 - Thumbnails are empty in the anonymous list until F-013 uploads the media; other devices show the card placeholder.
 - Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database.
-- `DebugSeed` must be removed before delivery (D-015 checklist).
+- `DebugSeed` must be removed before delivery (D-015 checklist). Done in D-015 (2026-11-17, `6c0fbf0`).
 - The `currentUser` seam is temporary; D-009 replaces it with the signed-in user.
 - A write the server later refuses (only once rules are deployed, or after the test mode ends on 2026-12-10) is only logged, not shown.
 - Counters drift if a future write path forgets `statsIncrements` (D-013 and F-014 must add it). Repair: recompute the four counters by hand from `tickets/` in the console.
@@ -1330,3 +1330,41 @@ Brief (wording from the task file; the PDF was not reread in this task): I.3 Obs
 - A per-operator "on duty" switch, and a note on the panel when precise location is missing.
 - Adaptive update intervals (slower when far from every active ticket) to save battery.
 - Count a background arrival by forgetting `inside` after a long time in the background.
+
+## D-015: Final pass and delivery
+**Partial (2026-11-17): slices 1-3 only.** Slices 4-6 (strings and screen sweep after the F-015/F-016/F-017 merges, citizen FAB, delivery ZIP), the device checks, the console steps and the test accounts are still to do; the subsections marked "to do" are filled then. For F-017: Diogo hands these notes to Francisco. No decision record yet (0023, delivery package, comes with slice 6). Overview: the D-015 notes in "Code structure", "ViewModel (D-003)", "Report form (F-006)", "Routes", "Firebase (F-010)" and the F-011/F-012 handovers.
+
+Brief: V (languages, orientation, dynamic bars and FABs, accessibility, MVVM) and VI (ZIP name and contents).
+
+### Technical solutions
+- **Clean-up before delivery (slices 1-3, done).**
+  - The debug seed (`DebugSeed.kt`, F-011) and the phase-1 sample categories (`SampleCategories.kt`, F-006) were deleted, with the `onCreate()` override in `CityFixApplication`, which is now only the lazy container (`6c0fbf0`). Categories now come only from the operator's Categories screen (D-012).
+  - `SampleTickets` stays, as preview data only, for one privacy preview (Gate 1 Q2).
+  - The unused `placeholder_message` string was removed from both locales, and `PlaceholderScreen` now requires its `messageRes` (`a3fe6fb`), so there is no silent default text.
+  - Lint warnings cleared: the redundant `android:label` on `<activity>` (the `<application>` label still names the app in the launcher) and the template `res/values/colors.xml`, which nothing referenced (`ade184a`).
+  - Stale comments that still mentioned the seed were reworded (review S1, comment only).
+- **Lint.** 0 errors. The warnings went from 22 to 14; the 14 left are dependency-version notices (13) and one `UseKtx` in `ImageCompression.kt`, left on purpose: no dependency upgrades right before delivery.
+- **Languages (checked before the merges; to repeat after them).** English default (`values/`), Portuguese from the device setting (`values-pt/`). The planner's key diff found every translatable key in both locales; the three keys only in `values/` are `translatable="false"` (`app_name` among them), so `app_name` is not really missing (Gate 1 Q3). No hard-coded UI text outside previews. Category names are data typed by operators, so they are not translated.
+
+### To do (after slices 4-6)
+- Orientation, accessibility, dynamic top bar and FAB: the sweep results (see the docs plan list), the citizen FAB (Q5), the Accessibility Scanner findings.
+- Test accounts table (report section 9; passwords in the PDF only, Q9) and the reCAPTCHA note for the grader's SMS MFA (R3).
+- How to run, the ZIP layout and its verification build, the test-mode date (Q7), the Maps key restriction check (R4).
+- Sweep defects not fixed.
+
+### Limits to state at the defence
+- The security rules are drafts and not deployed: privacy, MFA and role guards are enforced in the app only.
+- Notifications are local, with no server; the operator geofence works in the foreground only.
+- The stand-in test users (`dev-citizen-1`, `citizen-1`, `citizen-2`) are still in the test database until Diogo deletes them in the console (Q4). The seeded sample tickets are kept on purpose, so the dashboard counters match the list (deleting tickets does not update `stats/summary`).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after each of slices 1-3 and the review fixes: pass, 0 errors, 14 warnings. `app/src` has no reference to `DebugSeed`, `SampleCategories`, `placeholder_message` or the template colours.
+- One review round: approve with should-fix (S1 stale KDoc, S2 overview lines), both handled; nits N2 (the `PlaceholderScreen` name) and N3 (a case-insensitive clean-up grep) are left for slice 4.
+- **Device checks: none run yet** (cold start without the seed, Pending validation / Account problem texts, launcher label).
+
+### Improvement opportunities
+- Automated UI tests for rotation and TalkBack.
+- A `WindowSizeClass`-based layout for tablets.
+- Localised category names (per-locale fields on `categories`).
+- Deployed security rules.
+- A CI job that builds the ZIP and checks it.
