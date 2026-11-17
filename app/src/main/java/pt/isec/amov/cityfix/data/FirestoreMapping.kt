@@ -197,6 +197,7 @@ internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
     followerIds = getStringList("followerIds"),
     statusHistory = getMapList("statusHistory").map { it.toStatusHistory() },
     attachments = attachments(),
+    lastOperatorNearbyAt = getLong("lastOperatorNearbyAt"),
 )
 
 /**

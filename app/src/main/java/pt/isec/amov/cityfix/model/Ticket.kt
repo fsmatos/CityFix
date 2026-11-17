@@ -37,4 +37,6 @@ data class Ticket(
     /** Thread between citizens and the municipality; registered participants and operators only (brief I.1.C). */
     val messages: List<Message> = emptyList(),
     val statusHistory: List<StatusHistory> = emptyList(),
+    /** Time (epoch ms) an operator last came within 20 m while IN_PROGRESS (D-014). Time only, never a location. Null = never. */
+    val lastOperatorNearbyAt: Long? = null,
 )
