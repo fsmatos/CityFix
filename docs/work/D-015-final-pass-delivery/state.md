@@ -1,6 +1,6 @@
 # D-015: Final pass: landscape, accessibility, strings, delivery ZIP
 Branch: dev/Diogo · Base: 69fa4a6
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | pending | 2026-11-17 | Slices 1-3 done (6c0fbf0, a3fe6fb, ade184a); slices 4-6 wait for the F-015/F-016/F-017 merges |
 | Review | done | 2026-11-17 | Slices 1-3: approve with should-fix (0 blocking, 2 should-fix, 3 nits); see review.md |
 | Docs | pending | 2026-11-17 | Partial: slices 1-3 documented (overview incl. review S2, decision 0013, task file, report notes); the rest after slices 4-6 |
-| Pushed | | | |
+| Pushed | done | 2026-11-17 | b06c052 to origin/dev/Diogo (slices 1-3; slices 4-6 pending) |
 | Merged | | | |
 
 ## Log
@@ -43,3 +43,4 @@ Remote: not pushed
   - `docs/report/notes.md`: `:875` gets "Done in D-015"; new section "D-015: Final pass and delivery", marked partial (clean-up, lint, languages before the merges, limits, verification, improvements; a "To do" list for the rest).
   - Dated history in notes.md (:382, :391, :842, :866) and decisions 0008/0009/0020 left as they are.
 - Left for after slices 4-6 (Docs stays pending): overview "Setup" (ZIP procedure, `ANDROID_HOME`, test-mode answer Q7), "MainTopAppBar" / "App shell" (citizen FAB, Q5), new "Delivery (D-015)" section (ZIP name/layout Q8, source `main` commit, PDF and `google-services.json`, verification build, Nonio time, link to `scripts/make-delivery-zip.ps1` Q6); decision 0012 :35/:37 "done in D-015" (Maps key in the ZIP, R4 check, `google-services.json` copy) and the 2026-12-10 date if Q7 changes it; decision 0013 :50 once the Q4 console clean-up is done; new decision 0023 (delivery package); report notes on orientation, accessibility (Scanner findings), top bar / FAB, test accounts table (Q9, R3), how to run, sweep defects, the post-merge key-diff parity; ticking the task file acceptance boxes; device checks (cold start, Pending validation / Account problem texts, launcher label).
+- 2026-11-17 Push: verify passed (assembleDebug; lint 0 errors / 14 warnings); pushed `69fa4a6..b06c052` to `origin/dev/Diogo`. No PR, `main` untouched. Francisco still to be told about the changes to his files (see slices 1-3 entries).
