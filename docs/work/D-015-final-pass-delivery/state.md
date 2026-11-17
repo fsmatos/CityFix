@@ -7,7 +7,7 @@ Remote: not pushed
 | Start | done | 2026-11-17 | Task file `docs/tasks/phase-2/D-015-final-pass-delivery.md` |
 | Plan | done | 2026-11-17 | 00-plan, 01-coding-plan, 03-docs-plan; 6 slices (3 now, 3 after merges or Gate answers), 10 open questions |
 | Gate 1: plan approved | done | 2026-11-17 | Approved by Diogo; Q1-Q10 as recommended; slices 1-3 now, 4-6 after the merges |
-| Code | | | |
+| Code | pending | 2026-11-17 | Slices 1-3 done (6c0fbf0, a3fe6fb, ade184a); slices 4-6 wait for the F-015/F-016/F-017 merges |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -30,3 +30,7 @@ Remote: not pushed
     - The Maps key must not be SHA-1 restricted (R4).
   - Not committed.
 - 2026-11-17 Gate 1: Diogo approved the plan with Q1-Q10 as recommended (slices 1-3 now; keep `SampleTickets`; no `app_name` in `values-pt`, the task file is corrected instead; citizen FAB (slice 5) and ZIP script (slice 6) approved; console changes (Q4, Q7) and passwords (Q9, PDF only) are Diogo's by hand). Ownership checked with `git log`: `CityFixApplication.kt`, `DebugSeed.kt`, `SampleCategories.kt`, `AndroidManifest.xml`, `colors.xml` are Francisco's; `SampleTickets.kt`, `PlaceholderScreen.kt` are Diogo's.
+- 2026-11-17 Code slice 1 (implementer): deleted `data/DebugSeed.kt` and `data/SampleCategories.kt`; removed the `onCreate` override and the `ApplicationInfo`/`DebugSeed` imports from `CityFixApplication.kt`; reworded the `SampleTickets` KDoc (preview data only). `rg "DebugSeed|SampleCategories" app/src` finds nothing. Verify: `assembleDebug` pass, `lint` 0 errors / 22 warnings (baseline). Commit 6c0fbf0. No deviation. Device cold-start check left to Diogo.
+- 2026-11-17 Code slice 2 (implementer): `PlaceholderScreen` `messageRes` is required and moved before `modifier`; KDoc updated; `PlaceholderPreview` uses `pending_title`/`pending_message`. Removed `placeholder_message` from both locales. `MainActivity` comment above `ProfileRoute` reworded. Callers unchanged (named arguments). Verify: `assembleDebug` pass, `lint` 0 errors / 22 warnings. Commit a3fe6fb. No deviation. Device check of Pending validation / Account problem texts left to Diogo.
+- 2026-11-17 Code slice 3 (implementer): removed `android:label` from `<activity>` in `AndroidManifest.xml` and reworded the Maps key comment (key value untouched). Grepped `app/src` for `R.color.`, `@color/` and the template colour names before deleting `res/values/colors.xml`: no references. Verify: `assembleDebug` pass, `lint` 0 errors / 14 warnings (expected 14), no `RedundantLabel` or `UnusedResources` left. The full recompile showed one Kotlin warning in `RoleAccess.kt:24` (annotation target on a value parameter); pre-existing, file not touched, not in the plan. Commit ade184a. No deviation. Launcher label check left to Diogo.
+- 2026-11-17 Francisco's files changed in slices 1-3 (tell him before `/push-task`): `CityFixApplication.kt` (onCreate removed), `DebugSeed.kt` (deleted), `SampleCategories.kt` (deleted), `AndroidManifest.xml` (activity label, key comment), `res/values/colors.xml` (deleted). Shared: both `strings.xml` (`placeholder_message` removed).
