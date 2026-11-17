@@ -19,16 +19,24 @@ fun Ticket.isWithinOperatorGeofence(at: Coordinates): Boolean =
         OPERATOR_GEOFENCE_RADIUS_METERS
 
 /**
- * True when a new proximity record may be written at [now]: the ticket needs the geofence
+ * True when a new proximity record may be written at [now]: the ticket is a full ticket (a
+ * projected one has an empty statusHistory, decision 0006), needs the geofence
  * ([needsOperatorGeofence]) and the last record is at least [PROXIMITY_ALERT_INTERVAL_MS] old.
  * A last record in the future (clock skew) gives false.
  */
 fun Ticket.canRecordOperatorNearby(now: Long): Boolean {
+    if (statusHistory.isEmpty()) return false // projected ticket (decision 0006): never written
     if (!needsOperatorGeofence(now)) return false
     val last = lastOperatorNearbyAt ?: return true
     return now - last >= PROXIMITY_ALERT_INTERVAL_MS
 }
 
-/** Ids of the tickets that need the geofence at [now] and have [at] inside their 20 m circle. */
+/**
+ * Ids of the full tickets (non-empty statusHistory, so never a projected one) that need the
+ * geofence at [now] and have [at] inside their 20 m circle.
+ */
 fun List<Ticket>.insideOperatorGeofence(at: Coordinates, now: Long): Set<String> =
-    filter { it.needsOperatorGeofence(now) && it.isWithinOperatorGeofence(at) }.map { it.id }.toSet()
+    filter {
+        it.statusHistory.isNotEmpty() && it.needsOperatorGeofence(now) &&
+            it.isWithinOperatorGeofence(at)
+    }.map { it.id }.toSet()

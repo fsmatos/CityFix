@@ -54,7 +54,10 @@ class LocationRepository(context: Context) {
         // Written out, as in currentLocation, for lint's MissingPermission check.
         val fine = ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
         if (fine != PackageManager.PERMISSION_GRANTED) return emptyFlow()
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs).build()
+        // Gate 1 Q11: every 5 s, but accept fixes other apps request as often as every 2 s.
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
+            .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MS)
+            .build()
         return callbackFlow {
             val callback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
@@ -71,5 +74,8 @@ class LocationRepository(context: Context) {
     private companion object {
         /** Fixes with a larger accuracy radius (metres) are too coarse for the 20 m geofence. */
         const val MAX_FIX_ACCURACY_METERS = 25f
+
+        /** Shortest gap (ms) between fixes, when other apps ask for faster updates (Q11). */
+        const val MIN_UPDATE_INTERVAL_MS = 2_000L
     }
 }
