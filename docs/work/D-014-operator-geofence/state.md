@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-11-17 | Slices 1-5 done (f48ea59, 5c1714b, 7bcd3ba, c2324a9, 7efaeb4); optional 5b-8 not started; device checks D1-D10 left to Diogo |
 | Review | done | 2026-11-17 | Round 1: approve with should-fixes (S1-S3, N1-N5). Round 2: approve; S1, S2, N1-N5 resolved, S3 open (process), 2 doc nits (R2-N1, R2-N2); see `review.md` |
 | Docs | done | 2026-11-17 | Overview (2 new sections + 8 cross-references), decision 0022, report notes, task file note; no acceptance box ticked (D1-D11 not run); not committed |
-| Pushed | | | |
+| Pushed | done | 2026-11-17 | ea251bc to origin/dev/Diogo |
 | Merged | | | |
 
 ## Log
@@ -65,3 +65,4 @@ Remote: origin/dev/Diogo
   - Deviations: (1) the agent had no shell, so it could not list `origin/main`'s `docs/decisions/`; 0022 was taken from the local branch (highest 0021, and no other doc mentions 0022+). **Check `git ls-tree --name-only origin/main docs/decisions/` before committing** and renumber if Francisco has taken 0022. (2) The KDoc items of the docs plan were not done, because this phase did not touch code: `LocationRepository`'s KDoc was already updated in slice 3; `utils/Distance.kt` still says "later by the 20 m geofence" and `needsOperatorGeofence` still says "D-014 hook" without naming its callers (small KDoc follow-ups for a code commit, optional). (3) The optional R2-N2 sentence in the `inside` KDoc was not added (same reason); the limit is in the overview, decision 0022 and the report notes.
   - Still open for Diogo before `/push-task` (review S3): tell Francisco (signatures, field, contract) and record his answer on the F-016 contract here; device checks D1-D11. `firestore.rules`, code and `google-services.json` untouched; nothing committed.
 - 2026-11-17 Docs check: `origin/main` and `origin/dev/Francisco` stop at decision 0018, so 0022 is free.
+- 2026-11-17 Push: verify passed (assembleDebug, lint 0 errors / 22 warnings); pushed `dev/Diogo` to `origin/dev/Diogo` at ea251bc. Open by hand: tell Francisco (signatures, field, F-016 contract) and record his answer; device checks D1-D11; rule for `lastOperatorNearbyAt` before any deploy (needs Diogo's OK).
