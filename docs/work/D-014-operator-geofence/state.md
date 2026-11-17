@@ -7,7 +7,7 @@ Remote: origin/dev/Diogo
 | Start | done | 2026-11-17 | Task file `docs/tasks/phase-2/D-014-operator-geofence.md` |
 | Plan | done | 2026-11-17 | 00/01/03 written; 11 open questions for Gate 1 |
 | Gate 1: plan approved | done | 2026-11-17 | Approved by Diogo; Q1-Q11 as recommended; slices 1-5 required, 5b-8 only if time remains by 2026-11-19 |
-| Code | | | |
+| Code | done | 2026-11-17 | Slices 1-5 done (f48ea59, 5c1714b, 7bcd3ba, c2324a9, slice 5 commit); optional 5b-8 not started; device checks D1-D10 left to Diogo |
 | Review | | | |
 | Docs | | | |
 | Pushed | | | |
@@ -41,3 +41,9 @@ Remote: origin/dev/Diogo
 - 2026-11-17 Code slice 3: `LocationRepository.locationUpdates(intervalMs = 5_000)` (Francisco's file, additive): written-out FINE check (empty flow without it), `LocationRequest.Builder(PRIORITY_HIGH_ACCURACY, intervalMs)`, `callbackFlow` with a `LocationCallback` that drops fixes with accuracy > 25 m (`MAX_FIX_ACCURACY_METERS` in a private companion), `awaitClose` removes the callback. No coordinates logged. The "D-014 adds updates here" KDoc line in `currentLocation` now points to `locationUpdates`. Verify: assembleDebug pass; lint 0 errors / 22 warnings (no MissingPermission).
 - 2026-11-17 Code slice 3 commit: 7bcd3ba.
 - 2026-11-17 Code slice 4: new `viewmodel/OperatorProximityViewModel.kt` (`watch(tickets)`: local `inside` set, entry edge `current - inside`, per-device `recentlyRecorded` map with the 1 h interval, then `recordOperatorNearby`) and `OperatorProximityViewModelFactory.kt` (shape of `LocationGateViewModelFactory`). Minor: the `recentlyRecorded` check is written as `val last = ...; if (last != null && now - last < INTERVAL) continue` instead of the plan's `?.let { } == true`, same behaviour, easier to read. Verify: assembleDebug pass; lint 0 errors / 22 warnings.
+- 2026-11-17 Code slice 4 commit: c2324a9.
+- 2026-11-17 Code slice 5: `CityFixApp` (`MainActivity.kt`) creates `OperatorProximityViewModel`, keeps `hasPrecise` (refreshed by `LifecycleResumeEffect` and in the start-up permission callback) and runs `LaunchedEffect(operator?.id, hasPrecise) { repeatOnLifecycle(STARTED) { watch(ticketsViewModel.tickets) } }`; an operator without precise location gets one `Log.i` (no coordinates), no UI (Q10). New file-level `TAG = "CityFixApp"`. Verify: assembleDebug pass; lint 0 errors / 22 warnings. Note: the plan's "Do not touch" lists `MainActivity`'s permission callback as F-016's area, but slice 5 explicitly asks to refresh `hasPrecise` there; I added only that one line (`hasPrecise = hasPreciseLocationPermission(context)`) and changed nothing else in the callback or the F-012 request.
+- 2026-11-17 Code end: required slices 1-5 done; optional 5b, 6, 7, 8 not implemented (not in scope of this run). `firestore.rules`, `storage.rules`, `google-services.json` and Gradle files untouched; nothing pushed.
+  - Left for Diogo by hand: device checks D1-D10 (two emulators, `adb emu geo fix`); D5 needs a temporary debug-shortened `PROXIMITY_ALERT_INTERVAL_MS` (do not commit it). D11 depends on F-016 or slice 8.
+  - Tell Francisco: new `TicketsRepository.recordOperatorNearby(ticket, now): Boolean` and field `tickets/{id}.lastOperatorNearbyAt` (Long, time only) as the F-016 seam; no rule allows the update yet (5b not done), so on the server the write may be rejected by the draft rules if they are ever deployed as is.
+  - Francisco-owned files touched (additive only): `data/FirestoreMapping.kt` (one line in `toTicket()`), `data/TicketsRepository.kt` (new method), `data/FirestoreTicketsRepository.kt` (implementation + import), `data/LocationRepository.kt` (`locationUpdates`, KDoc line, companion). Not touched: `utils/LocationPermissions.kt` (only imported).

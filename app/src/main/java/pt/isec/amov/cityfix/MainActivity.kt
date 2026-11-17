@@ -2,6 +2,7 @@ package pt.isec.amov.cityfix
 
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,11 +31,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -95,6 +101,7 @@ import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
@@ -114,6 +121,8 @@ import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModel
+import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
@@ -135,6 +144,9 @@ import pt.isec.amov.cityfix.viewmodel.isSignedIn
 import pt.isec.amov.cityfix.viewmodel.ticketsUser
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
+
+/** Logcat tag for CityFixApp (D-014). Never log coordinates with it. */
+private const val TAG = "CityFixApp"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -239,6 +251,15 @@ private fun CityFixApp(app: CityFixApplication) {
         else -> AccountAction.NONE
     }
 
+    // D-014: whether precise location is granted, for the operator's 20 m watch below. Read again
+    // on every resume (the user may change it in Settings) and after the start-up request.
+    val context = LocalContext.current
+    var hasPrecise by remember { mutableStateOf(hasPreciseLocationPermission(context)) }
+    LifecycleResumeEffect(Unit) {
+        hasPrecise = hasPreciseLocationPermission(context)
+        onPauseOrDispose { }
+    }
+
     // Location is requested when the app starts, as in Contacts_#3 (P10). The answer goes to the
     // 10 km gate; the report form checks the permission again when it opens.
     val gateViewModel: LocationGateViewModel =
@@ -248,9 +269,31 @@ private fun CityFixApp(app: CityFixApplication) {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         gateViewModel.onPermissionResult(permissions.values.any { it })
+        hasPrecise = hasPreciseLocationPermission(context)
     }
     LaunchedEffect(Unit) {
         locationPermissionRequest.launch(LOCATION_PERMISSIONS)
+    }
+
+    // Brief II.3 (D-014): while an operator with precise location has the app in the foreground,
+    // check the 20 m geofence of the IN_PROGRESS tickets (Gate 1 Q1: foreground only, no
+    // background permission). repeatOnLifecycle stops the location updates when the app goes to
+    // the background and starts them again on return; a new operator or Log out (operator null)
+    // cancels the effect, and with it the watch.
+    val proximityViewModel: OperatorProximityViewModel = viewModel(
+        factory = OperatorProximityViewModelFactory(app.locationRepository, app.ticketsRepository)
+    )
+    val operator = session.ticketsUser as? Operator
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(operator?.id, hasPrecise) {
+        if (operator != null && hasPrecise) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                proximityViewModel.watch(ticketsViewModel.tickets)
+            }
+        } else if (operator != null) {
+            // Q10: no UI; the operator keeps working without the proximity alert.
+            Log.i(TAG, "No precise location: operator proximity watch not started")
+        }
     }
 
     // Brief I.1: only the anonymous user is limited to 10 km around Pr. Republica; registered
