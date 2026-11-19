@@ -7,7 +7,7 @@ Remote: origin/dev/Francisco
 | Start | done | 2026-11-19 | feature, task file `docs/tasks/phase-2/F-015-impact-detection.md` |
 | Plan | done | 2026-11-19 | 3 slices, Q1-Q9 answered (defaults) |
 | Gate 1: plan approved | done | 2026-11-19 | approved by the person |
-| Code | pending | | |
+| Code | pending | 2026-11-19 | started |
 | Review | pending | | |
 | Docs | pending | | |
 | Pushed | pending | | |
@@ -21,3 +21,4 @@ Append-only.
 - 2026-11-19 (Re-plan): the person added class slides 10/11 "Permissions_Sensor_Navigation" and the `SideEffect_BR_Maps_Sensors_Permissions` demo. They show a `PotholeDetector` (`TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`, Z axis outside 6..14 m/s²) and a `DisposableEffect` + lifecycle observer for sensors. Plan now follows them: dropped the low-pass gravity filter and projection and the 1.5 g threshold; no longer "beyond class". Questions now Q1-Q9. P11 (Firebase/FCM) is for F-016.
 - 2026-11-19: the person accepted all recommended answers for Q1-Q9. Awaiting Gate 1.
 - 2026-11-19 (Gate 1): plan approved.
+- 2026-11-19 (Code, slice 1): added `utils/ImpactDetector` (slide PotholeDetector + callback + 30 s cooldown), `ImpactViewModel` and factory; not wired. Build and lint pass, no new lint issue.
