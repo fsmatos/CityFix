@@ -22,3 +22,4 @@ Append-only.
 - 2026-11-19: the person accepted all recommended answers for Q1-Q9. Awaiting Gate 1.
 - 2026-11-19 (Gate 1): plan approved.
 - 2026-11-19 (Code, slice 1): added `utils/ImpactDetector` (slide PotholeDetector + callback + 30 s cooldown), `ImpactViewModel` and factory; not wired. Build and lint pass, no new lint issue.
+- 2026-11-19 (Code, slice 2): `ReportTicketRoute(fromImpact)` data class, passed via the factory; ReportViewModel selects DAMAGE and, while no category is chosen, the `pavement` category. Build and lint pass. The manual emulator check with `ReportTicketRoute(true)` was not run by the implementer (no emulator); left for the person.

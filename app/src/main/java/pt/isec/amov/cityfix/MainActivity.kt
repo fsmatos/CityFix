@@ -260,7 +260,7 @@ private fun CityFixApp(app: CityFixApplication) {
                     onBackClick = { navController.navigateUp() },
                     onToggleExpandedClick = { isExpanded = !isExpanded },
                     onAddClick = {
-                        navController.navigate(ReportTicketRoute) { launchSingleTop = true }
+                        navController.navigate(ReportTicketRoute()) { launchSingleTop = true }
                     },
                     onMenuItemClick = { item ->
                         navController.navigate(item.route) { launchSingleTop = true }
@@ -365,7 +365,8 @@ private fun CityFixApp(app: CityFixApplication) {
                         viewModel(factory = ForgotPasswordViewModelFactory(app.authRepository, email))
                     ForgotPasswordScreen(viewModel = forgotViewModel)
                 }
-                composable<ReportTicketRoute> {
+                composable<ReportTicketRoute> { entry ->
+                    val fromImpact = entry.toRoute<ReportTicketRoute>().fromImpact
                     // Active citizens only (brief I.2.E); anyone else is sent to their home.
                     RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
                         // The guard lets only an active citizen in, so the session holds their profile.
@@ -378,6 +379,7 @@ private fun CityFixApp(app: CityFixApplication) {
                                     app.attachmentStorage,
                                     app.locationRepository,
                                     citizenId,
+                                    fromImpact,
                                 ),
                             )
                         ReportScreen(
