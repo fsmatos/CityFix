@@ -6,12 +6,14 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
+import kotlin.math.sqrt
 
 /**
- * Vertical-impact detector (brief I.2.F), the "PotholeDetector" of class slides 10/11: the
- * accelerometer's Z axis outside [Z_MIN]..[Z_MAX] m/s² counts as an impact. Z is the vertical
- * axis only while the phone lies flat. [start] calls onImpact at most once per [COOLDOWN_MS], so
- * one bump gives one suggestion. Without an accelerometer, [start] does nothing.
+ * Impact detector (brief I.2.F), based on the "PotholeDetector" of class slides 10/11 and its
+ * limits: the total acceleration sqrt(x² + y² + z²) outside [MIN]..[MAX] m/s² counts as an impact.
+ * At rest it is gravity (about 9.8) in any phone position, so, unlike the slide's Z axis alone,
+ * an upright phone does not trigger it; a vertical jolt does. [start] calls onImpact at most once
+ * per [COOLDOWN_MS], so one bump gives one suggestion. Without an accelerometer, [start] does nothing.
  */
 class ImpactDetector(context: Context) : SensorEventListener {
 
@@ -36,9 +38,12 @@ class ImpactDetector(context: Context) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+            val x = event.values[0]
+            val y = event.values[1]
             val z = event.values[2]
+            val total = sqrt(x * x + y * y + z * z)
             val now = System.currentTimeMillis()
-            if ((z > Z_MAX || z < Z_MIN) && now - lastImpact > COOLDOWN_MS) {
+            if ((total > MAX || total < MIN) && now - lastImpact > COOLDOWN_MS) {
                 lastImpact = now
                 onImpact()
             }
@@ -49,8 +54,8 @@ class ImpactDetector(context: Context) : SensorEventListener {
 
     companion object {
         /** Slide values, in m/s² (gravity alone is about 9.8). */
-        const val Z_MAX = 14.0f
-        const val Z_MIN = 6.0f
+        const val MAX = 14.0f
+        const val MIN = 6.0f
         /** At most one suggestion every 30 s. */
         const val COOLDOWN_MS = 30_000L
     }
