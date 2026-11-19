@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-19 | 3 slices; emulator checks left for the person |
 | Review | done | 2026-11-19 | review.md: 0 blocking, 3 should-fix, 4 nits |
 | Docs | done | 2026-11-19 | overview, decision 0023, report notes |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-19 | origin/dev/Francisco |
 | Merged | pending | | |
 
 ## Log
@@ -29,3 +29,4 @@ Append-only.
 - 2026-11-19 (Review fixes): S2 snackbar "Report" no longer navigates when the form is already open; S3 KDoc says it also reacts to non-vertical jolts (docs plan asks 0023 and the report to say so); nits: `stop()` logs only with an accelerometer, comment on the cooldown when skipped, coding-plan pointer to the deviation, rotation line added to report improvements. S1 (device checks) next.
 - 2026-11-19 (Device checks, Medium_Phone emulator, current build): logged out, a jolt registers nothing. Citizen A logged in by the person, `impactDetection` set true via the Firestore REST API: Logcat "start"; jolt `0:0:20` shows one snackbar; a second jolt within 30 s none, after 30 s one again; "Report" opens the form with Pavement + Damage, location being read; a jolt on the report form shows nothing (Q9); Home logs "stop", reopening logs "start"; landscape jolt `25:0:0` shows the snackbar; setting back to false logs "stop" and a jolt shows nothing. Upright at rest (`0:9.8:0`) never triggered. TalkBack itself not run: the snackbar exposes the text, "Report" and the "Dismiss" label. `impactDetection` for A restored to false.
 - 2026-11-19 (Docs): followed 03-docs-plan. Overview: new "Impact detection (F-015)" and "Handover (F-015)" sections; D-010 handover line and the F-006 `prefill` handover marked done by F-015. Wrote decision 0023 (Gate 1 Q1-Q9 defaults, Q1/Q2 deviation to total acceleration, departure from brief I.2.F "eixo vertical" stated). Report notes: new F-015 section (class sources, why not Z alone, no permission, improvements); F-006 prefill improvement line replaced; D-010 "D-014 uses it" corrected to F-015. Not committed.
+- 2026-11-19 (Pushed): dev/Francisco pushed to origin.
