@@ -418,7 +418,7 @@ Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../d
 ### Improvement opportunities
 - `SavedStateHandle` in `ReportViewModel` so a draft survives process death.
 - In the Firebase phase, a categories repository (active categories of the municipality) and ticket creation through a repository, injected with a `ViewModelProvider.Factory` (the doc's "later" list); then a `suspend` submit with a progress state ("Sending...") instead of the synchronous `Boolean`.
-- Impact-detection prefill (brief I.2.F): a `prefill(situation, categoryId)` event that opens the form for a pavement anomaly.
+- Impact-detection prefill (brief I.2.F): **built by F-015** as the route argument `ReportTicketRoute(fromImpact = true)` (Damage + Pavement), not a `prefill` event; see "F-015: Impact detection".
 - A description length limit with a character counter, if the data layer needs one.
 - Defence checks from the doc: rotate a half-filled form (values and errors stay), force-close the app (the draft is gone, by design), leave and reopen (empty).
 - Nits left open by the person's choice (review), with their fixes:
@@ -1027,7 +1027,7 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - **Role-prefixed NIF ids** (`CITIZEN_<nif>`, `OPERATOR_<nif>`): a citizen and an operator may share one NIF, as "unique for the role" reads.
 - **`photoPath` = the https download URL (Q4)**, as F-013 does for ticket media. Profile and validation screens load it with Coil directly.
 - **Council domain read from `municipality/main` (Q9)**, not a constant. The council's data stays in one document, as the domain model's `Municipio.dominioEmail` says.
-- **The impact switch is only stored** (`impactDetection`); D-014 uses it.
+- **The impact switch is only stored** (`impactDetection`); F-015 uses it.
 - **Phone: mobile or landline (Q6)**; **password: 8 characters with a letter and a digit, plus a confirmation (Q7)**; **NIF: any valid check digit (Q5)**, not only individuals' prefixes.
 - **Rejected:** ViewModel orchestration of two repositories (Q13; the cleanup rule would depend on a screen's scope); an inline upload (blocks on a slow network, breaks "uploads through WorkManager"); a batch (no read, so no uniqueness); deferring the operator document (local store, two paths); the map pick (slice 6, skipped).
 
@@ -1101,3 +1101,28 @@ Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview
 - Paginate long threads.
 - A detail listener on the single ticket instead of the list.
 - `hasPendingWrites` to mark messages not yet sent.
+
+## F-015: Impact detection
+Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detection (F-015)", "Handover (F-015)". Brief I.2.F.
+
+### Technical solutions
+- **As in class:** the slides' `PotholeDetector` (`TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`, limits 6..14 m/s²) and the `Sensors.kt` demo lifecycle (`DisposableEffect` + `LifecycleEventObserver`: register on ON_START, unregister on ON_STOP).
+- **Total acceleration** `sqrt(x² + y² + z²)` outside 6..14 m/s² = impact; 30 s cooldown so one bump gives one suggestion.
+- **MVVM:** sensor in `utils/ImpactDetector`, owned by `ImpactViewModel`; the composable only says when to start and stop.
+- **Suggestion, never a silent report:** long snackbar "Report" -> `ReportTicketRoute(fromImpact = true)` with Damage + Pavement + current location.
+- **No runtime permission:** the accelerometer needs none.
+
+### Why not the slide's Z axis alone
+- An upright phone reads Z near 0, below 6, so `z < 6` would fire all the time (seen on the emulator).
+- Cost: total acceleration also reacts to non-vertical jolts (phone put down hard), a departure from the brief's "eixo vertical" (decision 0023).
+
+### Verification
+- Emulator checks in `docs/work/F-015-impact-detection/state.md` (jolt `adb emu sensor set acceleration 0:0:20`, back to rest `0:9.8:0`; cooldown, background stop, landscape, prefill).
+
+### Improvement opportunities
+- Foreground service for detection with the app closed (P10 `ProximityService` pattern).
+- Only the vertical part of the jolt (project on gravity).
+- Keep the suggestion across a screen rotation (the snackbar scope belongs to the composition).
+- Movement check with GPS speed, so a dropped phone at rest does not count.
+- Threshold set in the profile.
+- Attach the detected location and time to the ticket.
