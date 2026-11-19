@@ -289,7 +289,7 @@ class ReportViewModel(
         copy(showErrorSummary = showErrorSummary && !isValid)
 
     companion object {
-        /** Category id of Pavement in DebugSeed / SampleCategories (F-015 Q8). */
+        /** Category id of Pavement in the Firestore `categories` collection (F-015 Q8). */
         const val PAVEMENT_ID = "pavement"
     }
 }

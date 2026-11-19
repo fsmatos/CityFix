@@ -54,6 +54,13 @@ fun Ticket.effectiveStatus(now: Long): TicketStatus {
 fun Ticket.isLocked(now: Long): Boolean = effectiveStatus(now) == TicketStatus.CLOSED
 
 /**
+ * D-014 hook: true while the operator's 20 m geofence should watch this ticket (brief II.3):
+ * effectively IN_PROGRESS and with a real location. INFO_REQUESTED pauses it by construction.
+ */
+fun Ticket.needsOperatorGeofence(now: Long): Boolean =
+    effectiveStatus(now) == TicketStatus.IN_PROGRESS && location != Coordinates()
+
+/**
  * Brief III: time of the 24 h closing warning ([resolvedAt] + [CLOSING_WARNING_MS]) while RESOLVED; null otherwise.
  * It can be in the past for an expired ticket not yet closed: check `!isLocked(now)` before warning (review S2).
  */

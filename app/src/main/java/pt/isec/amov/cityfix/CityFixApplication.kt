@@ -1,7 +1,6 @@
 package pt.isec.amov.cityfix
 
 import android.app.Application
-import android.content.pm.ApplicationInfo
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -16,8 +15,9 @@ import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.AuthRepository
-import pt.isec.amov.cityfix.data.DebugSeed
+import pt.isec.amov.cityfix.data.CategoriesRepository
 import pt.isec.amov.cityfix.data.FirebaseAuthRepository
+import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
@@ -76,11 +76,6 @@ class CityFixApplication : Application() {
         FirestoreUsersRepository(firestore, auth, profilePhotoUploader)
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        // DEBUG ONLY (F-011 Q5): sample data in an empty database. Remove before delivery (D-015).
-        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
-            DebugSeed.seedIfEmpty(firestore)
-        }
-    }
+    /** Category management for operators (D-012), built from [firestore] so the cache settings apply. */
+    val categoriesRepository: CategoriesRepository by lazy { FirestoreCategoriesRepository(firestore) }
 }

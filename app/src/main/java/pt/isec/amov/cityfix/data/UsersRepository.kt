@@ -1,13 +1,19 @@
 package pt.isec.amov.cityfix.data
 
 import kotlinx.coroutines.flow.Flow
+import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.User
 
 /** The result of reading `users/{uid}`. */
 sealed interface UserProfile {
-    /** A Citizen or an Operator; the concrete type is the role (decision 0010). */
-    data class Found(val user: User) : UserProfile
+    /**
+     * A Citizen or an Operator; the concrete type is the role (decision 0010).
+     * [photoUpdatedAt] is when ProfilePhotoWorker last stored the photo (epoch ms; null before the
+     * first upload). The overwritten photo may keep the same download URL, so this is the
+     * photo's version: the image cache key and the end of a Profile upload (D-011 R4).
+     */
+    data class Found(val user: User, val photoUpdatedAt: Long? = null) : UserProfile
 
     /** No document, or a `role` that is not CITIZEN or OPERATOR. The role is never guessed. */
     data object Missing : UserProfile
@@ -48,8 +54,19 @@ sealed interface RegisterResult {
     data class Failure(val error: AuthError) : RegisterResult
 }
 
+/** What the Profile screen may change (brief I.2.C, I.3.C). null = unchanged. */
+data class ProfileChanges(
+    /** 9 digits, without +351. */
+    val phone: String? = null,
+    /** Citizens only; ignored for an Operator. */
+    val impactDetection: Boolean? = null,
+    /** A new local photo in filesDir/images; uploaded by ProfilePhotoWorker. */
+    val newPhotoPath: String? = null,
+)
+
 /**
- * User profiles: read (D-009) and registration (D-010); profile editing is D-011.
+ * User profiles: read (D-009), registration (D-010), profile editing (D-011) and operator
+ * validation (D-012).
  * [FirestoreUsersRepository] is the implementation.
  */
 interface UsersRepository {
@@ -65,4 +82,27 @@ interface UsersRepository {
 
     /** `municipality/main.emailDomain`, lowercase without '@'; null when missing or unreadable. */
     suspend fun operatorEmailDomain(): String?
+
+    /**
+     * Writes only phone and (citizen) impactDetection to users/{user.id}, then queues the photo.
+     * Never name, nif, georeferencing, role, registrationStatus or email. Not awaited: the write
+     * is queued in the local cache (works offline) and the listener shows it at once.
+     * Writes nothing when [changes] is empty (the Profile screen calls it only with changes).
+     */
+    fun updateProfile(user: User, changes: ProfileChanges)
+
+    /** Copies the Auth e-mail into users/{uid}.email (after a verified change). Not awaited. */
+    fun syncEmail(uid: String, email: String)
+
+    /**
+     * Citizens whose registration waits for validation (brief I.3.D), oldest first, live.
+     * Operators only (the draft rules let only them list users). An error gives an empty list.
+     */
+    fun pendingCitizens(): Flow<List<Citizen>>
+
+    /**
+     * Activates [citizenId]: registrationStatus ACTIVE, validatedBy [operatorId], validatedAt now
+     * (epoch ms). Only these three fields (draft validation rule). Not awaited: queued offline.
+     */
+    fun activateCitizen(citizenId: String, operatorId: String)
 }

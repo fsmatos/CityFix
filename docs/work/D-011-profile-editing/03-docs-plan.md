@@ -1,0 +1,82 @@
+# D-011 docs plan
+
+## Docs to update
+- `docs/architecture/overview.md`:
+  - **Layers:** the `viewmodel/` list gains `ProfileViewModel` + `ProfileUiState` + `ProfileViewModelFactory(uid, users, auth, attachmentStorage)` and `CredentialChangeViewModel` + `CredentialChangeUiState` + `CredentialChangeViewModelFactory(change, isOperator, auth, users)`, both route-scoped with `SavedStateHandle`. The `data/` line gains `updateProfile`, `syncEmail`, `reauthenticate`, `changePassword`, `requestEmailChange` and the unique photo work. The `ui/components/` line gains `AccountFields.kt`.
+  - **Navigation (D-004), the route table:** `ProfileRoute` owner D-011, real screen. New rows `ChangePasswordRoute` and `ChangeEmailRoute` (guard CITIZEN, PENDING_CITIZEN, OPERATOR; D-011).
+  - **Top bar (D-005):** the `CHANGE_PASSWORD` / `CHANGE_EMAIL` values and titles. Profile is still reached only from the overflow menu (unchanged controls table).
+  - **App shell (D-006), the state table:** rows for `ProfileViewModel` and `CredentialChangeViewModel` (back-stack entry; challenge in a private field). Profile's Log out uses the `logOut` helper.
+  - **Auth and session (D-009):**
+    - the repository line (three new `AuthRepository` calls);
+    - re-authentication = password + SMS through the same resolver;
+    - the e-mail sync `onEach` in `SessionViewModel`;
+    - the "Gap"/involuntary sign-out note extended with the e-mail-link and password-change cases.
+  - **New section "Profile (D-011)":**
+    - read-only vs editable fields per role;
+    - the Save path (no `await()`, offline queue, the listener drives the session);
+    - photo replace (unique work, R4 result);
+    - the change flows (FORM -> CODE -> DONE);
+    - phone vs SMS factor (Q1);
+    - the e-mail lifecycle (link, revocation result R2, sync, revert R6);
+    - the operator domain (client-only for Auth, R7);
+    - a failure-mode table (from `00-plan.md`, updated with the device results);
+    - known limits (rules not deployed, so locked fields are protected only by the app; no MFA phone change; no photo removal).
+  - **New "Handover (D-011)":**
+    - **F-015 (Francisco):** read `((session as? Session.SignedIn)?.user as? Citizen)?.impactDetection == true` together with `session.accessRole == AccessRole.CITIZEN`. Key the `DisposableEffect` on that Boolean, so a Save on Profile unregisters the sensor at once (offline too). The value comes from the cached `users/{uid}` listener.
+    - **Fix the "Handover (D-010)" line** that says "D-014 (Diogo), impact detection": the task is F-015 (Francisco).
+    - **F-016 (Francisco):** `fcmTokens` stays writable by the owner in the draft allow-list (if slice 8 ran).
+    - **D-012:** `users/{uid}.email` follows the Auth e-mail after a verified change, so the operator sees the current contact e-mail. `phone` may differ from the MFA number.
+    - **Francisco, shared files:** `firestore.rules` (slice 8, if it ran); new `profile_*` / `credential_*` / `top_bar_title_change_*` strings (merge conflicts, keep both sides); `MainActivity.kt` (three destinations); `RegisterScreen` now uses `ui/components/AccountFields.kt`.
+  - **Firebase (F-010), the "Security rules" bullet:** a "D-011 and the rules" note (what slice 8 changed, or that it was skipped; not deployed; the acceptance "direct write" shown only in the draft, R8).
+  - **Roles:** profile editing for the three signed-in roles.
+- `docs/tasks/phase-2/D-011-profile-editing.md`: status line, a "Status notes" section (Gate 1 answers, deviations, pending device checks), and acceptance boxes ticked only once checked. The impact box depends on F-015; note whether it was checked through the session value only.
+- `docs/tasks/phase-2/F-015-impact-detection.md` (Francisco's task file): **do not edit**. Give the contract to Francisco through the overview handover; Diogo tells him.
+- `docs/report/notes.md`: a new "D-011" section (see Report notes).
+- `CLAUDE.md`: no change expected. The architecture map does not list screens.
+
+## Decisions to record
+- **New `docs/decisions/0019-profile-editing.md`** (Diogo's; 0016 is the last; the 0015 clash is still open, R10). Contents:
+  - Context: brief I.2.C / I.3.C / I.2.A-F; MFA makes re-authentication two-step; `verifyBeforeUpdateEmail` is out of band; the rules are not deployed.
+  - Decision:
+    - editable set per role, and `updateProfile` as an allow-list in code;
+    - one Save, not awaited (offline);
+    - re-authentication = password + SMS via the existing resolver flow;
+    - e-mail and password on their own routes with one ViewModel;
+    - the e-mail sync owned by `SessionViewModel`, plus a reload when Profile opens;
+    - profile phone separate from the SMS factor (Q1);
+    - unique photo work `REPLACE` (Q8);
+    - draft rules allow-list (Q4, if approved).
+  - Rejected: an immediate impact toggle; dialogs; sync from the Profile ViewModel; a `pendingEmail` field; re-enrolling MFA on a phone change; photo removal.
+  - Consequences:
+    - locked fields protected only by the app while the rules are not deployed;
+    - the operator domain is checked by the client only for the Auth e-mail (R7);
+    - a session may end after the e-mail link (R2) or on other devices after a password change;
+    - a revert link may unenrol MFA (R6);
+    - R3, R4, R5.
+- **Amend `0015-session-role-navigation-mfa.md`** (Diogo's): a status-line note plus one Decision bullet. `SessionViewModel` writes `users/{uid}.email` when the Auth e-mail differs (D-011, decision 0019). `resolveSecondFactor` also completes re-authentications.
+- **Amend `0016-registration.md`** (Diogo's): one line. The form field components moved to `ui/components/AccountFields.kt` (D-011), and the photo uploader uses unique work per uid.
+- **Decision 0010 (Francisco's; not edited):** put a suggested amendment line in the overview handover. "Amended by D-011: the owner's `users` update is an allow-list (`phone`, `photoPath`, `impactDetection` for citizens, `email` only equal to the verified token e-mail and, for operators, in the domain, `fcmTokens`); not deployed (decision 0019)." Only if slice 8 ran.
+
+## Report notes
+Section "D-011: Profile editing" in `docs/report/notes.md`:
+- **Technical solutions:**
+  - shared field components reused by Register and Profile (stateless, `readOnly` for the locked fields);
+  - a Firestore `update()` that is not awaited, so Save works offline, and the snapshot listener drives the session, so the impact setting takes effect at once;
+  - re-authentication of an MFA account (`reauthenticate` -> `FirebaseAuthMultiFactorException` -> resolver -> SMS);
+  - `verifyBeforeUpdateEmail` and why the Firestore copy is synced from the session;
+  - unique WorkManager work for the photo.
+- **Options chosen and why:** the Gate 1 answers (Q1-Q13), especially the phone vs MFA factor, one Save, and routes instead of dialogs.
+- **Class material vs beyond:** P08 (form state with `@StringRes` errors), P09 (TakePicture / PickVisualMedia), WorkManager (P10 pattern) and Navigation type-safe routes are class material. MFA re-authentication and the e-mail change flow go beyond the classes (Firebase docs).
+- **Limits** (state them at the defence):
+  - the rules are not deployed, so a direct write to the name or NIF is possible against the test-mode database (R8);
+  - the operator domain is enforced by the client only for the Auth e-mail (R7);
+  - no MFA phone change and no photo removal;
+  - the R2/R3/R4/R6 device findings.
+- **Verification:** build and lint results per slice; the device checks run (emulator, test numbers), and which ones are still open; the impact check through the session value until F-015 exists.
+- **Improvements:**
+  - deploy the rules with the allow-list;
+  - a Cloud Function (or a blocking function) to enforce the operator domain on the Auth e-mail;
+  - an MFA phone change with re-enrolment;
+  - photo removal with a Storage delete;
+  - a cache key (`photoUpdatedAt`) if R4 shows a stale photo;
+  - a two-pane landscape profile (P07).

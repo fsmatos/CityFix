@@ -41,7 +41,7 @@ data class ForgotPasswordRoute(val email: String = "")
 @Serializable
 data object PendingValidationRoute
 
-/** Operator home. Placeholder until D-013's operations panel. */
+/** Operator home: the operations panel (D-013). */
 @Serializable
 data object OperatorPanelRoute
 
@@ -49,15 +49,27 @@ data object OperatorPanelRoute
 @Serializable
 data object MyTicketsRoute
 
-/** Profile of the signed-in user. Placeholder until D-011. */
+/** Profile of the signed-in user (D-011). */
 @Serializable
 data object ProfileRoute
 
-/** Operator: citizen registrations to validate. Placeholder until D-012. */
+/** Change password, from Profile (D-011). */
+@Serializable
+data object ChangePasswordRoute
+
+/** Change e-mail (verification link), from Profile (D-011). */
+@Serializable
+data object ChangeEmailRoute
+
+/** Operator: citizen registrations to validate (D-012). */
 @Serializable
 data object ApprovalsRoute
 
-/** Operator: ticket categories. Placeholder until D-012. */
+/** Operator: one pending citizen's registration (D-012). Only the uid: no personal data in the back stack. */
+@Serializable
+data class PendingCitizenRoute(val citizenId: String)
+
+/** Operator: ticket categories (D-012). */
 @Serializable
 data object CategoriesRoute
 

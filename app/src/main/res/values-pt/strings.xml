@@ -34,6 +34,8 @@
     <string name="ticket_map_exact_title">Localização</string>
     <string name="cd_ticket_map_exact">Mapa com a localização exata da ocorrência</string>
     <string name="ticket_history_system">Fechada automaticamente</string>
+    <string name="ticket_history_by">Por %1$s</string>
+    <string name="ticket_media_proof">Prova da resolução</string>
 
     <!-- Message thread -->
     <string name="messages_title">Mensagens</string>
@@ -207,7 +209,6 @@
     <string name="menu_approvals">Validação de registos</string>
     <string name="menu_categories">Categorias</string>
     <string name="menu_log_out">Terminar sessão</string>
-    <string name="placeholder_message">Brevemente.</string>
     <string name="pending_title">O seu registo aguarda validação</string>
     <string name="pending_message">A autarquia tem de validar o seu registo antes de poder reportar ocorrências. Entretanto, pode consultar as ocorrências públicas.</string>
     <string name="pending_browse">Ver ocorrências públicas</string>
@@ -279,4 +280,118 @@
     <string name="register_photo_copy_failed">Não foi possível adicionar a fotografia. Tente novamente.</string>
     <string name="cd_register_photo">A sua fotografia de perfil</string>
     <string name="cd_register_photo_copying">A adicionar a fotografia</string>
+    <!-- D-011 Perfil -->
+    <string name="profile_role_label">Função</string>
+    <string name="profile_status_label">Estado do registo</string>
+    <string name="profile_status_pending">A aguardar validação</string>
+    <string name="profile_status_active">Ativo</string>
+    <string name="profile_phone_hint">Número de contacto. O número que recebe os códigos de início de sessão não muda aqui.</string>
+    <string name="profile_save">Guardar</string>
+    <string name="profile_saved">Perfil guardado. As alterações feitas sem rede sincronizam quando estiver online.</string>
+    <string name="profile_photo_uploading">A enviar a nova fotografia. Sem ligação, espera até estar online.</string>
+    <string name="profile_photo_label">Fotografia</string>
+    <string name="profile_unavailable">Não foi possível ler o seu perfil. Verifique a ligação e abra-o de novo.</string>
+    <string name="profile_log_out">Terminar sessão</string>
+    <string name="cd_profile_loading">A carregar o seu perfil</string>
+    <!-- D-011 Alterar palavra-passe -->
+    <string name="profile_change_password">Alterar palavra-passe</string>
+    <string name="credential_current_password_label">Palavra-passe atual</string>
+    <string name="credential_new_password_label">Nova palavra-passe</string>
+    <string name="credential_error_current_blank">Introduza a palavra-passe atual.</string>
+    <string name="credential_error_current_wrong">A palavra-passe atual está errada.</string>
+    <string name="credential_continue">Continuar</string>
+    <string name="credential_back">Voltar</string>
+    <string name="credential_password_changed">Palavra-passe alterada. Use a nova palavra-passe no próximo início de sessão.</string>
+    <string name="credential_back_to_profile">Voltar ao perfil</string>
+    <string name="cd_credential_progress">A verificar</string>
+    <string name="top_bar_title_change_password">Alterar palavra-passe</string>
+    <!-- D-011 Alterar e-mail -->
+    <string name="profile_change_email">Alterar e-mail</string>
+    <string name="credential_current_email_label">E-mail atual</string>
+    <string name="credential_new_email_label">Novo e-mail</string>
+    <string name="credential_error_email_same">Este já é o seu e-mail.</string>
+    <string name="credential_email_link_sent">Enviámos uma ligação para %1$s. O seu e-mail muda quando a abrir; pode ter de iniciar sessão de novo com o novo endereço.</string>
+    <string name="top_bar_title_change_email">Alterar e-mail</string>
+    <!-- D-012 Aprovação de registos -->
+    <string name="approvals_empty">Não há registos à espera.</string>
+    <string name="approvals_nif">NIF %1$s</string>
+    <string name="cd_approvals_loading">A carregar os registos pendentes</string>
+    <!-- D-012 Registo pendente -->
+    <string name="top_bar_title_pending_citizen">Registo</string>
+    <string name="citizen_approval_nif">NIF</string>
+    <string name="citizen_approval_email">E-mail</string>
+    <string name="citizen_approval_phone">Telefone</string>
+    <string name="citizen_approval_location_title">Localização registada</string>
+    <string name="citizen_approval_no_location">Localização indisponível</string>
+    <string name="citizen_approval_activate">Ativar</string>
+    <string name="citizen_approval_confirm_title">Ativar este registo?</string>
+    <string name="citizen_approval_confirm_text">%1$s poderá reportar ocorrências.</string>
+    <string name="citizen_approval_confirm">Ativar</string>
+    <string name="citizen_approval_cancel">Cancelar</string>
+    <string name="citizen_approval_already_active">Este registo já está ativo.</string>
+    <string name="citizen_approval_not_found">Não foi possível encontrar este registo.</string>
+    <string name="citizen_approval_activated">Registo ativado.</string>
+    <string name="cd_citizen_photo">Fotografia do munícipe</string>
+    <string name="cd_citizen_map">Mapa com a localização registada do munícipe</string>
+    <string name="cd_citizen_approval_loading">A carregar o registo</string>
+    <!-- D-012 Categorias -->
+    <string name="categories_add">Adicionar categoria</string>
+    <string name="categories_active">Ativa</string>
+    <string name="categories_inactive">Inativa</string>
+    <string name="categories_empty">Ainda não há categorias.</string>
+    <string name="categories_dialog_new">Nova categoria</string>
+    <string name="categories_dialog_edit">Editar categoria</string>
+    <string name="categories_name_label">Nome</string>
+    <string name="categories_save">Guardar</string>
+    <string name="categories_cancel">Cancelar</string>
+    <string name="categories_error_blank">Indique um nome.</string>
+    <string name="categories_error_too_long">O nome é demasiado longo (máximo %1$d).</string>
+    <string name="categories_error_duplicate">Já existe uma categoria com este nome.</string>
+    <string name="cd_category_edit">Editar %1$s</string>
+    <string name="cd_category_active">Ativa: %1$s</string>
+    <string name="cd_categories_loading">A carregar as categorias</string>
+    <!-- D-013 painel de operações -->
+    <string name="operator_panel_filter_all">Todas</string>
+    <string name="operator_panel_category_label">Categoria</string>
+    <string name="operator_panel_category_all">Todas as categorias</string>
+    <string name="operator_panel_category_inactive">%1$s (inativa)</string>
+    <string name="operator_panel_sort_newest">Mais recentes primeiro</string>
+    <string name="operator_panel_sort_oldest">Mais antigas primeiro</string>
+    <string name="operator_panel_private">Privada</string>
+    <string name="operator_panel_empty">Ainda não há ocorrências.</string>
+    <string name="operator_panel_no_match">Nenhuma ocorrência corresponde a estes filtros.</string>
+    <string name="cd_operator_panel_sort">Ordenar por data de registo: %1$s. Toque duas vezes para inverter.</string>
+    <!-- D-013 detalhe da ocorrência para o operador -->
+    <string name="operator_ticket_contacts_title">Contactos</string>
+    <string name="operator_ticket_author">Autor</string>
+    <string name="operator_ticket_followers">Seguidores</string>
+    <string name="operator_ticket_no_followers">Sem seguidores.</string>
+    <string name="operator_ticket_contact_unavailable">Contacto indisponível</string>
+    <string name="operator_ticket_contact_loading">A carregar…</string>
+    <string name="operator_ticket_phone">+351 %1$s</string>
+    <!-- D-013 ações do operador -->
+    <string name="operator_action_request_info">Pedir informações</string>
+    <string name="operator_action_start_work">Iniciar trabalhos</string>
+    <string name="operator_request_info_title">Pedir informações</string>
+    <string name="operator_request_info_text">O munícipe vê esta mensagem e a ocorrência fica a aguardar a resposta.</string>
+    <string name="operator_request_info_label">O que precisa de saber?</string>
+    <string name="operator_request_info_confirm">Enviar</string>
+    <string name="operator_request_info_error_blank">Escreva o que precisa de saber.</string>
+    <string name="operator_start_work_title">Iniciar trabalhos?</string>
+    <string name="operator_start_work_text">A ocorrência passa a Em resolução e os munícipes veem a alteração.</string>
+    <string name="operator_start_work_label">Nota (opcional)</string>
+    <string name="operator_start_work_confirm">Iniciar</string>
+    <string name="operator_action_error_not_allowed">Esta ação já não está disponível.</string>
+    <!-- D-013 resolver com prova -->
+    <string name="operator_action_resolve">Resolver</string>
+    <string name="resolve_title">Prova do trabalho concluído</string>
+    <string name="resolve_hint">Adicione pelo menos uma fotografia ou vídeo (até %1$d).</string>
+    <string name="resolve_add_gallery">Adicionar da galeria</string>
+    <string name="resolve_take_photo">Tirar fotografia</string>
+    <string name="resolve_note_label">Nota (opcional)</string>
+    <string name="resolve_confirm">Confirmar resolução</string>
+    <string name="resolve_cancel">Cancelar</string>
+    <string name="resolve_error_failed">Não foi possível preparar a prova, ou esta ocorrência já não pode ser resolvida.</string>
+    <string name="resolve_camera_unavailable">Não foi possível usar a câmara.</string>
+    <string name="cd_resolve_busy">A guardar a resolução</string>
 </resources>

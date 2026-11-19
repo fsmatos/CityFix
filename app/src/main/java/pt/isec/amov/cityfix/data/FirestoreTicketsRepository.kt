@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import pt.isec.amov.cityfix.model.Attachment
+import pt.isec.amov.cityfix.model.AttachmentPhase
 import pt.isec.amov.cityfix.model.Category
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.DashboardStats
@@ -26,6 +27,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.TicketsList
 import pt.isec.amov.cityfix.model.UploadState
+import pt.isec.amov.cityfix.model.canRecordOperatorNearby
 import pt.isec.amov.cityfix.model.closeIfExpired
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.isActive
@@ -245,16 +247,88 @@ class FirestoreTicketsRepository(
     }
 
     /**
+     * The operator starts work (brief II.3, D-013): D-008's transition to IN_PROGRESS with the
+     * optional [note] as justification, written with commitStatusChange. False when the
+     * lifecycle rejects the move.
+     */
+    override fun startWork(ticket: Ticket, by: User, note: String?): Boolean {
+        val after = ticket.transition(TicketStatus.IN_PROGRESS, by, System.currentTimeMillis(), note)
+            ?: return false
+        commitStatusChange(ticket, after)
+        return true
+    }
+
+    /**
+     * The operator resolves [ticket] with [proof] (brief I.3.E, D-013), on Dispatchers.IO:
+     * 1. a dry run of D-008's transition with the raw files, so a rejected move prepares nothing;
+     * 2. each proof prepared (compressed copy + thumbnail); if none is PENDING (all failed) it
+     *    stops, and the originals are still there (prepare deletes them only on success);
+     * 3. the real transition with the prepared proof (phase RESOLUTION, uploadedById = operator);
+     * 4. one batch (commitStatusChange) with the new proof entries appended by arrayUnion;
+     * 5. one upload worker for the ticket document. Its thumbnails never go to publicTickets
+     *    (decision 0010: only the creator's REPORT media there).
+     */
+    override suspend fun resolveTicket(
+        ticket: Ticket,
+        by: User,
+        proof: List<Attachment>,
+        note: String?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        if (ticket.transition(TicketStatus.RESOLVED, by, now, note, proof) == null) return@withContext false
+
+        val prepared = proof.map { uploader.prepare(it, by.id) }
+        if (prepared.none { it.uploadState == UploadState.PENDING }) return@withContext false
+
+        val after = ticket.transition(TicketStatus.RESOLVED, by, now, note, prepared)
+            ?: return@withContext false
+        commitStatusChange(ticket, after, newAttachments = after.attachments.drop(ticket.attachments.size))
+
+        if (after.attachments.any { it.phase == AttachmentPhase.RESOLUTION && it.uploadState == UploadState.PENDING }) {
+            uploader.enqueue("$TICKETS/${after.id}", after.id, false)
+        }
+        true
+    }
+
+    /**
+     * Sets only `lastOperatorNearbyAt` on the ticket (D-014); false when canRecordOperatorNearby
+     * rejects it. Not awaited, as in sendMessage: offline the update is queued; failures are only
+     * logged, without the location.
+     */
+    override fun recordOperatorNearby(ticket: Ticket, now: Long): Boolean {
+        if (!ticket.canRecordOperatorNearby(now)) return false
+        firestore.collection(TICKETS).document(ticket.id)
+            .update("lastOperatorNearbyAt", now)
+            .addOnFailureListener { Log.w(TAG, "nearby not saved", it) }
+        return true
+    }
+
+    /**
      * One batch for a status change from [before] to [after] (decisions 0010, 0013, 0014):
      * the ticket's status fields, the publicTickets mirror for a PUBLIC ticket, whether
      * ticketLocations still groups (`active`), the stats/summary counters and, when given,
-     * [message] as a new message in the thread. Not awaited, as in reportTicket. D-013 can reuse
+     * [message] as a new message in the thread. Not awaited, as in reportTicket. D-013 reuses
      * it for the operator's moves.
+     *
+     * [newAttachments] (D-013, the resolution proof) are appended with FieldValue.arrayUnion
+     * instead of rewriting `attachments`, so an UploadWorker updating the creator's entries at the
+     * same moment is not overwritten by this batch.
      */
-    private fun commitStatusChange(before: Ticket, after: Ticket, message: Map<String, Any>? = null) {
+    private fun commitStatusChange(
+        before: Ticket,
+        after: Ticket,
+        message: Map<String, Any>? = null,
+        newAttachments: List<Attachment> = emptyList(),
+    ) {
         val ticketRef = firestore.collection(TICKETS).document(after.id)
         val batch = firestore.batch()
-        batch.update(ticketRef, after.toStatusFields())
+        val fields: Map<String, Any> = if (newAttachments.isEmpty()) {
+            after.toStatusFields()
+        } else {
+            after.toStatusFields() +
+                ("attachments" to FieldValue.arrayUnion(*newAttachments.map { it.toDocument() }.toTypedArray()))
+        }
+        batch.update(ticketRef, fields)
         if (message != null) {
             batch.set(ticketRef.collection(MESSAGES).document(), message)
         }

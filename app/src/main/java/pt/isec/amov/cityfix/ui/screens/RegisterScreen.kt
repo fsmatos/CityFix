@@ -9,27 +9,19 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.TakePicture
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,29 +31,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.RegistrationRole
 import pt.isec.amov.cityfix.model.Coordinates
+import pt.isec.amov.cityfix.ui.components.AccountTextField
+import pt.isec.amov.cityfix.ui.components.ImpactDetectionRow
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
+import pt.isec.amov.cityfix.ui.components.PasswordField
+import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
@@ -218,7 +206,7 @@ fun RegisterContent(
         )
         RoleSelector(role = state.role, enabled = enabled, onRoleSelected = onRoleSelected)
 
-        RegisterTextField(
+        AccountTextField(
             value = state.name,
             onValueChange = onNameChange,
             labelRes = R.string.register_name_label,
@@ -239,7 +227,7 @@ fun RegisterContent(
                 stringResource(it)
             }
         }
-        RegisterTextField(
+        AccountTextField(
             value = state.email,
             onValueChange = onEmailChange,
             labelRes = R.string.login_email_label,
@@ -248,7 +236,7 @@ fun RegisterContent(
             keyboardType = KeyboardType.Email,
             autoCorrect = false,
         )
-        RegisterTextField(
+        AccountTextField(
             value = state.phone,
             onValueChange = onPhoneChange,
             labelRes = R.string.register_phone_label,
@@ -257,7 +245,7 @@ fun RegisterContent(
             keyboardType = KeyboardType.Phone,
             prefix = stringResource(R.string.setup_phone_prefix),
         )
-        RegisterTextField(
+        AccountTextField(
             value = state.nif,
             onValueChange = onNifChange,
             labelRes = R.string.register_nif_label,
@@ -303,13 +291,16 @@ fun RegisterContent(
             )
         }
 
-        ProfilePhoto(
-            state = state,
+        ProfilePhotoPicker(
+            photo = state.photoPath?.let { File(it) },
+            isCopying = state.isCopyingPhoto,
             enabled = enabled && !state.isCopyingPhoto,
+            showRemove = state.photoPath != null,
             onPickPhoto = onPickPhoto,
             onTakePhoto = onTakePhoto,
             onRemovePhoto = onRemovePhoto,
         )
+        FormMessage(state.photoNotice, isError = true)
 
         FormMessage(state.error, isError = true)
         if (state.showErrorSummary) {
@@ -418,175 +409,6 @@ private fun CitizenLocation(
             Text(stringResource(R.string.register_location_use))
         }
     }
-}
-
-/** The optional photo (brief I.2.A, I.3.A): a preview of the local copy, Gallery, Camera and Remove. */
-@Composable
-private fun ProfilePhoto(
-    state: RegisterUiState,
-    enabled: Boolean,
-    onPickPhoto: () -> Unit,
-    onTakePhoto: () -> Unit,
-    onRemovePhoto: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.register_photo_label),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        if (state.photoPath != null) {
-            AsyncImage(
-                model = File(state.photoPath),
-                contentDescription = stringResource(R.string.cd_register_photo),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .align(Alignment.CenterHorizontally),
-            )
-        }
-        if (state.isCopyingPhoto) {
-            val copyingDescription = stringResource(R.string.cd_register_photo_copying)
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .semantics { contentDescription = copyingDescription },
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.register_photo_gallery))
-            }
-            OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.register_photo_camera))
-            }
-        }
-        if (state.photoPath != null) {
-            TextButton(
-                onClick = onRemovePhoto,
-                enabled = enabled,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                Text(stringResource(R.string.register_photo_remove))
-            }
-        }
-        FormMessage(state.photoNotice, isError = true)
-    }
-}
-
-/** The impact detection choice (brief I.2.A). The whole row toggles, so the target is large. */
-@Composable
-private fun ImpactDetectionRow(
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .toggleable(
-                value = checked,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = onCheckedChange,
-            ),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.register_impact_label),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = stringResource(R.string.register_impact_description),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        // The row handles the click and announces the label, so the switch itself is passive.
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
-    }
-}
-
-@Composable
-private fun RegisterTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    @StringRes labelRes: Int,
-    error: String?,
-    enabled: Boolean,
-    keyboardType: KeyboardType,
-    prefix: String? = null,
-    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
-    autoCorrect: Boolean = true,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(stringResource(labelRes)) },
-        prefix = prefix?.let { { Text(it) } },
-        singleLine = true,
-        enabled = enabled,
-        isError = error != null,
-        supportingText = error?.let { { Text(it) } },
-        keyboardOptions = KeyboardOptions(
-            capitalization = capitalization,
-            autoCorrectEnabled = autoCorrect,
-            keyboardType = keyboardType,
-            imeAction = ImeAction.Next,
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { if (error != null) error(error) },
-    )
-}
-
-/** A password field; [onToggleShowPassword] null means no Show/Hide button (the confirmation). */
-@Composable
-private fun PasswordField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    @StringRes labelRes: Int,
-    error: String?,
-    hint: String?,
-    showPassword: Boolean,
-    enabled: Boolean,
-    onToggleShowPassword: (() -> Unit)?,
-    imeAction: ImeAction,
-) {
-    val toggleDescription = stringResource(
-        if (showPassword) R.string.cd_hide_password else R.string.cd_show_password,
-    )
-    val supporting = error ?: hint
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(stringResource(labelRes)) },
-        singleLine = true,
-        enabled = enabled,
-        isError = error != null,
-        supportingText = supporting?.let { { Text(it) } },
-        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
-        // material-icons-core has no eye icon, so the toggle is a text button (as on Login).
-        trailingIcon = onToggleShowPassword?.let { onToggle ->
-            {
-                TextButton(
-                    onClick = onToggle,
-                    enabled = enabled,
-                    modifier = Modifier.semantics { contentDescription = toggleDescription },
-                ) {
-                    Text(
-                        stringResource(if (showPassword) R.string.login_hide_password else R.string.login_show_password),
-                    )
-                }
-            }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { if (error != null) error(error) },
-    )
 }
 
 @Composable

@@ -12,8 +12,8 @@ Check the whole app against brief V and build the ZIP for Nonio.
 
 ## What to build
 - **Screen sweep** (every screen, every role): rotate with data entered (state kept), check PT on a device set to Portuguese, TalkBack labels (`contentDescription`, touch targets 48 dp, contrast), FAB/top bar per context. Fix what is small; list the rest in the report's improvements.
-- **Strings:** every string in `values/` and `values-pt/` (today `app_name` is only in `values/`); no hard-coded text (`lint` HardcodedText).
-- **Clean-up:** remove seed/debug buttons, test documents and `LocalTicketsRepository` if unused; `./gradlew lint` with no errors.
+- **Strings:** every translatable string in `values/` and `values-pt/` (`app_name` is `translatable="false"`, so no PT copy is needed; Gate 1 Q3); no hard-coded text (`lint` HardcodedText).
+- **Clean-up:** remove seed/debug buttons, test documents and `LocalTicketsRepository` (already deleted by F-011); `./gradlew lint` with no errors.
 - **Test accounts** in the Firebase project (citizen active, citizen pending, operator) listed in the report.
 - **ZIP:** from a clean checkout of `main`: `git archive` or copy, check the excluded folders are absent, add the PDF (F-017), make sure `google-services.json` is included so the project builds; unzip in a temp folder and run `./gradlew assembleDebug` once to prove it builds.
 

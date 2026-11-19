@@ -1,0 +1,49 @@
+# D-013 docs plan
+
+## Docs to update
+- `docs/architecture/overview.md`:
+  - **Layers:** `viewmodel/` gains `OperatorPanelViewModel` (+ UiState, factory) and `OperatorTicketViewModel` (+ UiState with `PersonContact` and `OperatorDialog`, factory), route-scoped, plain factories. `model/` gains `TicketFilter.kt` and `needsOperatorGeofence` in `TicketLifecycle.kt`. `data/`: `TicketsRepository` gains `startWork` and `resolveTicket` (Q2), `commitStatusChange` gains `newAttachments`, `Attachment.toDocument()` is `internal`. Optional: `components/TicketsMap.kt` (slice 8), `reportsFor` (slice 9).
+  - **Lifecycle (D-008), "How F-014 / D-013 / F-016 use it":** mark the D-013 bullet done: offered actions = `allowedTransitions(operator, now)`; Resolve builds the proof through `AttachmentUploader.prepare` and `transition(RESOLVED, ..., proof)`; no `addResolutionProof`; Request information reuses `askForClarification` (text = justification + message); last write wins, no transaction (offline). The INFO_REQUESTED -> OPEN answer (Q8). History display: "By <name>" for operators (Q3, Q13); proof labelled by phase (Q4, review N2 closed).
+  - **Navigation (D-004), route table:** `OperatorPanelRoute` real (owner D-013); the note "Since D-012 only `OperatorPanelRoute` (D-013) is left" becomes "no placeholders left" (and `PlaceholderScreen` deleted, if Q10). `TicketDetailRoute`: the operator branch (Q1).
+  - **App shell (D-006), state table:** rows for the two ViewModels (back-stack entry), the operator branch of the detail destination, the panel reading the shared `tickets`.
+  - **Screens:** `OperatorPanelScreen` (filters, sort, expanded cards with effective status, "Private" label, empty states, 600dp cap) and `OperatorTicketScreen` (ShowScreen OPERATOR + contacts + actions + resolve section + thread). `ShowScreen`: the `responsibleNames` parameter and the proof line (if Q3/Q4).
+  - **Citizen tickets, messages and reopen (F-014) / Handover (F-014):** the D-013 items done (operator routed to its own view, `MessageThread` reused, public functions over `commitStatusChange`, INFO_REQUESTED reason posted as a message, attachment phase shown).
+  - **Media upload (F-013) / Handover (F-013):** the D-013 resolution-proof item done (prepare before the batch, one `enqueue(..., false)` after it, `arrayUnion` for the proof entries); joiners' `reports/{uid}` shown (only if slice 9).
+  - **Location (F-012) / Handover (F-012):** the D-013 items: exact map reused, `ticketLocations.active = false` on resolve (through `commitStatusChange`), joiners' reports (slice 9 or still open).
+  - **New section "Operations panel and lifecycle (D-013)":** panel source and filter rule (Q5, effective status), the operator detail and who sees contacts, the three actions and their batches, the resolve flow step by step (dry run, prepare, require one PENDING, `arrayUnion`, enqueue), offline behaviour, the D-014 hook, the failure-mode table from `00-plan.md` updated with device results, known limits (last write wins, F-013 attachments race, orphaned files when leaving during preparation, rules not deployed, `resolvedAt` not written).
+  - **New "Handover (D-013)":**
+    - **Francisco:** the exact changes in his files (`TicketsRepository.kt`, `FirestoreTicketsRepository.kt`, `FirestoreMapping.kt`, `ShowScreen.kt`), with the agreed signatures; likely merge conflicts (`MainActivity.kt` detail destination and panel, both `strings.xml`, overview); decision 0018 suggested amendment line (below).
+    - **D-014 (Diogo):** use `tickets.filter { it.needsOperatorGeofence(now) }` from the operator's shared list; Start work writes IN_PROGRESS through the normal batch; INFO_REQUESTED pauses the geofence by construction.
+    - **F-016 (Francisco):** status changes by operators (INFO_REQUESTED with a message, IN_PROGRESS, RESOLVED) come through the same `tickets` documents and `messages` subcollection the citizen already listens to; "work started" = a transition to IN_PROGRESS whose last entry's `responsibleId` is an operator.
+    - **D-015 (Diogo):** demo script for the defence (two devices: report, request info, answer, start work, resolve offline with proof, reopen); mention rules not deployed and `resolvedAt` not written.
+  - **Firebase (F-010), security rules:** a "D-013 and the rules" line: no edit, not deployed; the drafts would refuse the resolve batch without `resolvedAt` (same as F-014's reopen); suggested fix for whoever deploys (Q9).
+  - **Roles:** the operator's home is the real operations panel; the operator detail with contacts and actions.
+- `docs/tasks/phase-2/D-013-operator-panel-lifecycle.md`: status line, a "Status notes" section (Gate 1 answers; deviations from the task file: no `operatorTickets`, no `addResolutionProof`, no `changeStatus`, `startWork` / `resolveTicket` instead, no new detail route if Q1, optional slices done or dropped; device checks run and pending), acceptance boxes ticked only once checked.
+- `docs/tasks/phase-2/D-014-operator-geofence.md`: one line under "What to build": the hook `needsOperatorGeofence(now)` exists (D-013).
+- `docs/report/notes.md`: a new "D-013" section (see Report notes).
+- `CLAUDE.md`: no change expected.
+
+## Decisions to record
+- **New `docs/decisions/0021-operator-panel-and-lifecycle.md`** (Diogo's; 0020 is the last on this branch; check `origin/main` for a newer number before writing). Contents:
+  - Context: brief I.3.E, II.2-II.5; D-008's rules (0011); F-014's `commitStatusChange` and audience (0018); F-013's uploader (0017); rules drafted, not deployed (0012 Q5).
+  - Decision: panel reads the shared list and filters with a pure rule on the effective status (Q5); operator detail as the operator branch of `TicketDetailRoute` (Q1); repository methods `startWork` and `resolveTicket` in `TicketsRepository`, Request information through `askForClarification` (Q2); resolve = dry run, prepare, at least one PENDING proof, one batch with `arrayUnion`, one worker with no public thumbnail; Start work with confirmation (Q6); the operator's own thread in its ViewModel (Q7); names in the history for operators only (Q3, Q13); proof label (Q4); no INFO_REQUESTED -> OPEN (Q8); no rules edit, no `resolvedAt` (Q9); proof limits (Q11).
+  - Rejected: a separate operator tickets repository with its own batch; a generic `changeStatus(to)`; `addResolutionProof` as a separate write; a second `allTickets()` listener for the panel; a new detail route; rewriting the whole `attachments` array on resolve.
+  - Consequences: operator-only actions and contact visibility enforced by the app only (R4); last write wins; F-013 attachments race unchanged; D-014 builds on `needsOperatorGeofence`.
+- **Amend `0011-ticket-lifecycle-rules.md`** (Diogo's): one line, D-013 is the operator caller; `addResolutionProof` not needed (confirmed); Q8's answer on INFO_REQUESTED -> OPEN; history shows the responsible name to operators (N1 refinement).
+- **Amend `0020-operator-approvals-and-categories.md`** (Diogo's): `CategoriesRepository.allCategories()` also feeds the panel's category filter.
+- **Decision 0018 (Francisco's; not edited):** suggested amendment line in the handover: "D-013 adds `startWork` and `resolveTicket` over `commitStatusChange` (new optional `newAttachments`, appended with `arrayUnion`) and reuses `askForClarification` for the operator's request for information; decision 0021."
+- **Decision 0017 (Francisco's; not edited):** suggested line: "Resolution proof uses the same `prepare` + one `enqueue(\"tickets/<id>\", id, false)` (D-013, decision 0021)."
+
+## Report notes
+Section "D-013: Operations panel and lifecycle" in `docs/report/notes.md`:
+- **Technical solutions:**
+  - one source of truth for tickets (the shared `TicketsViewModel` list) feeding the panel and the detail; filtering as a pure function on the effective status, so an expired RESOLVED ticket counts as CLOSED with no write;
+  - every action goes through D-008's `transition`, so the UI only offers `allowedTransitions` and the repository cannot write an invalid move; one batch keeps `tickets`, `publicTickets`, `ticketLocations` and `stats/summary` consistent (decision 0004);
+  - Request information as status + message in the same batch;
+  - the offline-safe resolve: local compression, the batch queued in the Firestore cache, WorkManager with a network constraint; `arrayUnion` so the resolve does not overwrite another device's upload update;
+  - contacts read live from `users/{uid}` only inside the operator view (privacy by construction, not only by hiding).
+- **Options chosen and why:** the Gate 1 answers (Q1-Q13), especially reusing Francisco's batch instead of a second repository, no new route, and the proof rules.
+- **Class material vs beyond:** Navigation with an argument, ViewModel + StateFlow + factory, `LazyColumn` with keys, `FilterChip` / dropdown, `AlertDialog`, `TakePicture` + `FileProvider`, `PickVisualMedia`, Coil, Maps Compose markers, WorkManager `CoroutineWorker` with constraints (slides 08). Beyond class: Firestore batches with `FieldValue.increment` and `arrayUnion`, snapshot listeners as flows, the composable slot in `ShowScreen`.
+- **Limits** (state at the defence): rules not deployed (app-only enforcement); last write wins for concurrent status changes; the F-013 attachments race; files orphaned if the operator leaves during preparation; no video recording, no upload retry button; optional map / joiners' reports if dropped.
+- **Verification:** build and lint per slice; D1-D12 device checks (two devices; offline resolve), with the ones still open.
+- **Improvements:** deploy rules matching these batches (with `resolvedAt` or without it); a transaction or precondition on `currentStatus` when online; ticket assignment to operators; tap-to-call / e-mail intents on contacts; marker clustering on the panel map; counts per status on the filter chips.
