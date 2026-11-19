@@ -8,7 +8,7 @@ Remote: origin/dev/Francisco
 | Plan | done | 2026-11-19 | 3 slices, Q1-Q9 answered (defaults) |
 | Gate 1: plan approved | done | 2026-11-19 | approved by the person |
 | Code | done | 2026-11-19 | 3 slices; emulator checks left for the person |
-| Review | pending | | |
+| Review | done | 2026-11-19 | review.md: 0 blocking, 3 should-fix, 4 nits |
 | Docs | pending | | |
 | Pushed | pending | | |
 | Merged | pending | | |
@@ -25,3 +25,5 @@ Append-only.
 - 2026-11-19 (Code, slice 2): `ReportTicketRoute(fromImpact)` data class, passed via the factory; ReportViewModel selects DAMAGE and, while no category is chosen, the `pavement` category. Build and lint pass. The manual emulator check with `ReportTicketRoute(true)` was not run by the implementer (no emulator); left for the person.
 - 2026-11-19 (Code, slice 3): added `ui/components/ImpactDetectionEffect` (shape of the demo `Sensors.kt`, including its `registered`-style guard as `started`), wired it in MainActivity with `ImpactViewModel`, the `detectImpacts` flag and a long snackbar with "Report" -> `ReportTicketRoute(fromImpact = true)`; strings EN/PT. Build and lint pass, no new lint issue. Deviation: MainActivity grew ~31 lines (with imports and comments) instead of ~15. Emulator/TalkBack acceptance checks not run by the implementer (no emulator); left for the person.
 - 2026-11-19 (Deviation, Q1/Q2): the slide's `z > 14 || z < 6` fires every 30 s when the phone is upright (Z near 0, e.g. the emulator's default `0:9.8:0`). The person chose to use the total acceleration sqrt(x²+y²+z²) with the same 6..14 m/s² limits: orientation-independent, still catches vertical jolts. Constants renamed `MIN`/`MAX`; 03-docs-plan updated.
+- 2026-11-19 (Review): reviewed 3805597..b4f0675 against the plans, brief I.2.F and kotlin rules; wrote review.md. No blocking issue. Should-fix: run and tick the acceptance checks; the snackbar "Report" action reuses an already-open form (no prefill); the KDoc says "vertical" but the total-acceleration check reacts to jolts in any direction (brief deviation to explain). 4 nits.
+- 2026-11-19 (Review fixes): S2 snackbar "Report" no longer navigates when the form is already open; S3 KDoc says it also reacts to non-vertical jolts (docs plan asks 0023 and the report to say so); nits: `stop()` logs only with an accelerometer, comment on the cooldown when skipped, coding-plan pointer to the deviation, rotation line added to report improvements. S1 (device checks) next.

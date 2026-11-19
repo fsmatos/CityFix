@@ -197,13 +197,16 @@ private fun CityFixApp(app: CityFixApplication) {
     LaunchedEffect(impactDetected) {
         if (impactDetected) {
             impactViewModel.onSuggestionShown()
-            // Not while the user is already reporting (Q9). Never opens a report on its own.
+            // Not while the user is already reporting (Q9); the 30 s cooldown still starts, so the
+            // same bump is not suggested later. Never opens a report on its own.
             if (screen != TopBarScreen.REPORT) {
                 snackbarScope.launch {
                     val result = snackbarHostState.showSnackbar(
                         impactMessage, impactAction, withDismissAction = true, duration = SnackbarDuration.Long,
                     )
-                    if (result == SnackbarResult.ActionPerformed) {
+                    // If the user opened the form with "+" meanwhile, keep that one (Q9).
+                    val onReport = navController.currentDestination?.hasRoute<ReportTicketRoute>() == true
+                    if (result == SnackbarResult.ActionPerformed && !onReport) {
                         navController.navigate(ReportTicketRoute(fromImpact = true)) { launchSingleTop = true }
                     }
                 }

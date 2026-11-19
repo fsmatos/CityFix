@@ -11,7 +11,7 @@
 
 ## Decisions to record
 - `docs/decisions/0023-impact-detection.md`:
-  - Based on the slides' `PotholeDetector`: `TYPE_ACCELEROMETER`, total acceleration outside 6..14 m/s² (the slide's Z axis alone fires constantly when the phone is upright).
+  - Based on the slides' `PotholeDetector`: `TYPE_ACCELEROMETER`, total acceleration outside 6..14 m/s² (the slide's Z axis alone fires constantly when the phone is upright); state plainly that it also reacts to non-vertical jolts, a departure from brief I.2.F's "eixo vertical".
   - 30 s cooldown.
   - Foreground only.
   - Snackbar suggestion, never an automatic report.
@@ -26,6 +26,7 @@
   - Improvements:
     - foreground service for detection with the app closed (P10 `ProximityService` pattern);
     - only the vertical part of the jolt (project on gravity);
+    - keep the suggestion across a screen rotation;
     - movement check with GPS speed;
     - threshold set in the profile;
     - attach the detected location and time to the ticket.

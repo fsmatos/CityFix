@@ -13,6 +13,7 @@
 | `res/values/strings.xml`, `values-pt/strings.xml` | 2 strings | Message + action |
 
 ## Interfaces
+Deviation (see state.md): total acceleration with `MIN`/`MAX` replaces the Z axis below.
 ```kotlin
 // utils/ImpactDetector.kt  (slides 10/11, "PotholeDetector")
 class ImpactDetector(context: Context) : SensorEventListener {

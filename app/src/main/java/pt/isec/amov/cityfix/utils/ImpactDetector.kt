@@ -12,7 +12,9 @@ import kotlin.math.sqrt
  * Impact detector (brief I.2.F), based on the "PotholeDetector" of class slides 10/11 and its
  * limits: the total acceleration sqrt(x² + y² + z²) outside [MIN]..[MAX] m/s² counts as an impact.
  * At rest it is gravity (about 9.8) in any phone position, so, unlike the slide's Z axis alone,
- * an upright phone does not trigger it; a vertical jolt does. [start] calls onImpact at most once
+ * an upright phone does not trigger it. A vertical jolt (pothole) triggers it, but so can any other
+ * hard jolt, e.g. putting the phone down hard: the brief asks for the vertical axis, and this is the
+ * simple compromise (decision 0023). [start] calls onImpact at most once
  * per [COOLDOWN_MS], so one bump gives one suggestion. Without an accelerometer, [start] does nothing.
  */
 class ImpactDetector(context: Context) : SensorEventListener {
@@ -32,8 +34,10 @@ class ImpactDetector(context: Context) : SensorEventListener {
     }
 
     fun stop() {
-        sensorManager.unregisterListener(this)
-        Log.d("CityFix", "ImpactDetector stop")
+        accelerometer?.let {
+            sensorManager.unregisterListener(this)
+            Log.d("CityFix", "ImpactDetector stop")
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
