@@ -9,11 +9,11 @@ Brief I.2.F: a citizen who turned on "Detecao de Impactos" (chosen at registrati
 An active citizen with the setting on and the app open feels a jolt and sees a snackbar "Possible pothole detected. Report it?". "Report" opens the form with Pavement + Damage chosen and the location being read.
 
 ## Acceptance checks
-- [ ] A vertical jolt (emulator Virtual sensors, or `adb emu sensor`) shows one snackbar; a second within the cooldown shows nothing.
-- [ ] Setting off, logged out, pending citizen or operator: the sensor is never registered (Logcat).
-- [ ] App in the background: sensor unregistered; back in front: registered again.
-- [ ] "Report" opens the form with Pavement and Damage selected.
-- [ ] Portrait and landscape; TalkBack reads the action. No new permission (the accelerometer needs none).
+- [x] A vertical jolt (emulator Virtual sensors, or `adb emu sensor`) shows one snackbar; a second within the cooldown shows nothing.
+- [x] Setting off, logged out, pending citizen or operator: the sensor is never registered (Logcat).
+- [x] App in the background: sensor unregistered; back in front: registered again.
+- [x] "Report" opens the form with Pavement and Damage selected.
+- [x] Portrait and landscape; TalkBack reads the action. No new permission (the accelerometer needs none).
 
 ## Approach (class slides 10/11 "Sensor Framework" + `SideEffect_BR_Maps_Sensors_Permissions` demo)
 - `utils/ImpactDetector`: the slides' `PotholeDetector` almost as is: `SensorEventListener`, `TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`, `start()`/`stop()`, Z axis outside 6..14 m/s² = impact. We add an `onImpact` callback and a cooldown.
