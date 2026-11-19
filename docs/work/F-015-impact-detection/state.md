@@ -7,7 +7,7 @@ Remote: origin/dev/Francisco
 | Start | done | 2026-11-19 | feature, task file `docs/tasks/phase-2/F-015-impact-detection.md` |
 | Plan | done | 2026-11-19 | 3 slices, Q1-Q9 answered (defaults) |
 | Gate 1: plan approved | done | 2026-11-19 | approved by the person |
-| Code | pending | 2026-11-19 | started |
+| Code | done | 2026-11-19 | 3 slices; emulator checks left for the person |
 | Review | pending | | |
 | Docs | pending | | |
 | Pushed | pending | | |
@@ -23,3 +23,4 @@ Append-only.
 - 2026-11-19 (Gate 1): plan approved.
 - 2026-11-19 (Code, slice 1): added `utils/ImpactDetector` (slide PotholeDetector + callback + 30 s cooldown), `ImpactViewModel` and factory; not wired. Build and lint pass, no new lint issue.
 - 2026-11-19 (Code, slice 2): `ReportTicketRoute(fromImpact)` data class, passed via the factory; ReportViewModel selects DAMAGE and, while no category is chosen, the `pavement` category. Build and lint pass. The manual emulator check with `ReportTicketRoute(true)` was not run by the implementer (no emulator); left for the person.
+- 2026-11-19 (Code, slice 3): added `ui/components/ImpactDetectionEffect` (shape of the demo `Sensors.kt`, including its `registered`-style guard as `started`), wired it in MainActivity with `ImpactViewModel`, the `detectImpacts` flag and a long snackbar with "Report" -> `ReportTicketRoute(fromImpact = true)`; strings EN/PT. Build and lint pass, no new lint issue. Deviation: MainActivity grew ~31 lines (with imports and comments) instead of ~15. Emulator/TalkBack acceptance checks not run by the implementer (no emulator); left for the person.

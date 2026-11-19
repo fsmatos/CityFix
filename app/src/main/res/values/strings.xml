@@ -100,6 +100,8 @@
     <string name="report_error_location">The report needs your location.</string>
     <string name="report_joined">This issue was already reported nearby. You now follow it.</string>
     <string name="report_already_following">You already follow this issue nearby.</string>
+    <string name="impact_suggestion">Possible pothole detected. Report it?</string>
+    <string name="impact_report_action">Report</string>
     <string name="report_submitted">Report submitted.</string>
 
     <!-- Location and the 10 km gate (F-012) -->

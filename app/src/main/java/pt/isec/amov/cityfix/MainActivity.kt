@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +47,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
+import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.isParticipant
+import pt.isec.amov.cityfix.ui.components.ImpactDetectionEffect
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
@@ -91,6 +95,8 @@ import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.GateStatus
+import pt.isec.amov.cityfix.viewmodel.ImpactViewModel
+import pt.isec.amov.cityfix.viewmodel.ImpactViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
@@ -179,6 +185,31 @@ private fun CityFixApp(app: CityFixApplication) {
     // previousBackStackEntry is not Compose state: read it here, in the same scope as
     // backStackEntry, so a back-stack change recomposes this line too (D-005 review N4).
     val canNavigateBack = navController.previousBackStackEntry != null
+
+    // Impact detection (F-015, brief I.2.F): only for an active citizen who turned it on.
+    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app))
+    val impactDetected by impactViewModel.impactDetected.collectAsStateWithLifecycle()
+    val detectImpacts = role == AccessRole.CITIZEN &&
+        (session.ticketsUser as? Citizen)?.impactDetection == true
+    ImpactDetectionEffect(detectImpacts, impactViewModel::start, impactViewModel::stop)
+    val impactMessage = stringResource(R.string.impact_suggestion)
+    val impactAction = stringResource(R.string.impact_report_action)
+    LaunchedEffect(impactDetected) {
+        if (impactDetected) {
+            impactViewModel.onSuggestionShown()
+            // Not while the user is already reporting (Q9). Never opens a report on its own.
+            if (screen != TopBarScreen.REPORT) {
+                snackbarScope.launch {
+                    val result = snackbarHostState.showSnackbar(
+                        impactMessage, impactAction, withDismissAction = true, duration = SnackbarDuration.Long,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        navController.navigate(ReportTicketRoute(fromImpact = true)) { launchSingleTop = true }
+                    }
+                }
+            }
+        }
+    }
 
     // The role's home with the back stack cleared: used by the redirect and every destination guard.
     val goHome = {
