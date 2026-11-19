@@ -21,9 +21,9 @@ data object TicketListRoute
 @Serializable
 data class TicketDetailRoute(val ticketId: String)
 
-/** Provisional report form. */
+/** Report form; [fromImpact] prefills Pavement + Damage after an impact suggestion (F-015). */
 @Serializable
-data object ReportTicketRoute
+data class ReportTicketRoute(val fromImpact: Boolean = false)
 
 /** E-mail and password; the SMS code is a step of this route (D-009, slice 6). */
 @Serializable

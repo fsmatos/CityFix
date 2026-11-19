@@ -10,8 +10,8 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-15 | Q15 renumber + 7 slices (`cac6213`..`6ffb359`); lint 0 errors, 22 warnings; device checks D1-D15 not run; device checks D1-D15 and D1b passed 2026-11-15 |
 | Review | done | 2026-11-15 | approve: 0 blocking, 1 should-fix (S1 decision 0011 vs Q1, docs phase), 1 nit; build + lint 0 errors, 22 warnings; D1-D15 open |
 | Docs | done | 2026-11-15 | overview (F-014 section + handover, small updates), 0018 new, 0011 S1 amend, 0007/0010/0013 lines, report notes, task file; not committed |
-| Pushed | done | 2026-11-15 | 322eb61 to origin/dev/Francisco before the device checks; not merged into main |
-| Merged | pending | | |
+| Pushed | done | 2026-11-15 | pushed before and after the device checks; origin/dev/Francisco level with main |
+| Merged | done | 2026-11-15 | ed5754a in origin/main (merge: dev/Francisco into main) |
 
 ## Log
 Append-only.
@@ -92,3 +92,4 @@ Append-only.
   - Crash buffer: only an Android Bluetooth service abort at boot, nothing from CityFix.
   - Test data left: T1-T3, C's report on T1, messages on T1, sample-3 CLOSED and owned by A.
 - 2026-11-15: Merged origin/main (D-010 registration) into dev/Francisco before merging into main. One conflict in docs/report/notes.md (both added a section at the end; kept D-010's, then F-014's). Added a line in the overview, decision 0016 (Diogo's) and the report notes saying the 0015 numbering clash is resolved (F-013's record is 0017). assembleDebug and lint pass, 0 errors.
+- 2026-11-15: The person asked to merge into main. After bringing in D-010 (9ace844), dev/Francisco was merged with --no-ff into local main (ed5754a, no conflicts; assembleDebug and lint pass, 0 errors). The session cannot push main, so the person pushed it; ed5754a confirmed in origin/main. dev/Francisco fast-forwarded to main. Merged: done.

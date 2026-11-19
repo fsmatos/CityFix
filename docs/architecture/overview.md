@@ -465,7 +465,7 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
     - **`consumeWindowInsets(innerPadding)`** after `padding(innerPadding)`, on the `NavHost`: the `Scaffold` padding already includes these insets, and `imePadding()` would otherwise add them again while the keyboard is open.
     - `ReportScreen` now uses `collectAsStateWithLifecycle()`.
     - Emulator: a half-filled form kept its values on rotation, and leaving started it empty. Still open: the keyboard over the description and the double bottom gap; TalkBack behaviour (N2); the report screen under the cutout (F-003 review N3).
-  - Other handovers to Diogo: confirm the three new files F-006 added in his folders (`viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, Gate 1 Q7a); later, impact detection (I.2.F) prefills the form through a new `ReportViewModel` event (for example `prefill(situation, categoryId)`), not added now (Q7d).
+  - Other handovers to Diogo: confirm the three new files F-006 added in his folders (`viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, Gate 1 Q7a); later, impact detection (I.2.F) prefills the form through a new `ReportViewModel` event (for example `prefill(situation, categoryId)`), not added now (Q7d). **Done by F-015** with the route argument `ReportTicketRoute(fromImpact)` instead of an event.
   - **F-007 handovers to Diogo** (his files, not edited by F-007 unless stated):
     - `TicketsViewModel.reportTicket`: F-007 added the `attachments` parameter, as agreed, and also changed its KDoc (review S3, comment only). Since F-008 the function lives in `TicketsRepository`/`LocalTicketsRepository`, so this item is superseded by the F-008 handover in "App shell (D-006)".
     - `model/Attachment.kt` KDoc: `id` says "Firestore document id. Empty until persisted", but F-007 stores the file name (N7); `file` says "Local content/file URI", but F-007 stores an absolute path (Q12).
@@ -689,7 +689,7 @@ Decision: [0016](../decisions/0016-registration.md). The number 0016 is used bec
 ### Handover (D-010)
 - **D-011 (Diogo), profile:** a photo change reuses `ProfilePhotoUploader.enqueue(uid, localPath)` (same path `users/{uid}/photo.jpg`, `photoPath` = download URL). The draft `storage.rules` allow the owner `create, update` there, so an overwrite is accepted. `name`, `nif` and (citizen) `georeferencing` are not editable (draft update rule, I.2.C / I.3.C). Prefill from `Session.SignedIn.user`. Possible improvement: prefill the MFA phone with the registration phone.
 - **D-012 (Diogo), validation:** pending citizens have `registrationStatus: "PENDING"`, `photoPath` (a URL, when the upload finished) and `georeferencing` (`GeoPoint`). Activation sets `registrationStatus: "ACTIVE"`, `validatedBy` (the operator's uid) and `validatedAt`; nothing else may change (draft rule). The citizen's app switches live through the `users/{uid}` listener.
-- **D-014 (Diogo), impact detection:** read `impactDetection` from `users/{uid}` (`Citizen.impactDetection`, already mapped by `toProfile()`).
+- **D-014 (Diogo), impact detection:** read `impactDetection` from `users/{uid}` (`Citizen.impactDetection`, already mapped by `toProfile()`). **Done by F-015 (2026-11-19)**, see "Impact detection (F-015)".
 - **Francisco:**
   - **`firestore.rules` (shared) changed in `1760f28`:** the operator branch of the `users` create rule no longer has `request.auth.token.email_verified == true`. The domain term stays, there is a comment, and it is not deployed. He must be told.
   - Shared strings: new `register_*`, `auth_error_email_in_use`, `auth_error_weak_password`, `top_bar_title_register` and `cd_register_*` keys in both `strings.xml` files (expect merge conflicts; keep both sides).
@@ -865,6 +865,21 @@ Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md) (amends [
 - **`Message.byOperator`** (Diogo's `Message.kt`): new field, default `false`.
 - **`MainActivity.kt`:** detail destination (audience branch, detail ViewModel) and My tickets destination changed.
 - **D-010, D-015:** nothing new.
+
+### Impact detection (F-015)
+Decision: [0023](../decisions/0023-impact-detection.md). Code: `utils/ImpactDetector.kt`, `viewmodel/ImpactViewModel(+Factory).kt`, `ui/components/ImpactDetectionEffect.kt`, `ui/navigation/Destinations.kt` (`ReportTicketRoute`), `viewmodel/ReportViewModel(+Factory).kt`, `MainActivity.kt`, strings EN + PT. Based on the slides' `PotholeDetector` and the demo `Sensors.kt`.
+
+- **Detection:** `TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`; total acceleration `sqrt(x²+y²+z²)` outside `MIN`..`MAX` = 6..14 m/s²; at most one `onImpact` per `COOLDOWN_MS` (30 s). Also reacts to non-vertical jolts (decision 0023).
+- **Who:** `detectImpacts = role == CITIZEN && Citizen.impactDetection`; anyone else never registers the sensor.
+- **Lifecycle (foreground only):** `ImpactDetectionEffect` starts on ON_START (or at once if already STARTED), stops on ON_STOP, on `enabled = false` and on dispose; `ImpactViewModel.onCleared` stops too. Logcat tag `CityFix`: "ImpactDetector start" / "stop".
+- **Suggestion:** `impactDetected` -> long snackbar "Report" with dismiss; skipped on the report form (Q9, cooldown still starts); "Report" does not navigate if the form is already open.
+- **Prefill:** `ReportTicketRoute(fromImpact = true)` -> `ReportViewModel` sets DAMAGE and, while no category is chosen, the category with id `pavement`; location read as usual.
+- **Emulator test:** `adb emu sensor set acceleration 0:0:20` (jolt), then `0:9.8:0` (upright at rest, never triggers). Results in `docs/work/F-015-impact-detection/state.md`.
+
+### Handover (F-015)
+- **D-011 (Diogo), profile:** saving the toggle updates `impactDetection`, the session follows, and the detector stops or starts by itself; nothing to call.
+- **D-012/D-015 (Diogo):** keep a category with id `pavement` once DebugSeed is removed, or the prefill leaves the category empty.
+- **Diogo, `MainActivity.kt`:** imports (`ImpactDetectionEffect`, `ImpactViewModel`, `ImpactViewModelFactory`, `SnackbarDuration`); the impact block after `canNavigateBack` (~lines 189-215); "+" now navigates to `ReportTicketRoute()`; the `composable<ReportTicketRoute>` reads `fromImpact` with `toRoute` and passes it to `ReportViewModelFactory`.
 
 ## Roles
 Anonymous citizen (public, active issues only, no personal data), registered citizen, municipal operator. Since D-009 the app has one `AccessRole` per home screen ([decision 0015](../decisions/0015-session-role-navigation-mfa.md); `homeFor` and `menuItemsFor` in `ui/navigation/RoleAccess.kt`):

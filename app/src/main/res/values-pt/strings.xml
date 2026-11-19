@@ -98,6 +98,8 @@
     <string name="report_error_location">A ocorrência precisa da sua localização.</string>
     <string name="report_joined">Esta ocorrência já tinha sido reportada perto daqui. Passou a acompanhá-la.</string>
     <string name="report_already_following">Já acompanha esta ocorrência perto daqui.</string>
+    <string name="impact_suggestion">Possível buraco detetado. Reportar?</string>
+    <string name="impact_report_action">Reportar</string>
     <string name="report_submitted">Ocorrência enviada.</string>
 
     <!-- Location and the 10 km gate (F-012) -->
