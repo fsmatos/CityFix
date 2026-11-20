@@ -1482,3 +1482,22 @@ Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (
 - Message preview in the notification.
 - Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
 - Remove the FCM token at Log out; rationale before the permission request.
+
+## F-018: Map pinch zoom, phone at sign-up, full-size media
+
+### Technical solutions
+- Ticket map inside a scrolling page: the map reports finger down/up (`pointerInput`, Initial pass) and the page turns its `verticalScroll` off meanwhile, so pinch zoom works.
+- Phone verified by SMS once at setup and **linked** to the account (`linkWithCredential`), not enrolled as MFA ([decision 0026](../decisions/0026-phone-verified-at-signup.md)).
+- Tap a photo/video tile: full-screen `Dialog`; photo with Coil and pinch zoom, video with `VideoView` + `MediaController`.
+
+### Class material vs beyond class
+- Class: Compose `Dialog`, Coil, `AndroidView`, Firebase Auth.
+- Beyond class: `VideoView`/`MediaController` (no video playback in class), Initial-pass pointer input, phone linking.
+
+### Limits to state at the defence
+- **Brief deviation:** I.2.B/II.2.B ask for MFA at login; login is now e-mail/password only. Chosen for usability (fewer SMS); the phone is still proven by SMS at registration.
+- One account per phone number; accounts from before F-018 still get the SMS at login.
+
+### Improvement opportunities
+- Optional MFA the user can turn on in Profile (enrol the linked phone as a factor).
+- Media3/ExoPlayer for streaming and better controls; swipe between attachments in the viewer.
