@@ -56,7 +56,8 @@ fun MyTicketsScreen(
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            // Bottom padding so the last card clears the citizen report FAB.
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(tickets, key = { it.id }) { ticket ->

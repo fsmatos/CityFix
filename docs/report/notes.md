@@ -1332,7 +1332,7 @@ Brief (wording from the task file; the PDF was not reread in this task): I.3 Obs
 - Count a background arrival by forgetting `inside` after a long time in the background.
 
 ## D-015: Final pass and delivery
-**Partial (2026-11-17): slices 1-3 only.** Slices 4-6 (strings and screen sweep after the F-015/F-016/F-017 merges, citizen FAB, delivery ZIP), the device checks, the console steps and the test accounts are still to do; the subsections marked "to do" are filled then. For F-017: Diogo hands these notes to Francisco. No decision record yet (0023, delivery package, comes with slice 6). Overview: the D-015 notes in "Code structure", "ViewModel (D-003)", "Report form (F-006)", "Routes", "Firebase (F-010)" and the F-011/F-012 handovers.
+**Code done (2026-11-20): slices 1-6 coded and reviewed (two rounds).** Still open: running the ZIP script, the console steps, the test accounts, the ZIP from `main` and the upload (see "To do"). For F-017: Diogo hands these notes to Francisco. Decision: [0025](../decisions/0025-delivery-package.md) (delivery package). Overview: "Top bar (D-005)", "App shell (D-006)" (report FAB), "Profile (D-011)" (phone on read), "Setup", "Delivery (D-015)", and the D-015 notes in "Code structure", "Firebase (F-010)" and the F-011/F-012/F-015 handovers.
 
 Brief: V (languages, orientation, dynamic bars and FABs, accessibility, MVVM) and VI (ZIP name and contents).
 
@@ -1343,29 +1343,79 @@ Brief: V (languages, orientation, dynamic bars and FABs, accessibility, MVVM) an
   - The unused `placeholder_message` string was removed from both locales, and `PlaceholderScreen` now requires its `messageRes` (`a3fe6fb`), so there is no silent default text.
   - Lint warnings cleared: the redundant `android:label` on `<activity>` (the `<application>` label still names the app in the launcher) and the template `res/values/colors.xml`, which nothing referenced (`ade184a`).
   - Stale comments that still mentioned the seed were reworded (review S1, comment only).
-- **Lint.** 0 errors. The warnings went from 22 to 14; the 14 left are dependency-version notices (13) and one `UseKtx` in `ImageCompression.kt`, left on purpose: no dependency upgrades right before delivery.
-- **Languages (checked before the merges; to repeat after them).** English default (`values/`), Portuguese from the device setting (`values-pt/`). The planner's key diff found every translatable key in both locales; the three keys only in `values/` are `translatable="false"` (`app_name` among them), so `app_name` is not really missing (Gate 1 Q3). No hard-coded UI text outside previews. Category names are data typed by operators, so they are not translated.
+- **Report entry as a dynamic FAB (slice 5, `953f577`; Gate 1 Q5, brief V "botões flutuantes dinâmicos").** The top-bar "+" was replaced by an `ExtendedFloatingActionButton` "Report an issue" / "Reportar ocorrência" in `MainActivity`'s `Scaffold`. It shows only for an active citizen (`session.canReport`), only on Dashboard, List and My tickets, and never behind the anonymous 10 km gate. So the app has two dynamic FABs: the citizen's report FAB and the operator's "Add category" on Categories (shown once the list has loaded). The text label is the accessible name, so the icon has no description; the FAB is 56 dp high. `List` and `My tickets` got 88 dp of bottom padding (review S1, `1946dcc`) so the FAB never covers the last card. The top bar keeps the other dynamic parts: title per destination, back arrow from the back stack, the menu by role, Log in / Log out.
+- **Phone shown once with +351 (slice 4, `f6a4cb1`).** Accounts created by hand in the Firebase console stored `phone` as "+351 9...", while the app writes 9 digits and the screens add "+351", so the operator's Contacts showed "+351 +351...". Fix on read: the pure `nationalPhoneDigits` (`utils/Validation.kt`) drops whitespace and a leading `+351` / `00351`, applied in `FirestoreUsersRepository.toProfile()`, the only mapper from `users/{uid}`, so every screen gets 9 digits. Writes are unchanged (the phone is written only when the user edits it). Side effect: console-made accounts can now save their profile (before, their phone failed validation).
+- **Lint.** 0 errors, 17 warnings (2026-11-20), all left on purpose:
+  - 8 `GradleDependency` and 7 `NewerVersionAvailable`: newer library versions exist (3 of them published after 2026-11-17). No upgrades right before delivery; some newer versions also need a newer Kotlin or Compose (overview "App shell", Dependencies).
+  - 1 `AndroidGradlePluginVersion`: same reason.
+  - 1 `UseKtx` in `ImageCompression.kt` (Francisco's file): `Bitmap.createScaledBitmap` kept as in P10.
+  - Slices 1-3 had cleared `RedundantLabel` and the 7 `UnusedResources`; slice 5 removed `cd_report_ticket` instead of leaving a new `UnusedResources`.
+- **Languages (re-checked after the F-015/F-016 merge, slice 4).** English default (`values/`), Portuguese from the device setting (`values-pt/`). Key diff: 341 translatable keys in each locale, none missing or extra (EN has 344 with the 3 `translatable="false"`: `app_name` and the two phone-prefix strings, Gate 1 Q3); 4 plurals in both. No hard-coded UI text outside previews (greps for `Text("`, literal `contentDescription`, notification titles/texts/channels, `Toast`): F-016's channels and notification texts use resources. Category names are data typed by operators, so they are not translated.
+- **Accessibility (code check, slice 4).** 6 `contentDescription = null` uses, each decorative or labelled by visible text (Categories FAB label, sort chip semantics, attachment label, preview map icon, play overlay, `PlaceholderScreen` icon). No `remember { mutableStateOf }` holds typed input (the two in `MainActivity` are permission flags). Top-bar buttons are 48 dp.
+- **Orientation.** Form and dialog state lives in ViewModels (`StateFlow<UiState>`, some with `SavedStateHandle`); small UI flags and the camera temp path use `rememberSaveable`, so rotation keeps typed data.
 
-### To do (after slices 4-6)
-- Orientation, accessibility, dynamic top bar and FAB: the sweep results (see the docs plan list), the citizen FAB (Q5), the Accessibility Scanner findings.
-- Test accounts table (report section 9; passwords in the PDF only, Q9) and the reCAPTCHA note for the grader's SMS MFA (R3).
-- How to run, the ZIP layout and its verification build, the test-mode date (Q7), the Maps key restriction check (R4).
-- Sweep defects not fixed.
+### Device checks (emulator, 2026-11-17 and 2026-11-20)
+Emulator API 37, 1080x2400 at 420 dpi, system language pt-PT; debug APK; driven with adb, logins and console reads by Diogo.
+- **Clean-up:** cold start with no seed in Logcat and no crash; "Registo pendente" texts unchanged; launcher label "CityFix" in every locale.
+- **Rotation** (portrait -> landscape -> portrait): pending screen, Dashboard, list, ticket detail and the 10 km gate keep their content; a half-typed Profile phone ("9123456") survived two rotations, and leaving without Save changed nothing.
+- **PT / EN** (per-app locale switched to `en-US`): every visible string on those screens is translated; top-bar icons have descriptions; top-bar buttons are 48 dp.
+- **Anonymous:** at Pr. Republica the dashboard, list and detail work and the detail shows only the ~1 km area (no author, no exact point); in Lisbon the gate blocks with "Try again" / "Log in"; back in Coimbra "Try again" opens the dashboard.
+- **Operator geofence (D-014):** 100 m and 25 m write nothing; 15 m sets `lastOperatorNearbyAt` once and nothing else; leaving and entering again within the hour keeps the value; no coordinates in Logcat.
+- **Phone fix:** the operator's Contacts for a console-made citizen show "+351 917234568", one prefix.
+- **Not run:** TalkBack spoken order, Accessibility Scanner contrast, the registered citizen's screens (report, My tickets), operator screens other than the panel, the report FAB per role and in landscape, notifications on this branch.
+
+### Findings (not fixed in code)
+- **Category names are English seed data.** Removing the seed code deleted no Firestore data, so the categories written by the old seed ("Public lighting", "Pavement", ...) still show in English with the app in PT. Fix in the console (Q4 clean-up, Diogo): rename them in Portuguese, keeping the document id `pavement` (F-015's impact prefill looks it up). Improvement: per-locale category names.
+- **The map's TalkBack label comes from the Maps SDK** ("Mapa do Google Maps", in the system language), not from our strings, so it does not follow the per-app locale. Improvement: wrap the map with our own `semantics` description.
+- The map tiles load with this machine's debug key, which does not prove that the key has no SHA-1 restriction (R4).
+
+### Test accounts (report section 9)
+Passwords, e-mails, MFA test numbers and codes go **only in the PDF**, never in git (Gate 1 Q9). Table for the PDF (Francisco fills the values from the authors' private note):
+
+| Role | E-mail | Password | MFA test number | Fixed code | What to try |
+| --- | --- | --- | --- | --- | --- |
+| Active citizen | (PDF only) | (PDF only) | (PDF only) | (PDF only) | report with photo, My tickets, thread, reopen, Profile, impact suggestion |
+| Pending citizen | (PDF only) | (PDF only) | (PDF only) | (PDF only) | waiting screen, Profile; activated by the operator |
+| Operator | (PDF only) | (PDF only) | (PDF only) | (PDF only) | panel, Request information, Start work, Resolve with proof, Approvals, Categories, 20 m alert |
+
+Note for the grader: the build is signed with their own debug key, whose SHA-1 is not registered in Firebase, so SMS MFA may show a reCAPTCHA browser step (R3). It normally works on an emulator with Chrome.
+
+### How to run (for the PDF)
+- Unzip, open `CityFix/` in Android Studio (it writes `local.properties` with `sdk.dir`), let Gradle sync, run on a device or emulator with Google Play services.
+- `app/google-services.json` is included in the ZIP; the Maps key is in the manifest.
+- On macOS/Linux, `chmod +x gradlew` before running `./gradlew` from a shell (the ZIP made on Windows has no execute bit; review N4). Android Studio is not affected.
+- The database is in test mode until 2026-12-10 (2027-03-01 if the Q7 console change is made before the upload; say which).
+- For the anonymous mode, the emulator location must be within 10 km of Pr. Republica, Coimbra.
+
+### Delivery package
+- `scripts/make-delivery-zip.ps1` (slice 6, `d8e5881`, `2e7862a`): `git archive` of `main`, adds `google-services.json` and the PDF from parameters, checks the excluded folders twice, zips with `tar.exe` (forward slashes), deletes the staging copy, and builds the unzipped copy with `gradlew.bat assembleDebug`. With `-Ref main` it refuses a local `main` that differs from `origin/main`. Option `-ExcludeAgentFiles` leaves out `.claude/`, `CLAUDE.md` and `docs/work/` (Q8, open). Rejected: zipping the working folder, committing `google-services.json`, `Compress-Archive` (backslash separators on PS 5.1). Details in decision 0025.
+
+### To do (before 2026-11-22 23:59)
+- Run the ZIP script once (`-Ref dev/Diogo -SkipBuild`, then without `-SkipBuild`); if the execution policy blocks it, write "manual ZIP" in the checklist and follow slice 6 steps 2-7 by hand.
+- Q8 with Francisco: keep or leave out `.claude/`, `CLAUDE.md`, `docs/work/`.
+- Q4 and Q7 console changes (Diogo): delete the stand-in users, rename the seed categories (keep id `pavement`); move the test-mode date of Firestore and Storage to 2027-03-01.
+- R4: check in the Google Cloud console that the Maps key has no Android-app restriction.
+- Build the ZIP from `main` after the final merges, record the full SHA, build the unzipped copy, install it, log in, see the map.
+- Upload to Nonio and record the time in `state.md`.
 
 ### Limits to state at the defence
 - The security rules are drafts and not deployed: privacy, MFA and role guards are enforced in the app only.
 - Notifications are local, with no server; the operator geofence works in the foreground only.
 - The stand-in test users (`dev-citizen-1`, `citizen-1`, `citizen-2`) are still in the test database until Diogo deletes them in the console (Q4). The seeded sample tickets are kept on purpose, so the dashboard counters match the list (deleting tickets does not update `stats/summary`).
+- A profile phone stored as "+351..." by the console stays that way in Firestore until the user edits it; only the display is normalised.
+- The device sweep did not cover TalkBack order, contrast or every screen of every role (list above).
 
 ### Verification
-- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after each of slices 1-3 and the review fixes: pass, 0 errors, 14 warnings. `app/src` has no reference to `DebugSeed`, `SampleCategories`, `placeholder_message` or the template colours.
-- One review round: approve with should-fix (S1 stale KDoc, S2 overview lines), both handled; nits N2 (the `PlaceholderScreen` name) and N3 (a case-insensitive clean-up grep) are left for slice 4.
-- **Device checks: none run yet** (cold start without the seed, Pending validation / Account problem texts, launcher label).
+- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after every slice and review fix: pass, 0 errors (14 warnings after slices 1-3, 17 after slice 4 because of 3 new version notices). `app/src` has no reference to `DebugSeed`, `SampleCategories`, `placeholder_message`, `cd_report_ticket` or the template colours.
+- Two review rounds, both "approve with should-fix": round 1 (S1 stale KDoc, S2 overview lines) and round 2 (S1 FAB over the last card, fixed; S2 the script has never run, open; S3 `main` vs `origin/main`, fixed). The `-ExcludeAgentFiles` pathspec was checked with `git archive` (298 files, none excluded wrongly).
+- The script itself: PowerShell parser only (0 errors); not executed (execution policy `AllSigned`).
 
 ### Improvement opportunities
 - Automated UI tests for rotation and TalkBack.
 - A `WindowSizeClass`-based layout for tablets.
 - Localised category names (per-locale fields on `categories`).
+- Our own accessible description on the map instead of the Maps SDK's label.
+- Normalise the stored phone with a one-off write (or on the next Save) instead of only on read.
 - Deployed security rules.
 - A CI job that builds the ZIP and checks it.
 

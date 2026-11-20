@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,8 +40,8 @@ enum class AccountAction { NONE, LOG_IN, LOG_OUT }
 /**
  * App top bar. Stateless: the caller says which screen is showing and receives the clicks.
  * The toggle appears on the list only, and only when [showExpandToggle]; anonymous users never
- * get it (brief I.1.B, D-007). The add button only when [showAddAction]: the caller passes true
- * for an active citizen on every screen except the report form (D-009). [accountAction] picks
+ * get it (brief I.1.B, D-007). Reporting is a floating button in the caller's Scaffold, not a
+ * bar action (D-015, Q5). [accountAction] picks
  * the Log in / Log out button, which calls [onAccountClick]. [menuItems] are the role's screens,
  * in an overflow menu shown only when the list is not empty; when it is shown, Log out is its
  * last entry instead of a separate icon, so the bar does not overflow in portrait.
@@ -55,12 +54,10 @@ fun MainTopAppBar(
     canNavigateBack: Boolean,
     isExpanded: Boolean,
     showExpandToggle: Boolean,
-    showAddAction: Boolean,
     accountAction: AccountAction,
     menuItems: List<TopBarMenuItem>,
     onBackClick: () -> Unit,
     onToggleExpandedClick: () -> Unit,
-    onAddClick: () -> Unit,
     onAccountClick: () -> Unit,
     onMenuItemClick: (TopBarMenuItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -119,14 +116,6 @@ fun MainTopAppBar(
                         contentDescription = stringResource(
                             if (isExpanded) R.string.cd_collapse_tickets else R.string.cd_expand_tickets
                         ),
-                    )
-                }
-            }
-            if (showAddAction) {
-                IconButton(onClick = onAddClick) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.cd_report_ticket),
                     )
                 }
             }
@@ -198,7 +187,6 @@ private fun BarPreview(
     canNavigateBack: Boolean,
     isExpanded: Boolean = false,
     showExpandToggle: Boolean = true,
-    showAddAction: Boolean = screen != TopBarScreen.REPORT,
     accountAction: AccountAction = AccountAction.LOG_OUT,
     menuItems: List<TopBarMenuItem> = emptyList(),
 ) {
@@ -208,12 +196,10 @@ private fun BarPreview(
             canNavigateBack = canNavigateBack,
             isExpanded = isExpanded,
             showExpandToggle = showExpandToggle,
-            showAddAction = showAddAction,
             accountAction = accountAction,
             menuItems = menuItems,
             onBackClick = {},
             onToggleExpandedClick = {},
-            onAddClick = {},
             onAccountClick = {},
             onMenuItemClick = {},
         )
@@ -250,7 +236,6 @@ private fun DashboardAnonymousBarPreview() {
     BarPreview(
         TopBarScreen.DASHBOARD,
         canNavigateBack = false,
-        showAddAction = false,
         accountAction = AccountAction.LOG_IN,
     )
 }
@@ -261,7 +246,6 @@ private fun OperatorBarPreview() {
     BarPreview(
         TopBarScreen.OPERATOR_PANEL,
         canNavigateBack = false,
-        showAddAction = false,
         menuItems = listOf(
             TopBarMenuItem(R.string.menu_approvals, ApprovalsRoute),
             TopBarMenuItem(R.string.menu_categories, CategoriesRoute),
@@ -276,7 +260,6 @@ private fun LoginBarPreview() {
     BarPreview(
         TopBarScreen.LOGIN,
         canNavigateBack = true,
-        showAddAction = false,
         accountAction = AccountAction.NONE,
     )
 }

@@ -24,5 +24,7 @@ Check the whole app against brief V and build the ZIP for Nonio.
 - [ ] ZIP name and contents match brief VI; PDF inside.
 - [ ] Submitted on Nonio before 2026-11-22 23:59.
 
+**Status (2026-11-20):** no box is fully met yet. Code slices 1-6 are done and reviewed (`docs/work/D-015-final-pass-delivery/`): clean-up, strings parity after the F-015/F-016 merge, phone fix, citizen report FAB, ZIP script. `lint` has 0 errors (17 version/`UseKtx` warnings, kept on purpose) and `assembleDebug` passes on `dev/Diogo`, but not yet from an unzipped copy. Device checks covered part of the app only (no TalkBack order, no registered-citizen screens, no landscape FAB). Open: run the ZIP script (never run, execution policy), Q8 with Francisco, Q4/Q7 console changes, R4 Maps key check, test accounts, the PDF (F-017), the ZIP from `main`, Nonio upload. Decision: [0025](../../decisions/0025-delivery-package.md).
+
 ## References
 Brief V, VI; CLAUDE.md non-negotiable rules (ZIP contents).

@@ -20,6 +20,7 @@ import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.utils.isInEmailDomain
+import pt.isec.amov.cityfix.utils.nationalPhoneDigits
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -215,7 +216,8 @@ class FirestoreUsersRepository(
         val name = getString("name").orEmpty()
         val nif = getString("nif").orEmpty()
         val email = getString("email").orEmpty()
-        val phone = getString("phone").orEmpty()
+        // Accounts made in the console may store "+351…"; the model keeps 9 digits.
+        val phone = nationalPhoneDigits(getString("phone").orEmpty())
         val photo = getString("photoPath")
         val photoUpdatedAt = getLong("photoUpdatedAt")
         return when (getString("role")) {

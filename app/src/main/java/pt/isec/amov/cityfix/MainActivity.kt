@@ -20,13 +20,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -406,6 +411,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val showGate = role == AccessRole.ANONYMOUS && !onAuthScreen &&
         gateState.status != GateStatus.INSIDE
 
+    val showReportFab = session.canReport && !showGate &&
+        screen in setOf(TopBarScreen.DASHBOARD, TopBarScreen.LIST, TopBarScreen.MY_TICKETS)
+
     // The gate is drawn over the app instead of replacing it, so the NavHost (and its graph)
     // exists when the gate's "Log in" navigates.
     Box(modifier = Modifier.fillMaxSize()) {
@@ -426,15 +434,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     canNavigateBack = canNavigateBack && !showGate && !holdRedirect,
                     isExpanded = isExpanded,
                     showExpandToggle = canExpandCards,
-                    showAddAction = session.canReport && screen != TopBarScreen.REPORT,
                     accountAction = if (showGate) AccountAction.NONE else accountAction,
-                    // The auth screens show neither the add button nor the menu.
+                    // The auth screens show no menu.
                     menuItems = if (onAuthScreen) emptyList() else menuItemsFor(role),
                     onBackClick = { navController.navigateUp() },
                     onToggleExpandedClick = { isExpanded = !isExpanded },
-                    onAddClick = {
-                        navController.navigate(ReportTicketRoute()) { launchSingleTop = true }
-                    },
                     onMenuItemClick = { item ->
                         navController.navigate(item.route) { launchSingleTop = true }
                     },
@@ -447,6 +451,21 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         }
                     },
                 )
+            },
+            // Report an issue (D-015, Q5): an active citizen on the dashboard, the list and My
+            // tickets. The icon has no description. The label is also set as the button's
+            // contentDescription: on the device the FAB's Text did not reach the accessibility
+            // tree (uiautomator and TalkBack saw an unnamed button), so the name is explicit.
+            floatingActionButton = {
+                if (showReportFab) {
+                    val reportLabel = stringResource(R.string.top_bar_title_report)
+                    ExtendedFloatingActionButton(
+                        onClick = { navController.navigate(ReportTicketRoute()) { launchSingleTop = true } },
+                        modifier = Modifier.semantics { contentDescription = reportLabel },
+                        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        text = { Text(reportLabel) },
+                    )
+                }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { innerPadding ->
