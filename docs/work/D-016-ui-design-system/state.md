@@ -1,6 +1,6 @@
 # D-016: UI design system (Material 3, light and dark)
 Branch: design · Base: 9c4bab4 (dev/Diogo)
-Remote: none yet
+Remote: origin/design
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: none yet
 | Code | in progress | 2026-11-20 | Part A (navigation) f4f16f4; Part B waits for the design-system approval |
 | Review | pending | | |
 | Docs | pending | | |
-| Pushed | | | |
+| Pushed | done | 2026-11-20 | ef56ce4 to origin/design |
 | Merged | | | |
 
 ## Log
@@ -109,3 +109,6 @@ Remote: none yet
   Request info, Contacts and Messages cards). Fix found: the sort chip's arrow was indigo, now
   `onSurfaceVariant`. Verify pass (0 / 17). Not checked: Register, MFA screen, Forgot password,
   Account setup, landscape after the restyle, TalkBack.
+- 2026-11-20 Push: verify passed on ef56ce4 (assembleDebug; lint 0 errors / 17 warnings); pushed
+  `design` to `origin/design` (new remote branch). No PR, `main` and `dev/Diogo` untouched; the
+  local `ilha-navegacao` branch (20a28cd, contained in `design`) was not pushed.
