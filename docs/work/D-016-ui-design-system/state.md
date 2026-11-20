@@ -6,12 +6,12 @@ Remote: origin/design
 | --- | --- | --- | --- |
 | Start | done | 2026-11-20 | Asked in conversation (no task file); branch `design` asked by Diogo |
 | Plan | done | 2026-11-20 | 00-plan Part A (bottom navigation) + Part B (design system), 01-coding-plan |
-| Gate 1: plan approved | partial | 2026-11-20 | Part A approved (answers below); Part B to be shown again after Part A |
-| Code | in progress | 2026-11-20 | Part A (navigation) f4f16f4; Part B waits for the design-system approval |
+| Gate 1: plan approved | done | 2026-11-20 | Part A by the Gate answers; Part B by Diogo's reference image (indigo accent), Active issues approved before the rest |
+| Code | done | 2026-11-20 | Navigation f4f16f4, island a074889/20a28cd, theme 2eaa488, Inter 5b7e984, screens up to ef56ce4 |
 | Review | pending | | |
 | Docs | pending | | |
 | Pushed | done | 2026-11-20 | ef56ce4 to origin/design |
-| Merged | | | |
+| Merged | done | 2026-11-20 | d05fb9f into main (pushed by Diogo); dev/Diogo fast-forwarded |
 
 ## Log
 - 2026-11-20 Start: deviation from CLAUDE.md "Workflow" (one dev branch per person): Diogo asked
@@ -112,3 +112,14 @@ Remote: origin/design
 - 2026-11-20 Push: verify passed on ef56ce4 (assembleDebug; lint 0 errors / 17 warnings); pushed
   `design` to `origin/design` (new remote branch). No PR, `main` and `dev/Diogo` untouched; the
   local `ilha-navegacao` branch (20a28cd, contained in `design`) was not pushed.
+- 2026-11-20 Merge: Diogo asked to merge the new design into `main` for Francisco to test.
+  `origin/main` (abbe2ae) was already contained in `design`, so no conflicts: `main`
+  fast-forwarded to `origin/main`, then `git merge --no-ff design` as d05fb9f "merge: design into
+  main". It also brings D-015's 18 commits that were only on `dev/Diogo` (`design` was cut from
+  there). Verify on `main`: assembleDebug pass; lint 0 errors / 17 warnings. The push of `main` by
+  Claude was refused by the permission system; Diogo pushed `main` himself.
+- 2026-11-20 `dev/Diogo` fast-forwarded to `origin/main` (9c4bab4..d05fb9f), build pass, pushed.
+  `dev/Diogo`, `design` and `main` are on the same commit. Francisco to test the new design.
+- 2026-11-20 TalkBack: Diogo tested the new design with TalkBack by hand on the emulator and
+  reports that it works (island tabs, top bar, cards, forms). Checked by hearing, not recorded
+  item by item; Accessibility Scanner not run.
