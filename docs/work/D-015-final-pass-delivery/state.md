@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | done | 2026-11-20 | Slices 1-3 (6c0fbf0, a3fe6fb, ade184a); 4 (f6a4cb1, 01a276d); 5 (953f577); 6 (d8e5881, script not yet run: execution policy) |
 | Review | done | 2026-11-20 | Round 1 (slices 1-3, 2026-11-17): approve with should-fix (0/2/3). Round 2 (phone fix, slices 4-6): approve with should-fix (0 blocking, 3 should-fix, 5 nits); see review.md |
 | Docs | done | 2026-11-20 | Slices 1-6 documented: overview (top bar / app shell FAB, phone on read, Setup, new "Delivery (D-015)"), decision 0025 (delivery package; 0023/0024 taken), 0012 notes, task file status note (no box ticked), report notes D-015 section. Delivery facts (ZIP SHA, upload time, console steps) still to record when done |
-| Pushed | done | 2026-11-20 | 2b273a2 to origin/dev/Diogo (slices 1-3, device checks, phone fix; slices 4-6 rest pending) |
+| Pushed | done | 2026-11-20 | 9338032 to origin/dev/Diogo (slices 1-6, review rounds 1-2, docs, device checks) |
 | Merged | | | |
 
 ## Log
@@ -74,3 +74,4 @@ Remote: origin/dev/Diogo
   - Tap opens "Report an issue" (`ReportTicketRoute`).
   - Defect found and fixed: the FAB's `Text` did not reach the accessibility tree (uiautomator `NAF="true"`, empty text, also with TalkBack on), so TalkBack would announce an unnamed button. Fix: `Modifier.semantics { contentDescription = reportLabel }` on the `ExtendedFloatingActionButton` (`MainActivity.kt`, shared file; tell Francisco). After the fix the FAB subtree has content-desc "Report an issue" / "Reportar ocorrência" and no `NAF`. Verify: assembleDebug pass; lint 0 errors / 17 warnings. Commit: 6f929aa. TalkBack's spoken output itself could not be read back from Logcat (only pre-TTS items are logged); TalkBack was switched off again afterwards.
   - Landscape (PT): the FAB sits bottom-right inside the insets and covers nothing on Dashboard; List scrolled to the end: the last card ends above the FAB (88 dp padding, 1946dcc). My tickets: this citizen has none, so the last-card case there was not seen (same padding as List).
+- 2026-11-20 Push: verify passed on 6f929aa (assembleDebug; lint 0 errors / 17 warnings); pushed `1e33ea4..9338032` to `origin/dev/Diogo` (merge of main, slices 4-6, review round 2 fixes, docs, FAB fix). No PR, `main` untouched.
