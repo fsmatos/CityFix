@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -41,7 +41,7 @@ fun LocationDeniedMessage(
         Button(onClick = onTryAgainClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.location_try_again))
         }
-        OutlinedButton(onClick = onOpenSettingsClick, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onOpenSettingsClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.location_open_settings))
         }
     }

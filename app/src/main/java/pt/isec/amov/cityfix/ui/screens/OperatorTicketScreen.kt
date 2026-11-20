@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -301,7 +301,7 @@ private fun ActionsRow(
             }
         }
         if (TicketStatus.INFO_REQUESTED in moves) {
-            OutlinedButton(onClick = onRequestInfoClick) {
+            FilledTonalButton(onClick = onRequestInfoClick) {
                 Text(stringResource(R.string.operator_action_request_info))
             }
         }
@@ -349,10 +349,10 @@ private fun ResolveSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(onClick = onAddFromGalleryClick, enabled = state.canAddProof) {
+            FilledTonalButton(onClick = onAddFromGalleryClick, enabled = state.canAddProof) {
                 Text(stringResource(R.string.resolve_add_gallery))
             }
-            OutlinedButton(onClick = onTakePhotoClick, enabled = state.canAddProof) {
+            FilledTonalButton(onClick = onTakePhotoClick, enabled = state.canAddProof) {
                 Text(stringResource(R.string.resolve_take_photo))
             }
         }

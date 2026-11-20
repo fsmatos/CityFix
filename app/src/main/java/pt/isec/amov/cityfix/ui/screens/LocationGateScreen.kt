@@ -10,8 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -96,7 +96,7 @@ fun LocationGateContent(
             GateStatus.OUTSIDE -> MessageAndTryAgain(R.string.gate_outside, onTryAgainClick)
         }
         if (onLoginClick != null) {
-            OutlinedButton(onClick = onLoginClick, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLoginClick, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.gate_log_in))
             }
         }

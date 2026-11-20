@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,7 +120,7 @@ fun TicketDetailContent(
                     }
                 }
                 if (canAskClarification) {
-                    OutlinedButton(onClick = onAskClarificationClick) {
+                    FilledTonalButton(onClick = onAskClarificationClick) {
                         Text(stringResource(R.string.clarification_button))
                     }
                 }

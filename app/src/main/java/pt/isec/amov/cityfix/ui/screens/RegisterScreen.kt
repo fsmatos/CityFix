@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -401,7 +401,7 @@ private fun CitizenLocation(
             style = MaterialTheme.typography.bodyMedium,
         )
         FormMessage(state.locationError, isError = true)
-        OutlinedButton(
+        FilledTonalButton(
             onClick = onUseMyLocation,
             enabled = enabled && !state.isLocating,
             modifier = Modifier.fillMaxWidth(),

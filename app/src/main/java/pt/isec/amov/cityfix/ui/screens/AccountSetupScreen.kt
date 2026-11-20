@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -86,7 +86,7 @@ fun AccountSetupContent(
             TextButton(onClick = onResendEmail, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_resend_email))
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.menu_log_out))
             }
         }
@@ -116,7 +116,7 @@ fun AccountSetupContent(
             Button(onClick = onSendCode, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_send_code))
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.menu_log_out))
             }
         }

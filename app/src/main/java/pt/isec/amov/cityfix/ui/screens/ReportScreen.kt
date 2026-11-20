@@ -32,8 +32,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -548,14 +548,14 @@ private fun AttachmentsSection(
                 removeEnabled = !state.submitted,
             )
         }
-        OutlinedButton(
+        FilledTonalButton(
             onClick = onAddFromGalleryClick,
             enabled = state.canAddAttachment,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.report_attachments_gallery))
         }
-        OutlinedButton(
+        FilledTonalButton(
             onClick = onTakePhotoClick,
             enabled = state.canAddAttachment,
             modifier = Modifier.fillMaxWidth(),
@@ -612,7 +612,7 @@ private fun LocationSection(
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = onRefreshClick,
                 enabled = !state.isLocating && !state.submitted,
                 modifier = Modifier.fillMaxWidth(),

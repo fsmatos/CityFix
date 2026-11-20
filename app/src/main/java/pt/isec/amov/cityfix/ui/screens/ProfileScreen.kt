@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -160,7 +160,7 @@ fun ProfileContent(
                     )
                 }
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.profile_log_out))
             }
             return@FormColumn
@@ -240,13 +240,13 @@ fun ProfileContent(
         ) {
             Text(stringResource(R.string.profile_save))
         }
-        OutlinedButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_change_email))
         }
-        OutlinedButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_change_password))
         }
-        OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_log_out))
         }
     }

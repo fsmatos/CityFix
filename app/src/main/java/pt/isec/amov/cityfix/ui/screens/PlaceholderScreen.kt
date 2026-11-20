@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -85,7 +85,7 @@ fun AccountProblemScreen(
                 Text(stringResource(R.string.account_problem_retry))
             }
         }
-        OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.menu_log_out))
         }
     }
