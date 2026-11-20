@@ -2,7 +2,6 @@ package pt.isec.amov.cityfix.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +37,9 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.RegistrationStatus
+import pt.isec.amov.cityfix.ui.components.EmptyState
+import pt.isec.amov.cityfix.ui.components.LoadingState
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
@@ -79,28 +79,11 @@ fun CitizenApprovalContent(
 ) {
     val citizen = state.citizen
     if (state.isLoading) {
-        val loadingDescription = stringResource(R.string.cd_citizen_approval_loading)
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                modifier = Modifier.semantics { contentDescription = loadingDescription },
-            )
-        }
+        LoadingState(descriptionRes = R.string.cd_citizen_approval_loading, modifier = modifier)
         return
     }
     if (state.notFound || citizen == null) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.citizen_approval_not_found),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+        EmptyState(messageRes = R.string.citizen_approval_not_found, modifier = modifier)
         return
     }
 
@@ -126,14 +109,15 @@ fun CitizenApprovalContent(
                     .verticalScroll(detailsScroll)
                     .padding(bottom = LocalBottomBarPadding.current),
             )
-            CitizenLocation(
-                location = citizen.georeferencing,
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .verticalScroll(locationScroll)
                     .padding(bottom = LocalBottomBarPadding.current),
-            )
+            ) {
+                SectionCard { CitizenLocation(citizen.georeferencing) }
+            }
         }
     } else {
         Column(
@@ -146,7 +130,8 @@ fun CitizenApprovalContent(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CitizenDetails(citizen, state, onActivateClick)
-            CitizenLocation(citizen.georeferencing)
+            // D-016: the map is a section card.
+            SectionCard { CitizenLocation(citizen.georeferencing) }
         }
     }
 
