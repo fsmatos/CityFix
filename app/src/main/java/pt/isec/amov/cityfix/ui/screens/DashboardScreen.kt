@@ -12,8 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +26,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.ui.components.CityCard
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import java.text.NumberFormat
 
 private const val HOUR_MILLIS = 3_600_000L
@@ -88,7 +89,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.md),
             ) {
                 StatCard(
                     label = stringResource(R.string.dashboard_repair_time_label),
@@ -129,7 +130,8 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        Button(
+        // Neutral: on this screen the accent is the report button (D-016).
+        FilledTonalButton(
             onClick = onSeeTicketsClick,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
@@ -145,14 +147,14 @@ private fun StatCard(
     supporting: String?,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.semantics(mergeDescendants = true) {}) {
+    CityCard(modifier = modifier.semantics(mergeDescendants = true) {}) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(Dimens.lg),
+            verticalArrangement = Arrangement.spacedBy(Dimens.xs),
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
