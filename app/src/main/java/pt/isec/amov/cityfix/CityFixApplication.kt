@@ -24,6 +24,7 @@ import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.utils.createNotificationChannels
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -34,6 +35,12 @@ import pt.isec.amov.cityfix.data.UsersRepository
  * before any other Firestore call, so they are applied here, once, when [firestore] is first read.
  */
 class CityFixApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        // F-016: the class creates the channel before any notification is shown.
+        createNotificationChannels(this)
+    }
+
     val ticketsRepository: TicketsRepository by lazy {
         FirestoreTicketsRepository(firestore, attachmentUploader)
     }

@@ -1,6 +1,10 @@
 package pt.isec.amov.cityfix
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -38,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -104,6 +109,7 @@ import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.EXTRA_TICKET_ID
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
 import pt.isec.amov.cityfix.viewmodel.AccessRole
@@ -155,6 +161,9 @@ import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 private const val TAG = "CityFixApp"
 
 class MainActivity : ComponentActivity() {
+    /** F-016: ticket a tapped notification asked to open; CityFixApp opens it and clears it. */
+    private var openTicketId by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The app is light-only, so keep dark system bar icons even when the
@@ -165,11 +174,19 @@ class MainActivity : ComponentActivity() {
         )
         // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
         val app = application as CityFixApplication
+        // Only on a fresh start: after a rotation the same intent must not open the ticket again.
+        if (savedInstanceState == null) openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
         setContent {
             CityFixTheme {
-                CityFixApp(app)
+                CityFixApp(app, openTicketId, onTicketOpened = { openTicketId = null })
             }
         }
+    }
+
+    /** singleTop (manifest): a notification tapped while the app is open arrives here. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
     }
 }
 
@@ -179,7 +196,7 @@ class MainActivity : ComponentActivity() {
  * shares one instance of each. [app] holds the repositories the ViewModel factories receive.
  */
 @Composable
-private fun CityFixApp(app: CityFixApplication) {
+private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketOpened: () -> Unit) {
     val ticketsViewModel: TicketsViewModel =
         viewModel(factory = TicketsViewModelFactory(app.ticketsRepository, null))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
@@ -300,13 +317,42 @@ private fun CityFixApp(app: CityFixApplication) {
     val gateViewModel: LocationGateViewModel =
         viewModel(factory = LocationGateViewModelFactory(app.locationRepository))
     val gateState by gateViewModel.uiState.collectAsStateWithLifecycle()
+    // F-016: the notification request below waits for this answer.
+    var locationAnswered by remember { mutableStateOf(false) }
+    // F-016: saveable, so a rotation does not ask (or show the denied snackbar) again.
+    var askedNotifications by rememberSaveable { mutableStateOf(false) }
     val locationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         gateViewModel.onPermissionResult(permissions.values.any { it })
+        locationAnswered = true
     }
     LaunchedEffect(Unit) {
         locationPermissionRequest.launch(LOCATION_PERMISSIONS)
+    }
+
+    // F-016 (Gate 1 Q6): ask for notifications when a citizen or operator session starts, as P11
+    // asks with RequestPermission (Android 13+). Only after the location answer, because Android
+    // shows one permission request at a time. Asked once per session; denied -> a snackbar.
+    val notificationsDeniedMessage = stringResource(R.string.notifications_denied)
+    val notificationPermissionRequest = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            snackbarScope.launch { snackbarHostState.showSnackbar(notificationsDeniedMessage) }
+        }
+    }
+    LaunchedEffect(role, locationAnswered) {
+        if (role != AccessRole.CITIZEN && role != AccessRole.OPERATOR) {
+            askedNotifications = false
+        } else if (!askedNotifications && locationAnswered &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            askedNotifications = true
+            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // Brief II.3 (D-014): while an operator with precise location has the app in the foreground,
@@ -705,6 +751,15 @@ private fun CityFixApp(app: CityFixApplication) {
                     // null = fresh start: the NavHost is on the dashboard, so only other homes navigate.
                     if (handledRole != null || homeFor(role) != DashboardRoute) goHome()
                     handledRole = role
+                }
+            }
+
+            // F-016: a tapped notification opens its ticket. After the redirect above, so the
+            // role's home is set first and the ticket goes on top of it; never while Loading.
+            LaunchedEffect(openTicketId, role) {
+                if (openTicketId != null) {
+                    navController.navigate(TicketDetailRoute(openTicketId)) { launchSingleTop = true }
+                    onTicketOpened()
                 }
             }
         }

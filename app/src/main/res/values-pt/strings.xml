@@ -394,4 +394,9 @@
     <string name="resolve_error_failed">Não foi possível preparar a prova, ou esta ocorrência já não pode ser resolvida.</string>
     <string name="resolve_camera_unavailable">Não foi possível usar a câmara.</string>
     <string name="cd_resolve_busy">A guardar a resolução</string>
+    <!-- F-016 notificacoes -->
+    <string name="channel_tickets">Atualizações de ocorrências</string>
+    <string name="channel_messages">Mensagens</string>
+    <string name="channel_proximity">Município por perto</string>
+    <string name="notifications_denied">As notificações estão desligadas: não será avisado quando as suas ocorrências mudarem. Pode ligá-las nas Definições.</string>
 </resources>
