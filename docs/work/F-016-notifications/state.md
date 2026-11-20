@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-20 | review.md: 1 blocking (B1), 3 should-fix, 7 nits |
 | Docs | done | 2026-11-20 | overview, 0024, 0010/0022 lines, report notes |
 | Pushed | done | 2026-11-20 | origin/dev/Francisco |
-| Merged | pending | | |
+| Merged | done | 2026-11-20 | dev/Francisco into main |
 
 ## Log
 Append-only.
@@ -38,3 +38,4 @@ Append-only.
 - 2026-11-20: Fixed the offline-reopen gap found on device (commit `fix(F-016): check only server-confirmed tickets for notifications`). The in-app watch now uses its own listener, `TicketsRepository.ticketsFromServer` (`MetadataChanges.INCLUDE`, lists with `metadata.isFromCache` skipped), instead of the shared list plus the B1 start read; the worker reads use `get(Source.SERVER)` (offline -> exception -> `Result.retry()`). Device check: citizen app reopened in airplane mode after a remote `lastMessageAt` change (simulated with a REST write on the test ticket, author restored afterwards): no notification and `lastCheckedAt` unchanged while offline; after reconnecting, "New message" within a few seconds. The worker path with `Source.SERVER` was not re-run on device. Build + lint: 0 errors, 17 warnings.
 - 2026-11-20: pushed dev/Francisco again (device checks, offline fix, docs); verify passed on the fix commit.
 - 2026-11-20: Remaining device checks. **FCM:** console campaign (target app CityFix, data `ticketId`, channel `tickets`) shown on both emulators: citizen app in background (system tray) and anonymous app in foreground (`onMessageReceived` -> `showNotification`); the foreground one opens the ticket on tap; **the background (system-shown) one opens the app home, not the ticket** (the tap's launch intent arrived without extras; known limit, local notifications open the ticket). **24 h warning and Encerrado:** temporary build on the citizen with `REOPEN_WINDOW_MS = 4 min` / warning at 2 min (reverted, normal build reinstalled); new private test ticket "F016 24h test": live "In progress" and "Resolved", then "Closes in 24 hours..." inside the window and "This ticket is now closed." after it (checks triggered by operator messages, as the app-open watch checks on server changes); opening it wrote CLOSED by `system` (F-014 rule). **Worker with `Source.SERVER`:** SUCCESS every 15 min on citizen and operator. Build + lint after the revert: 0 errors.
+- 2026-11-20: merged dev/Francisco into main (no conflicts, build + lint pass), as the person asked. main not pushed.
