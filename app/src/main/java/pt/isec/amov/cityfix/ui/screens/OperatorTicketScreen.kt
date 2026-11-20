@@ -18,7 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -54,6 +53,7 @@ import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.MessageThread
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.viewmodel.MAX_PROOF_ATTACHMENTS
@@ -250,19 +250,20 @@ fun OperatorTicketContent(
                 onResolveClick = onResolveClick,
             )
         }
+        // D-016: contacts and the thread are section cards.
         if (ticket != null) {
-            HorizontalDivider()
-            ContactsSection(ticket = ticket, people = state.people)
+            SectionCard { ContactsSection(ticket = ticket, people = state.people) }
         }
-        HorizontalDivider()
-        MessageThread(
-            messages = state.messages,
-            currentUserId = operator.id,
-            draft = state.draft,
-            canSend = canSend,
-            onDraftChange = onDraftChange,
-            onSendClick = onSendClick,
-        )
+        SectionCard {
+            MessageThread(
+                messages = state.messages,
+                currentUserId = operator.id,
+                draft = state.draft,
+                canSend = canSend,
+                onDraftChange = onDraftChange,
+                onSendClick = onSendClick,
+            )
+        }
     }
 
     // Only while its move is still offered (review N1); the stateful half then dismisses it.
