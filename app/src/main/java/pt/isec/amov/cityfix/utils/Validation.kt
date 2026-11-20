@@ -27,6 +27,20 @@ fun isInEmailDomain(email: String, domain: String): Boolean =
 /** A Portuguese phone number: 9 digits starting with 2 (landline) or 9 (mobile), as in the PT numbering plan. */
 fun isPortuguesePhone(digits: String): Boolean = PORTUGUESE_PHONE.matches(digits)
 
+/**
+ * The national digits of a stored phone. The app writes 9 digits, but an account created by hand
+ * in the console may hold "+351 912 345 678" or "00351912345678"; the screens add "+351" again.
+ * Spaces are dropped and a leading +351 / 00351 is removed; anything else is returned trimmed.
+ */
+fun nationalPhoneDigits(phone: String): String {
+    val compact = phone.filterNot { it.isWhitespace() }
+    return when {
+        compact.startsWith("+351") -> compact.removePrefix("+351")
+        compact.startsWith("00351") -> compact.removePrefix("00351")
+        else -> compact
+    }
+}
+
 /** A Portuguese mobile number: 9 digits starting with 9 (the SMS second factor needs a mobile). */
 fun isPortugueseMobile(digits: String): Boolean = PORTUGUESE_MOBILE.matches(digits)
 
