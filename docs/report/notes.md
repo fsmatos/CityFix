@@ -202,7 +202,7 @@ No decision record (Gate 1). Code: `ui/navigation/Destinations.kt`, `gradle/libs
 - The runtime is declared explicitly rather than taken transitively from `navigation-compose`, so D-004 builds on its own and the direct use is documented. `navigation-compose` itself is added in D-006, which must check that it does not raise the runtime past 1.11.0 (Gradle picks the highest requested version).
 
 ### Improvement opportunities
-- Deep links to a ticket (for example from an FCM status-change notification) with `TicketDetailRoute`.
+- Deep links to a ticket (for example from a status-change notification) with `TicketDetailRoute`.
 - Nested navigation graphs per role (anonymous, registered citizen, operator) in later phases.
 - Bump kotlinx-serialization together with Kotlin 2.3.
 
@@ -1454,11 +1454,11 @@ Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (
 - **Pure rule** `Ticket.eventsFor(...)` in `model/`: status, message, operator nearby, 24 h warning, Encerrado; never one's own action.
 - **Messages seen by the ticket listener:** `lastMessageAt` / `lastMessageAuthorId` on the ticket, written in the same batch as the message.
 - **24 h warning and Encerrado:** time checks on each run, no scheduled job per ticket.
-- **FCM:** service and token as in P11, used for console test messages.
+- **FCM:** F-016 had the P11 service for console test messages; F-019 removed it (decision 0027).
 - **Privacy:** title = category; no coordinates or operator data; Log out clears the tray.
 
 ### Class material vs beyond class
-- Class: P11 FCM service, channels, `POST_NOTIFICATIONS` request, console sending; WorkManager slides 10/11; SharedPreferences slides 09.
+- Class: channels and the `POST_NOTIFICATIONS` request (P10, P11); WorkManager slides 10/11; SharedPreferences slides 09.
 - Beyond class: `singleTop` + `onNewIntent` for the tap; unique periodic work.
 
 ### Options chosen and rejected (Gate 1, 2026-11-20)
@@ -1474,14 +1474,27 @@ Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (
 - Draft rules would refuse the new fields (test mode accepts).
 
 ### Verification
-- Device checks listed in `docs/work/F-016-notifications/state.md` (two emulators, console test message, App Inspection "run now", shortened `CLOSING_WARNING_MS`).
+- Device checks listed in `docs/work/F-016-notifications/state.md` (two emulators, App Inspection "run now", shortened `CLOSING_WARNING_MS`).
 
 ### Improvement opportunities
-- Cloud Function on status change or new message -> FCM to `fcmTokens` (real push, no delay).
+- Cloud Function on status change or new message -> FCM (real push, no delay; needs FCM back, see F-019).
 - Per-user notification settings (per channel or per ticket).
 - Message preview in the notification.
 - Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
-- Remove the FCM token at Log out; rationale before the permission request.
+- Rationale before the permission request.
+
+## F-019: FCM removed
+Decision: [0027](../decisions/0027-local-notifications-only.md). Overview: "FCM removed (F-019)". Brief III.
+
+### Technical solutions
+- Notifications are created on the device from Firestore data (listener while open, WorkManager worker while closed), as P10 creates them from GPS. No push server, no FCM.
+- Removed the FCM receiver, the token storage, the `fcmTokens` field and the dependency.
+
+### Limits to state at the defence
+- **Deviation from the brief:** brief III asks for local and remote (push) notifications; only local ones remain, by the authors' choice.
+
+### Improvement opportunities
+- FCM sent by a Cloud Function on status change or new message (real push, no 15 min delay).
 
 ## F-018: Map pinch zoom, phone at sign-up, full-size media
 

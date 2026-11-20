@@ -1,6 +1,8 @@
 # 0010: Firestore and Storage layout
 
-Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012, F-013, F-014 and F-016 (below).
+Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012, F-013, F-014, F-016 and F-019 (below).
+
+Amended by F-019 (2026-11-20, see [decision 0027](0027-local-notifications-only.md)): `users/{uid}.fcmTokens` is no longer written (not at registration, not at session start) and left the owner allow-list of the draft rules.
 
 Amended by F-016 (2026-11-20, see [decision 0024](0024-notifications.md)):
 - `tickets/{id}.lastMessageAt` (Long, optional) and `lastMessageAuthorId` (String, optional): time and author of the newest message, written in the same batch as the message so the ticket listener sees it; never in `publicTickets`.

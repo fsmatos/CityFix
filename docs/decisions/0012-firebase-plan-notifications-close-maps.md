@@ -2,6 +2,8 @@
 
 Status: accepted (F-010, Gate 1 on 2026-11-10, both authors; Q5 amended 2026-11-13; Q6 amended by F-012 on 2026-11-14, Google Maps Compose instead of osmdroid). These are the four decisions the phase-2 README asked for at Gate 1 of F-010 (Q1, Q3, Q4, Q6), plus the start mode and rules deploy (Q5) and the MFA factor (Q7) that depend on them. The data layout is in [decision 0010](0010-firestore-schema.md).
 
+Amended by F-019 (2026-11-20, [decision 0027](0027-local-notifications-only.md)): FCM is no longer used; point 2 keeps the listener and worker, without the token or console test.
+
 ## Context
 - The brief requires Firebase Auth with MFA, Firestore with offline cache, Storage for photos and videos, and FCM.
 - Cloud Storage requires the Blaze plan: creating a default bucket needs Blaze since 30 Oct 2024, and Spark projects lost access to every bucket on 3 Feb 2026 (Firebase storage FAQ, "storage changes announced Sept 2024"; checked 2026-11-10).
