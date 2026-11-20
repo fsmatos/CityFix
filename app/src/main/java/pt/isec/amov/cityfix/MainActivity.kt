@@ -289,8 +289,12 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     // Every Log out path (top bar, account setup, account problem). The list is cleared first,
     // synchronously, so the next frame never shows the previous user's tickets to an anonymous
     // user; the LaunchedEffect(ticketsUser) that follows with null is then a no-op.
+    // F-016 (review S1): the previous user's notifications are removed from the tray too.
+    val notificationsViewModel: NotificationsViewModel =
+        viewModel(factory = NotificationsViewModelFactory(app))
     val logOut = {
         ticketsViewModel.setUser(null)
+        notificationsViewModel.onLoggedOut()
         sessionViewModel.signOut()
     }
 
@@ -378,11 +382,12 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
         }
     }
 
-    // F-016: notifications follow the session's tickets user (active citizen or operator).
-    val notificationsViewModel: NotificationsViewModel =
-        viewModel(factory = NotificationsViewModelFactory(app))
-    LaunchedEffect(session.ticketsUser?.id) {
-        notificationsViewModel.onUserChanged(session.ticketsUser)
+    // F-016: notifications follow the session's tickets user (active citizen or operator). Not
+    // while Loading (review S3): the user is not known yet, and a null there would cancel and
+    // re-enqueue the worker on every app start.
+    val isLoading = session == Session.Loading
+    LaunchedEffect(session.ticketsUser?.id, isLoading) {
+        if (!isLoading) notificationsViewModel.onUserChanged(session.ticketsUser)
     }
     // While the app is in the foreground, check the shared tickets for changes (like the
     // proximity watch below); a new user or Log out cancels it. Anonymous users get nothing.

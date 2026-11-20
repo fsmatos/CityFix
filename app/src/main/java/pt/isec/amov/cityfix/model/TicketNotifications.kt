@@ -25,8 +25,9 @@ data class TicketEvent(
  *
  * - STATUS: each history entry after the first, dated in (since, now], made by someone else,
  *   except CLOSED (the CLOSED event below covers it).
- * - MESSAGE: a newest message after [since] by someone else; dropped when a STATUS event of this
- *   ticket has a justification, because that text is the message (Gate 1 Q10).
+ * - MESSAGE: a newest message after [since] by someone else; dropped when it is the message of
+ *   an info request, i.e. a history entry with a justification has the same time (both are
+ *   written with one `now`), because the STATUS event already shows that text (Gate 1 Q10).
  * - Operator (Gate 1 Q2): STATUS and MESSAGE only when a citizen participant did it, so one
  *   operator's action does not notify the other operators.
  * - Citizen only: OPERATOR_NEARBY when an operator came within 20 m after [since] and less than
@@ -52,7 +53,7 @@ fun Ticket.eventsFor(userId: String, isOperator: Boolean, since: Long, now: Long
     val author = lastMessageAuthorId
     if (messageAt != null && author != null && messageAt > since && author != userId &&
         (!isOperator || isParticipant(author)) &&
-        events.none { it.justification != null }
+        statusHistory.none { it.dateTime == messageAt && it.justification != null }
     ) {
         events += TicketEvent(id, categoryName, TicketEventKind.MESSAGE)
     }
