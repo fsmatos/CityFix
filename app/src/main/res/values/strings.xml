@@ -399,4 +399,10 @@
     <string name="channel_messages">Messages</string>
     <string name="channel_proximity">Municipality nearby</string>
     <string name="notifications_denied">Notifications are off: you will not be told when your tickets change. You can turn them on in Settings.</string>
+    <string name="notif_status">New status: %1$s</string>
+    <string name="notif_status_with_reason">%1$s: %2$s</string>
+    <string name="notif_new_message">New message</string>
+    <string name="notif_operator_nearby">A municipal operator is near this issue.</string>
+    <string name="notif_closing_soon">Closes in 24 hours. Reopen it now if the problem is not solved.</string>
+    <string name="notif_closed">This ticket is now closed.</string>
 </resources>

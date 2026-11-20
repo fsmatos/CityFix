@@ -399,4 +399,10 @@
     <string name="channel_messages">Mensagens</string>
     <string name="channel_proximity">Município por perto</string>
     <string name="notifications_denied">As notificações estão desligadas: não será avisado quando as suas ocorrências mudarem. Pode ligá-las nas Definições.</string>
+    <string name="notif_status">Novo estado: %1$s</string>
+    <string name="notif_status_with_reason">%1$s: %2$s</string>
+    <string name="notif_new_message">Nova mensagem</string>
+    <string name="notif_operator_nearby">Um operador municipal está perto desta ocorrência.</string>
+    <string name="notif_closing_soon">Encerra dentro de 24 horas. Reabra-a agora se o problema não estiver resolvido.</string>
+    <string name="notif_closed">Esta ocorrência foi encerrada.</string>
 </resources>

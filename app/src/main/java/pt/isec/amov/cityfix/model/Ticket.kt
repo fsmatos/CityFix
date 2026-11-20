@@ -42,4 +42,11 @@ data class Ticket(
      * never a location. Null = never.
      */
     val lastOperatorNearbyAt: Long? = null,
+    /**
+     * Time (epoch ms) of the newest message in the thread (F-016), written with the message, so
+     * the tickets listener notices it without reading the subcollection. Null = no message.
+     */
+    val lastMessageAt: Long? = null,
+    /** User id of who wrote the newest message (F-016), so one's own message does not notify. */
+    val lastMessageAuthorId: String? = null,
 )

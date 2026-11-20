@@ -202,15 +202,20 @@ class FirestoreTicketsRepository(
 
     /**
      * Adds a message by [author] to ticket [ticketId]; false when the trimmed [text] is empty.
+     * One batch (F-016 Q4): the message and the ticket's lastMessageAt/lastMessageAuthorId, so
+     * the tickets listener of the other side sees that there is a new message.
      * Not awaited, as in reportTicket: offline the write is queued and this device's listener
      * shows the message at once; failures are only logged.
      */
     override fun sendMessage(ticketId: String, text: String, author: User): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
-        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES).document()
-            .set(messageDocument(trimmed, System.currentTimeMillis(), author))
-            .addOnFailureListener { Log.w(TAG, "message not saved", it) }
+        val message = messageDocument(trimmed, System.currentTimeMillis(), author)
+        val ticketRef = firestore.collection(TICKETS).document(ticketId)
+        val batch = firestore.batch()
+        batch.set(ticketRef.collection(MESSAGES).document(), message)
+        batch.update(ticketRef, lastMessageFields(message))
+        batch.commit().addOnFailureListener { Log.w(TAG, "message not saved", it) }
         return true
     }
 
@@ -322,12 +327,14 @@ class FirestoreTicketsRepository(
     ) {
         val ticketRef = firestore.collection(TICKETS).document(after.id)
         val batch = firestore.batch()
-        val fields: Map<String, Any> = if (newAttachments.isEmpty()) {
+        var fields: Map<String, Any> = if (newAttachments.isEmpty()) {
             after.toStatusFields()
         } else {
             after.toStatusFields() +
                 ("attachments" to FieldValue.arrayUnion(*newAttachments.map { it.toDocument() }.toTypedArray()))
         }
+        // F-016 Q4: a message in the same batch also marks the ticket as having a new message.
+        if (message != null) fields = fields + lastMessageFields(message)
         batch.update(ticketRef, fields)
         if (message != null) {
             batch.set(ticketRef.collection(MESSAGES).document(), message)

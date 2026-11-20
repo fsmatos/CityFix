@@ -23,6 +23,7 @@ import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.PushTokens
+import pt.isec.amov.cityfix.data.TicketNotifier
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 import pt.isec.amov.cityfix.utils.createNotificationChannels
@@ -75,6 +76,9 @@ class CityFixApplication : Application() {
 
     /** This installation's FCM token in `users/{uid}.fcmTokens` (F-016). */
     val pushTokens: PushTokens by lazy { PushTokens(messaging, firestore) }
+
+    /** Ticket changes -> local notifications, for the in-app watch and the worker (F-016). */
+    val ticketNotifier: TicketNotifier by lazy { TicketNotifier(this) }
 
     /** Sign-in, MFA and password reset (D-009), built from [auth]. */
     val authRepository: AuthRepository by lazy { FirebaseAuthRepository(auth) }
