@@ -25,6 +25,7 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.components.EmptyState
 import pt.isec.amov.cityfix.ui.components.TicketCard
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 
@@ -58,7 +59,8 @@ fun ActiveTicketsScreen(
             start = Dimens.screenPadding,
             top = Dimens.sm,
             end = Dimens.screenPadding,
-            bottom = Dimens.lg,
+            // Clears the floating island (0.dp when there is none).
+            bottom = maxOf(Dimens.lg, LocalBottomBarPadding.current),
         ),
         verticalArrangement = Arrangement.spacedBy(Dimens.md),
         horizontalAlignment = Alignment.CenterHorizontally,

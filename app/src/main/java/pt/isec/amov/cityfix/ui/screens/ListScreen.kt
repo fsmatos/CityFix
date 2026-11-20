@@ -22,6 +22,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.components.TicketCard
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
@@ -52,8 +53,13 @@ fun ListScreen(
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            // Bottom padding so the last card clears the citizen report FAB.
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
+            // Bottom padding so the last card clears the floating island (D-016), or 88dp.
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 16.dp,
+                end = 16.dp,
+                bottom = maxOf(88.dp, LocalBottomBarPadding.current),
+            ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(tickets, key = { it.id }) { ticket ->

@@ -55,6 +55,7 @@ import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.formatDateTime
 import java.util.Locale
@@ -149,7 +150,8 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(detailsScroll),
+                    .verticalScroll(detailsScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
             LocationPane(
                 ticket = ticket,
@@ -160,7 +162,8 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll),
+                    .verticalScroll(locationScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
         }
     } else {
@@ -168,7 +171,9 @@ fun ShowScreen(
             modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(detailsScroll)
-                .padding(16.dp),
+                .padding(16.dp)
+                // Room to scroll above the floating island (D-016).
+                .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             DetailsPane(ticket, audience, now, locale)

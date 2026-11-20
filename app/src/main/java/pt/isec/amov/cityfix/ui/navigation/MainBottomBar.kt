@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,12 +111,29 @@ val tabRootScreens: Set<TopBarScreen> = setOf(
     TopBarScreen.PENDING_VALIDATION,
 )
 
+/** Height of the island: a 56dp tab plus 8dp above and below. */
+val IslandHeight = 72.dp
+
+/** Gap between the island and the system navigation bar (or the bottom of the screen). */
+val IslandBottomMargin = 12.dp
+
+/** What the island takes above the system navigation bar: margin plus island. */
+val IslandClearance = IslandHeight + IslandBottomMargin
+
+/**
+ * Bottom padding a scrolling screen adds after its last item, so it can scroll above the island
+ * (island, system navigation bar and a gap; also the report button on the Dashboard). 0.dp when
+ * no island is shown. Provided by CityFixApp around the NavHost.
+ */
+val LocalBottomBarPadding = compositionLocalOf { 0.dp }
+
 /**
  * App bottom bar as a floating "island" (D-016): a pill with the card background, a thin outline
- * and a soft shadow, inset from the sides and the bottom (above the system navigation bar), at
- * most 480dp wide so it stays compact in landscape. Icons only: each tab's label is its
- * contentDescription, and the row is a selectable group of tabs for TalkBack. Stateless: the
- * caller gives the role's [tabs] and the [selected] one, and receives the clicks.
+ * and a soft shadow, centred and only as wide as its icons, [IslandBottomMargin] above the system
+ * navigation bar (it adds that inset itself). It is drawn over the content, which scrolls under
+ * it (see [LocalBottomBarPadding]). Icons only: each tab's label is its contentDescription, and
+ * the row is a selectable group of tabs for TalkBack. Stateless: the caller gives the role's
+ * [tabs] and the [selected] one, and receives the clicks.
  */
 @Composable
 fun MainBottomBar(
@@ -127,17 +146,18 @@ fun MainBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+            .padding(start = 24.dp, end = 24.dp, bottom = IslandBottomMargin),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            shadowElevation = 3.dp,
+            shadowElevation = 6.dp,
         ) {
             Row(
                 modifier = Modifier
+                    .height(IslandHeight)
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -156,8 +176,9 @@ fun MainBottomBar(
 }
 
 /**
- * One 56dp tab (above the 48dp minimum): the icon, with a discreet circle behind it when selected. The circle is the
- * content colour at low alpha, so it is slightly darker on a light theme and lighter on a dark one.
+ * One 56dp tab (above the 48dp minimum): the icon, with a discreet circle behind it when
+ * selected. The circle is the content colour at low alpha, so it is slightly darker on a light
+ * theme and lighter on a dark one.
  */
 @Composable
 private fun IslandTab(tab: BottomTab, isSelected: Boolean, onClick: () -> Unit) {

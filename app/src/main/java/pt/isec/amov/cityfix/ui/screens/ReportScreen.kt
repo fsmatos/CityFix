@@ -71,6 +71,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
@@ -245,7 +246,8 @@ fun ReportContent(
                     .weight(1f)
                     .fillMaxHeight()
                     .imePadding()
-                    .verticalScroll(leftScroll),
+                    .verticalScroll(leftScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
             DetailsPane(
                 state = state,
@@ -262,7 +264,8 @@ fun ReportContent(
                     .weight(1f)
                     .fillMaxHeight()
                     .imePadding()
-                    .verticalScroll(rightScroll),
+                    .verticalScroll(rightScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
         }
     } else {
@@ -271,7 +274,9 @@ fun ReportContent(
                 .fillMaxSize()
                 .imePadding()
                 .verticalScroll(leftScroll)
-                .padding(16.dp),
+                .padding(16.dp)
+                // Room to scroll above the floating island (D-016).
+                .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             ChoicesPane(

@@ -12,10 +12,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -33,6 +38,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -44,10 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -80,6 +88,8 @@ import pt.isec.amov.cityfix.ui.navigation.ChangeEmailRoute
 import pt.isec.amov.cityfix.ui.navigation.ChangePasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.EditProfileRoute
+import pt.isec.amov.cityfix.ui.navigation.IslandClearance
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.LoginRoute
 import pt.isec.amov.cityfix.ui.navigation.MainBottomBar
@@ -433,6 +443,16 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
         TopBarScreen.CHANGE_PASSWORD,
         TopBarScreen.CHANGE_EMAIL,
     )
+    val islandShown = showBottomBar && session != Session.Loading
+    // What the island covers at the bottom of the screen (system bar + margin + island), plus a
+    // 16dp gap, plus the report button on the Dashboard: the end padding of scrolling screens.
+    val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomBarPadding = if (islandShown) {
+        navigationBarBottom + IslandClearance + Dimens.lg +
+            if (showReportFab) Dimens.reportButtonHeight + Dimens.lg else 0.dp
+    } else {
+        0.dp
+    }
     // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
     // stack saved and restored when the user comes back to it.
     val openTab = { tab: BottomTab ->
@@ -478,11 +498,6 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     },
                 )
             },
-            bottomBar = {
-                if (showBottomBar && session != Session.Loading) {
-                    MainBottomBar(tabs = tabs, selected = selectedTab, onTabClick = openTab)
-                }
-            },
             // Report an issue (D-015, Q5): an active citizen on the dashboard (D-016). The icon has no description. The label is also set as the button's
             // contentDescription: on the device the FAB's Text did not reach the accessibility
             // tree (uiautomator and TalkBack saw an unnamed button), so the name is explicit.
@@ -493,7 +508,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     // corners, 52dp high; the label style is the theme's labelLarge (weight 500).
                     ExtendedFloatingActionButton(
                         onClick = { navController.navigate(ReportTicketRoute()) { launchSingleTop = true } },
+                        // Above the floating island (the Scaffold already adds the system bar).
                         modifier = Modifier
+                            .padding(bottom = if (islandShown) IslandClearance else 0.dp)
                             .height(Dimens.reportButtonHeight)
                             .semantics { contentDescription = reportLabel },
                         shape = MaterialTheme.shapes.medium,
@@ -504,7 +521,12 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     )
                 }
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            snackbarHost = {
+                SnackbarHost(
+                    snackbarHostState,
+                    modifier = Modifier.padding(bottom = if (islandShown) IslandClearance else 0.dp),
+                )
+            },
         ) { innerPadding ->
             if (session == Session.Loading) {
                 // Until the account and profile are known, show nothing role-specific: an operator
@@ -521,13 +543,27 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                 }
                 return@Scaffold
             }
+            // With the island the content goes down to the bottom of the screen and scrolls under
+            // it; the screens add LocalBottomBarPadding at the end of their scroll instead.
+            val layoutDirection = LocalLayoutDirection.current
+            val contentPadding = if (islandShown) {
+                PaddingValues(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                    bottom = 0.dp,
+                )
+            } else {
+                innerPadding
+            }
+            CompositionLocalProvider(LocalBottomBarPadding provides bottomBarPadding) {
             NavHost(
                 navController = navController,
                 startDestination = DashboardRoute,
                 // consumeWindowInsets: ReportContent's imePadding() must not add these insets again.
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding),
+                    .padding(contentPadding)
+                    .consumeWindowInsets(contentPadding),
             ) {
                 composable<DashboardRoute> {
                     DashboardScreen(
@@ -849,6 +885,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     }
                 }
             }
+            }
 
             // Redirect to the role's home when the role changes (login, logout, activation) and on a
             // fresh start with a stored session, so an operator or a setup user does not stay on the
@@ -876,6 +913,17 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     onTicketOpened()
                 }
             }
+        }
+
+        // D-016: the bottom bar is a floating island drawn over the content (not the Scaffold's
+        // bottomBar slot), so lists pass under it; it handles the system bar insets itself.
+        if (islandShown) {
+            MainBottomBar(
+                tabs = tabs,
+                selected = selectedTab,
+                onTabClick = openTab,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
 
         if (showGate) {

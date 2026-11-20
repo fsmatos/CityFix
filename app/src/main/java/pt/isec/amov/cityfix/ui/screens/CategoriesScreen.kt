@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.CategoriesUiState
 import pt.isec.amov.cityfix.viewmodel.CategoriesViewModel
@@ -115,8 +116,13 @@ fun CategoriesContent(
                         .align(Alignment.TopCenter)
                         .fillMaxSize()
                         .widthIn(max = 600.dp),
-                    // Bottom padding so the last row clears the FAB.
-                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp),
+                    // Bottom padding so the last row clears the FAB and the floating island.
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 88.dp + LocalBottomBarPadding.current,
+                    ),
                 ) {
                     items(state.categories, key = { it.id }) { category ->
                         CategoryRow(
@@ -137,7 +143,8 @@ fun CategoriesContent(
                 text = { Text(stringResource(R.string.categories_add)) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
+                    // Above the floating island (D-016).
+                    .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = maxOf(16.dp, LocalBottomBarPadding.current)),
             )
         }
     }

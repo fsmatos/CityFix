@@ -41,6 +41,7 @@ import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.ui.components.TicketMap
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalUiState
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
@@ -122,14 +123,16 @@ fun CitizenApprovalContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(detailsScroll),
+                    .verticalScroll(detailsScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
             CitizenLocation(
                 location = citizen.georeferencing,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll),
+                    .verticalScroll(locationScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
         }
     } else {
@@ -137,7 +140,9 @@ fun CitizenApprovalContent(
             modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(detailsScroll)
-                .padding(16.dp),
+                .padding(16.dp)
+                // Room to scroll above the floating island (D-016).
+                .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CitizenDetails(citizen, state, onActivateClick)

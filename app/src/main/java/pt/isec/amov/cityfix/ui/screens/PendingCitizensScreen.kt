@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Citizen
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensUiState
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
@@ -81,7 +82,13 @@ fun PendingCitizensContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .widthIn(max = 600.dp),
-                    contentPadding = PaddingValues(16.dp),
+                    // The last item scrolls above the floating island (D-016).
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 16.dp,
+                        end = 16.dp,
+                        bottom = maxOf(16.dp, LocalBottomBarPadding.current),
+                    ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(state.citizens, key = { it.id }) { citizen ->

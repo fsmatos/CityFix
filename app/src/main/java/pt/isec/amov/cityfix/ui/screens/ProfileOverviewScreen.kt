@@ -49,6 +49,7 @@ import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.ui.components.TicketCard
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 
@@ -127,7 +128,13 @@ fun ProfileOverviewContent(
         .fillMaxWidth()
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        // The last item scrolls above the floating island (D-016).
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 16.dp,
+            end = 16.dp,
+            bottom = maxOf(16.dp, LocalBottomBarPadding.current),
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

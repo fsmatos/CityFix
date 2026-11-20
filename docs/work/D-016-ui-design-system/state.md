@@ -64,3 +64,20 @@ Remote: none yet
   errors / 17 warnings. Device: light and dark screenshots of Active issues (citizen, PT).
 - Open: Inter files not downloaded (permission asked, not answered); Active issues waits for
   Diogo's look before the other screens.
+- 2026-11-20 Inter (Diogo: "Download Inter"): inter_regular/medium/semibold.ttf (Google Fonts
+  static files, ~325 KB each) in `res/font`, `AppFontFamily` in `Type.kt`, licence in
+  `docs/licenses/Inter-OFL.txt`. Verify pass (0 / 17). Commit 5b7e984 on `design`.
+- 2026-11-20 Branch `ilha-navegacao` from `design` (Diogo asked for a new branch for the island
+  change only). The island now floats over the content: drawn in CityFixApp's outer Box (not the
+  Scaffold `bottomBar`), content full height (NavHost bottom padding 0 while it shows), FAB and
+  snackbars lifted by `IslandClearance` (12 + 72 dp). `LocalBottomBarPadding` (navigation bar +
+  clearance + 16 dp, + report button on the Dashboard; 0 without the island) added at the end of
+  every scroll shown with the island: Active issues, full list, Profile, Dashboard, ticket detail
+  (ShowScreen, both panes), Report (both panes), operator panel, approvals list and detail,
+  Categories (list and its own FAB), `FormColumn`. Shadow 6 dp. No colour, type, logic or route
+  change. Device (Iphone_Diogo, citizen, PT): full list (14 cards) scrolled mid-way passes under
+  the island and the last card ends above it, light and dark; Dashboard FAB above the island.
+  Verify: assembleDebug pass; lint 0 errors / 17 warnings.
+  Francisco's files touched: `MainActivity.kt`, `CategoriesScreen.kt`, `CitizenApprovalScreen.kt`
+  (check `git log`), `DashboardScreen.kt`, `ListScreen.kt`, `ReportScreen.kt`, `ShowScreen.kt`,
+  `OperatorPanelScreen.kt`, `PendingCitizensScreen.kt` (bottom padding lines only).

@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.DashboardStats
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import java.text.NumberFormat
 
@@ -76,7 +77,9 @@ fun DashboardScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(16.dp)
+            // Room to scroll above the floating island and the report button (D-016).
+            .padding(bottom = LocalBottomBarPadding.current),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (isLandscape) {
