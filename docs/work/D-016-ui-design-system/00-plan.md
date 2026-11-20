@@ -40,80 +40,70 @@ Bottom navigation bar (M3 `NavigationBar`), one set of tabs per role:
   `menu_profile`, `menu_approvals`, `menu_categories` (unused after the menu goes).
 - No ViewModel, repository or rule changes; ProfileViewModel is reused read-only by the overview.
 
-## Part B: visual design (design system below, to be shown again for approval after Part A)
+## Part B: visual design (revised 2026-11-20 after Diogo's detailed spec)
 
-## What is there today
-- `ui/theme/`: light scheme only (`primary` #1565C0, `secondary` #00695C, `tertiary` #BF360C),
-  one typography override, no shapes, no spacing tokens, dynamic colour off.
-- `MainActivity` forces light system bars; `themes.xml` parent is `Theme.Material.Light`.
-- Screens already read `MaterialTheme.colorScheme`/`typography`; the only hard-coded colours are
-  in `StatusBadge` (`CityFixGreen`, `Color.White`). Spacing is literal `dp` (mostly 8/16/12/4).
+### Navigation update (done before Part B)
+The bottom bar is a floating "island" (a074889): pill shape, card background and thin outline,
+soft shadow, 24dp side and 12dp bottom margins, at most 480dp wide, icons only (outlined; filled
+when selected) with the tab label as `contentDescription`, a discreet circle behind the selected
+icon (content colour at 8% alpha, so darker in light and lighter in dark). It sits in the
+Scaffold's `bottomBar` slot, so the content padding already keeps every screen's content above it;
+the 88dp list padding stays for the report FAB.
 
-## Proposed design system
-
-### 1. Colour (Material 3 tonal roles, brand seed CityFix blue #1565C0)
-| Role | Light | Dark |
+### 1. Colour: neutral base + one accent (choose A, B or C)
+| Token | Light | Dark |
 | --- | --- | --- |
-| primary / onPrimary | #1565C0 / #FFFFFF | #A9C7FF / #003063 |
-| primaryContainer / on | #D6E3FF / #001B3E | #00468C / #D6E3FF |
-| secondary / onSecondary (teal) | #00695C / #FFFFFF | #82D5C8 / #003731 |
-| secondaryContainer / on | #A0F2E3 / #00201C | #005047 / #A0F2E3 |
-| tertiary / onTertiary (orange) | #A43B12 / #FFFFFF | #FFB59C / #5C1900 |
-| tertiaryContainer / on | #FFDBCF / #380D00 | #832B05 / #FFDBCF |
-| error / onError | #BA1A1A / #FFFFFF | #FFB4AB / #690005 |
-| errorContainer / on | #FFDAD6 / #410002 | #93000A / #FFDAD6 |
-| background = surface / onSurface | #F8F9FF / #191C20 | #111318 / #E1E2E8 |
-| surfaceVariant / onSurfaceVariant | #E0E2EC / #43474E | #43474E / #C3C6CF |
-| outline / outlineVariant | #73777F / #C3C6CF | #8D9199 / #43474E |
-| surfaceContainerLowest..Highest | #FFFFFF #F2F3FA #ECEEF4 #E6E8EE #E1E2E8 | #0C0E13 #191C20 #1D2024 #282A2F #33353A |
-| inverseSurface / inverseOn / inversePrimary | #2E3036 / #EFF0F7 / #A9C7FF | #E1E2E8 / #2E3036 / #1565C0 |
+| background | #F6F6F4 | #141414 |
+| surface (cards, island, top bar = background) | #FFFFFF | #1E1E1E |
+| surfaceVariant (thumbnails, tonal) | #EEEEEB | #2A2A29 |
+| outlineVariant (card outline) | #E4E4E0 | #2F2F2E |
+| outline | #8A8A86 | #8E8E8A |
+| onSurface | #1B1B1A | #ECECEA |
+| onSurfaceVariant | #5E5E5A | #A6A6A2 |
+| error / onError | #B3261E / #FFFFFF | #F2B8B5 / #601410 |
 
-Extra role (not in M3): **success** for RESOLVED, light #2E7D32 / container #C8E6C9 / on #002204,
-dark #8BD68E / container #1B5E20 / on #C8E6C9, exposed as `CityFixTheme.successColors` (a small
-data class via `staticCompositionLocalOf`, picked by the same dark flag).
+Accent (`primary`; `secondary` and `tertiary` map to the neutrals, so nothing else is coloured):
+- **A Terracota**: light #B4502F (5.1:1 on white), dark #F0A58A (8.3:1 on #1E1E1E)
+- **B Verde pinho**: light #0F766E (5.5:1), dark #5EC4B6 (7.9:1)
+- **C Índigo**: light #4F46E5 (6.3:1), dark #A5B4FC (8.3:1)
 
-- The scheme follows the system setting (`isSystemInDarkTheme()`); dynamic colour stays off so the
-  brand colours are kept (as today).
-- System bars: `enableEdgeToEdge()` with the default auto style, so the icons follow the theme.
-  `themes.xml` light parent + new `values-night/themes.xml` dark parent, so the window behind
-  Compose (splash, rotation) is not white in dark mode.
-- Google Maps tiles stay light in dark mode (a map style JSON is out of scope; noted as a limit).
+The accent is used only for: primary buttons, the report FAB, links and text buttons, focus and
+the selected state of form controls.
 
-### 2. Typography
-Default system font (Roboto); no font download, so nothing new to explain or to fail offline.
-M3 type scale with weights tuned for hierarchy:
-- `headlineSmall` 24/32 SemiBold (screen hero titles: Login, Dashboard numbers header)
-- `titleLarge` 22/28 SemiBold (top bar, dialog titles)
-- `titleMedium` 16/24 SemiBold (card titles, section titles)
-- `titleSmall` 14/20 Medium (section headers, in `primary`)
-- `bodyLarge` 16/24, `bodyMedium` 14/20, `bodySmall` 12/16 (as M3)
-- `labelLarge` 14/20 Medium (buttons), `labelMedium` 12/16 Medium (badges)
+Status dots (8dp dot + neutral text; non-text contrast at least 3:1 on the card in both themes):
+OPEN blue #3E7BD6 / #7FA8EC, INFO_REQUESTED violet #8E5BD0 / #B796EA, IN_PROGRESS amber #C98A12 /
+#E2B54E, RESOLVED green #2E8B57 / #6CC892, CLOSED grey #8A8A86 / #8E8E8A. Kept in
+`ui/theme/StatusColors.kt` (picked by the dark flag), not in the screens.
 
-### 3. Shape
-`Shapes(extraSmall 8, small 12, medium 16, large 20, extraLarge 28)` dp. Cards use `medium`,
-text fields `extraSmall`, badges full pill (`CircleShape`), dialogs `extraLarge`; buttons keep the
-M3 pill.
+Light/dark follows the system (`isSystemInDarkTheme()`); dynamic colour stays off; system bar
+icons follow the theme; `values-night/themes.xml` so the window is not white in dark mode.
 
-### 4. Spacing
-`ui/theme/Dimens.kt`, a plain `object Dimens`: `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`,
-`xxl 32`; `screenPadding 16`, `cardPadding 16`, `fabClearance 88`, `minTouchTarget 48`,
-`formMaxWidth 480`, `contentMaxWidth 600`. Screens replace literal dp with these names (same
-values where they are layout-critical, so portrait/landscape behave as now).
+### 2. Typography: Inter
+Inter 400, 500 and 600 as static TTF files in `res/font/` (offline; SIL OFL 1.1, licence text in
+`docs/`), one `FontFamily` in `ui/theme/Type.kt` set on every style of the M3 type scale; screens
+only use `MaterialTheme.typography`. Weights: headline/title 600, titleSmall and labels 500, body 400.
 
-### 5. Base components (in `ui/components/`)
-- `StatusBadge`: tonal pill (container colours instead of saturated fills), same labels.
-  OPEN primaryContainer, INFO_REQUESTED tertiaryContainer, IN_PROGRESS secondaryContainer,
-  RESOLVED success container, CLOSED surfaceContainerHighest / onSurfaceVariant.
-- `TicketCard`: `Card` on `surfaceContainerLow`, `medium` shape, 16 dp padding, 72 dp rounded
-  thumbnail on `surfaceContainerHighest`, badge top-right of the text column, date in
-  `onSurfaceVariant`.
-- New `SectionHeader(textRes)`: `titleSmall` in `primary`, 8 dp below (detail, operator, profile).
-- New `SectionCard { }`: `OutlinedCard`-like grouped block (`surfaceContainerLow`, `medium`
-  shape, 16 dp padding) for the field groups on detail/profile/operator screens.
-- New `EmptyState(messageRes)`: centred `bodyLarge` in `onSurfaceVariant` for empty lists.
-- Buttons: primary `Button` full width 48 dp+; secondary `OutlinedButton`; tertiary `TextButton`
-  (as now, just consistent). `FormMessage` errors on `errorContainer`.
-- Top bar: `TopAppBar` on `surface`, `surfaceContainer` when scrolled (M3 default colours).
+### 3. Shape and spacing
+Cards 16dp, thumbnails 12dp, buttons and island pill, dialogs 28dp (`ui/theme/Shape.kt`).
+`ui/theme/Dimens.kt`: 4, 8, 12, 16, 24, 32; `screenPadding` 16, `fabClearance` 88,
+`minTouchTarget` 48, `contentMaxWidth` 600, `formMaxWidth` 480.
+
+### 4. Base components (`ui/components/`)
+- `CityCard`: neutral surface, 1dp `outlineVariant` outline, 16dp corners, no elevation, optional
+  56dp leading thumbnail or icon on `surfaceVariant`.
+- `StatusLabel`: dot + neutral text (replaces the coloured `StatusBadge` chip; same strings).
+- `ScreenState` helpers: `LoadingState`, `EmptyState` (icon + message), `ErrorState` (message +
+  optional retry), used wherever a screen already has those states.
+- Buttons: primary `Button` (accent), secondary `FilledTonalButton` on neutral, `TextButton` (accent
+  text) for "See more" and minor actions; no strong outlines.
+- Top bar: no background colour (`containerColor` = background, also when scrolled), title left,
+  Logout right.
+- Motion: M3 defaults plus short fades (`AnimatedContent`/`animateColorAsState`, 150-250 ms) on
+  state changes and tab selection; no heavy animation.
+
+### 5. Order
+Theme + Inter + base components, then Active issues first (shown to Diogo before the rest), then
+the remaining screens one per commit.
 
 ## Out of scope
 New features, icons from new libraries (`material-icons-extended`), animations beyond M3
