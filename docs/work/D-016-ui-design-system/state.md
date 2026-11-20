@@ -100,3 +100,12 @@ Remote: none yet
 - Device (citizen, PT): Dashboard light, detail (public view) light, Report dark, Profile dark
   after the PrimaryButton change. Not checked on device: auth screens (would need a log out),
   operator screens (operator login), landscape after the restyle, TalkBack.
+- 2026-11-20 Device check, login and operator (emulator `Iphone_Diogo`, PT; operator signed in by
+  Diogo): anonymous shows the 2-tab island and the Log in icon; Login light and dark (solid
+  indigo button, light-indigo links in dark, no island); operator island with 4 tabs; Operations
+  panel light and dark; Approvals list; citizen approval detail (Activate in indigo, map section);
+  Categories (indigo switches and add button, the add button above the island); operator ticket
+  detail in dark (section cards, status dots in the history, Resolve indigo next to a neutral
+  Request info, Contacts and Messages cards). Fix found: the sort chip's arrow was indigo, now
+  `onSurfaceVariant`. Verify pass (0 / 17). Not checked: Register, MFA screen, Forgot password,
+  Account setup, landscape after the restyle, TalkBack.

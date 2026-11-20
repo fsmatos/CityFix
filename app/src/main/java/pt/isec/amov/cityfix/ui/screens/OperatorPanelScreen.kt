@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -222,6 +223,10 @@ private fun FilterHeader(
                     contentDescription = null,
                 )
             },
+            // D-016: neutral icon; the accent is kept for main actions.
+            colors = AssistChipDefaults.assistChipColors(
+                leadingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
             modifier = Modifier.semantics { contentDescription = sortDescription },
         )
     }
