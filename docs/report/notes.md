@@ -1399,7 +1399,7 @@ Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (
 
 ### Technical solutions
 - **No server (decision 0012):** the app compares the tickets it reads with one stored "last checked" time per user and shows local notifications.
-- **App open:** the shared Firestore tickets listener, after one read at start (the listener's first list is the offline cache).
+- **App open:** a Firestore listener that only accepts server-confirmed lists (`isFromCache` skipped), so cached data never advances the last-check time; the worker reads with `Source.SERVER`.
 - **App closed:** a 15 min periodic `CoroutineWorker` (citizens and operators), network constraint.
 - **Pure rule** `Ticket.eventsFor(...)` in `model/`: status, message, operator nearby, 24 h warning, Encerrado; never one's own action.
 - **Messages seen by the ticket listener:** `lastMessageAt` / `lastMessageAuthorId` on the ticket, written in the same batch as the message.
