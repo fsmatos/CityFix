@@ -3,12 +3,10 @@ package pt.isec.amov.cityfix.viewmodel
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.CityFixApplication
 import pt.isec.amov.cityfix.data.TicketCheckWorker
 import pt.isec.amov.cityfix.model.Operator
-import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.User
 
 /**
@@ -42,34 +40,16 @@ class NotificationsViewModel(private val app: CityFixApplication) : ViewModel() 
 
     /**
      * Runs until cancelled (CityFixApp calls it inside repeatOnLifecycle, like D-014's proximity
-     * watch): every new list from the shared tickets listener is checked for changes.
+     * watch): every list the server sends for this user is checked for changes.
      *
-     * A list without any full ticket (empty, or only public copies) is skipped: it is the list
-     * still loading after a user change, and checking it would move the last-check time past
-     * changes that the real list has not shown yet.
+     * It uses its own listener (ticketsFromServer), not the shared list: the shared list starts
+     * from the offline cache, and a check on cached data would move the last-check time past
+     * changes made while the app was closed or offline, so they would never be notified.
      */
-    suspend fun watch(user: User, tickets: Flow<List<Ticket>>) {
+    suspend fun watch(user: User) {
         val isOperator = user is Operator
-        // Review B1: the listener's first list comes from the offline cache, which can be older
-        // than the changes made while the app was closed. One read first, as the worker does
-        // (get() asks the server when online), so those changes are notified before the cached
-        // list moves the last-check time past them.
-        val first = try {
-            if (isOperator) {
-                app.ticketsRepository.allTicketsOnce()
-            } else {
-                app.ticketsRepository.participantTicketsOnce(user.id)
-            }
-        } catch (e: Exception) {
-            null
-        }
-        if (first != null) {
-            app.ticketNotifier.check(user.id, isOperator, first, System.currentTimeMillis())
-        }
-        tickets.collect { list ->
-            if (list.any { it.statusHistory.isNotEmpty() }) {
-                app.ticketNotifier.check(user.id, isOperator, list, System.currentTimeMillis())
-            }
+        app.ticketsRepository.ticketsFromServer(user.id, isOperator).collect { list ->
+            app.ticketNotifier.check(user.id, isOperator, list, System.currentTimeMillis())
         }
     }
 }

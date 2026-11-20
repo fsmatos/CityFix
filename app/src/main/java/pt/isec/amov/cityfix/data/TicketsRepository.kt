@@ -40,6 +40,9 @@ interface TicketsRepository {
     /** [allTickets] read once (F-016 worker, operators), not live. */
     suspend fun allTicketsOnce(): List<Ticket>
 
+    /** Live tickets to notify [userId] about, server-confirmed lists only (F-016 in-app watch). */
+    fun ticketsFromServer(userId: String, isOperator: Boolean): Flow<List<Ticket>>
+
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     fun stats(): Flow<DashboardStats>
 

@@ -389,13 +389,13 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     LaunchedEffect(session.ticketsUser?.id, isLoading) {
         if (!isLoading) notificationsViewModel.onUserChanged(session.ticketsUser)
     }
-    // While the app is in the foreground, check the shared tickets for changes (like the
+    // While the app is in the foreground, check the user's tickets for changes (like the
     // proximity watch below); a new user or Log out cancels it. Anonymous users get nothing.
     val notifiedUser = session.ticketsUser
     LaunchedEffect(notifiedUser?.id) {
         if (notifiedUser != null) {
             lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                notificationsViewModel.watch(notifiedUser, ticketsViewModel.tickets)
+                notificationsViewModel.watch(notifiedUser)
             }
         }
     }

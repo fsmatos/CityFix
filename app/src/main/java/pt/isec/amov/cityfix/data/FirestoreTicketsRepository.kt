@@ -5,9 +5,11 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -84,20 +86,49 @@ class FirestoreTicketsRepository(
                 TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
             }
 
-    /** The participant query read once with get(), as the class demo reads (F-016 worker). */
+    /**
+     * The participant query read once from the server (F-016 worker). Source.SERVER: offline it
+     * fails instead of returning the cache, so a check never runs on old data.
+     */
     override suspend fun participantTicketsOnce(userId: String): List<Ticket> =
         firestore.collection(TICKETS)
             .whereArrayContains("participantIds", userId)
-            .get()
+            .get(Source.SERVER)
             .await()
             .documents.map { it.toTicket() }
 
-    /** Every full ticket read once with get() (F-016 worker, operators). */
+    /** Every full ticket read once from the server (F-016 worker, operators). */
     override suspend fun allTicketsOnce(): List<Ticket> =
         firestore.collection(TICKETS)
-            .get()
+            .get(Source.SERVER)
             .await()
             .documents.map { it.toTicket() }
+
+    /**
+     * The tickets to notify about (F-016 in-app watch): the participant query for a citizen, every
+     * ticket for an operator, live, but only lists confirmed by the server. Cached lists are
+     * skipped (they can be older than the last check, so checking them would hide newer changes).
+     */
+    override fun ticketsFromServer(userId: String, isOperator: Boolean): Flow<List<Ticket>> {
+        val query: Query = if (isOperator) {
+            firestore.collection(TICKETS)
+        } else {
+            firestore.collection(TICKETS).whereArrayContains("participantIds", userId)
+        }
+        return callbackFlow {
+            // INCLUDE: Firestore also calls back when the same data is confirmed by the server.
+            val registration = query.addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "listen failed", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && !snapshot.metadata.isFromCache) {
+                    trySend(snapshot.documents.map { it.toTicket() })
+                }
+            }
+            awaitClose { registration.remove() }
+        }
+    }
 
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     override fun stats(): Flow<DashboardStats> =
