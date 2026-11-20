@@ -10,7 +10,7 @@ Remote: origin/dev/Diogo
 | Code | pending | 2026-11-17 | Slices 1-3 done (6c0fbf0, a3fe6fb, ade184a); slices 4-6 wait for the F-015/F-016/F-017 merges |
 | Review | done | 2026-11-17 | Slices 1-3: approve with should-fix (0 blocking, 2 should-fix, 3 nits); see review.md |
 | Docs | pending | 2026-11-17 | Partial: slices 1-3 documented (overview incl. review S2, decision 0013, task file, report notes); the rest after slices 4-6 |
-| Pushed | done | 2026-11-17 | a36297b to origin/dev/Diogo (slices 1-3 + device checks; slices 4-6 pending) |
+| Pushed | done | 2026-11-20 | 2b273a2 to origin/dev/Diogo (slices 1-3, device checks, phone fix; slices 4-6 rest pending) |
 | Merged | | | |
 
 ## Log
@@ -54,3 +54,4 @@ Remote: origin/dev/Diogo
   - Not run: TalkBack spoken order, contrast, registered-citizen screens (report, my tickets), operator screens other than the panel, notifications (F-016 not merged).
 - 2026-11-17 Push: verify passed (assembleDebug; lint 0 errors / 14 warnings); pushed `a257d1d..a36297b` (device check results) to `origin/dev/Diogo`. No PR, `main` untouched.
 - 2026-11-20 Code slice 4 (early, before the F-016 merge; Diogo asked): operator contacts showed "+351 +351…" (found in F-016's device checks, D-013 screen). Cause: accounts created by hand in the console store `phone` as "+351…", while the app writes 9 digits and the screens add "+351". Fix: new pure `nationalPhoneDigits` in `utils/Validation.kt` (drops spaces and a leading +351 / 00351) applied in `FirestoreUsersRepository.toProfile()`, so every screen (operator contacts, approvals, profile) gets 9 digits. Both files are Diogo's. Verify: assembleDebug pass; lint 0 errors / 17 warnings (the 3 new ones are `GradleDependency` notices in `libs.versions.toml`, newer library versions published since 2026-11-17; none from this change). Commit: f6a4cb1. Not checked on device; the stored data in the console is unchanged.
+- 2026-11-20 Push: verify passed on f6a4cb1 (assembleDebug; lint 0 errors / 17 warnings); pushed `f9a5834..2b273a2` to `origin/dev/Diogo`. No PR, `main` untouched.
