@@ -1,28 +1,25 @@
 package pt.isec.amov.cityfix.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
+import pt.isec.amov.cityfix.ui.components.EmptyState
 import pt.isec.amov.cityfix.ui.components.TicketCard
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 
 /**
  * Public active tickets (brief I.1.B), shown in the order given; filtering, sorting and the
@@ -36,30 +33,29 @@ fun ListScreen(
     modifier: Modifier = Modifier,
 ) {
     if (tickets.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.ticket_list_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+        EmptyState(messageRes = R.string.ticket_list_empty, modifier = modifier)
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            // Bottom padding so the last card clears the floating island (D-016), or 88dp.
+            contentPadding = PaddingValues(
+                start = Dimens.screenPadding,
+                top = Dimens.sm,
+                end = Dimens.screenPadding,
+                bottom = maxOf(Dimens.fabClearance, LocalBottomBarPadding.current),
+            ),
+            verticalArrangement = Arrangement.spacedBy(Dimens.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             items(tickets, key = { it.id }) { ticket ->
                 TicketCard(
                     ticket = ticket,
                     isExpanded = isExpanded,
                     onClick = { onTicketClick(ticket.id) },
+                    // Centred and at most contentMaxWidth wide, so cards do not stretch in landscape.
+                    modifier = Modifier
+                        .widthIn(max = Dimens.contentMaxWidth)
+                        .animateItem(),
                 )
             }
         }

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,10 +51,14 @@ import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
+import pt.isec.amov.cityfix.ui.components.EmptyState
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.formatDateTime
 import java.util.Locale
 
@@ -114,19 +117,7 @@ fun ShowScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     if (ticket == null) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.ticket_not_found),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+        EmptyState(messageRes = R.string.ticket_not_found, modifier = modifier)
         return
     }
 
@@ -149,7 +140,8 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(detailsScroll),
+                    .verticalScroll(detailsScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
             LocationPane(
                 ticket = ticket,
@@ -160,7 +152,8 @@ fun ShowScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll),
+                    .verticalScroll(locationScroll)
+                    .padding(bottom = LocalBottomBarPadding.current),
             )
         }
     } else {
@@ -168,8 +161,10 @@ fun ShowScreen(
             modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(detailsScroll)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(16.dp)
+                // Room to scroll above the floating island (D-016).
+                .padding(bottom = LocalBottomBarPadding.current),
+            verticalArrangement = Arrangement.spacedBy(Dimens.md),
         ) {
             DetailsPane(ticket, audience, now, locale)
             LocationPane(
@@ -194,15 +189,18 @@ private fun DetailsPane(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimens.md),
     ) {
         // Gate 1 Q2 (revised at review): I.1.B's list fields plus the status badge, for every audience
         TicketHeader(ticket, now)
         when (audience) {
             DetailAudience.PUBLIC -> Unit
-            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> DescriptionSection(ticket, locale)
+            DetailAudience.REGISTERED, DetailAudience.OPERATOR -> SectionCard {
+                DescriptionSection(ticket, locale)
+            }
         }
-        MediaSection(ticket.attachments)
+        // D-016: each section is a card.
+        SectionCard { MediaSection(ticket.attachments) }
     }
 }
 
@@ -221,16 +219,17 @@ private fun LocationPane(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimens.md),
     ) {
         when (audience) {
             // The map shows the approximate area, never coordinates (brief I.1.C)
-            DetailAudience.PUBLIC -> CoarseLocationMap(ticket.location)
+            DetailAudience.PUBLIC -> SectionCard { CoarseLocationMap(ticket.location) }
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
                 // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
-                ExactLocationSection(ticket.location)
-                HorizontalDivider()
-                StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
+                SectionCard { ExactLocationSection(ticket.location) }
+                SectionCard {
+                    StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
+                }
                 participantContent()
             }
         }
@@ -291,7 +290,8 @@ private fun TicketHeader(
         )
         Text(
             text = stringResource(situationLabelRes(ticket.situation)),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         StatusBadge(ticket.effectiveStatus(now))
     }

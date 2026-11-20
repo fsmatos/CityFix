@@ -1,13 +1,13 @@
 package pt.isec.amov.cityfix.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
@@ -25,7 +25,7 @@ fun PendingValidationScreen(
         messageRes = R.string.pending_message,
         modifier = modifier,
     ) {
-        Button(onClick = onBrowseClick, modifier = Modifier.fillMaxWidth()) {
+        PrimaryButton(onClick = onBrowseClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.pending_browse))
         }
     }

@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,6 +31,8 @@ import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.MessageThread
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.DetailDialog
 import pt.isec.amov.cityfix.viewmodel.TicketDetailUiState
@@ -115,26 +115,28 @@ fun TicketDetailContent(
         if (canReopen || canAskClarification) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (canReopen) {
-                    Button(onClick = onReopenClick) {
+                    PrimaryButton(onClick = onReopenClick) {
                         Text(stringResource(R.string.reopen_button))
                     }
                 }
                 if (canAskClarification) {
-                    OutlinedButton(onClick = onAskClarificationClick) {
+                    FilledTonalButton(onClick = onAskClarificationClick) {
                         Text(stringResource(R.string.clarification_button))
                     }
                 }
             }
         }
-        HorizontalDivider()
-        MessageThread(
-            messages = state.messages,
-            currentUserId = user.id,
-            draft = state.draft,
-            canSend = canSend,
-            onDraftChange = onDraftChange,
-            onSendClick = onSendClick,
-        )
+        // D-016: the thread is its own section card.
+        SectionCard {
+            MessageThread(
+                messages = state.messages,
+                currentUserId = user.id,
+                draft = state.draft,
+                canSend = canSend,
+                onDraftChange = onDraftChange,
+                onSendClick = onSendClick,
+            )
+        }
     }
 
     if (state.openDialog != null) {

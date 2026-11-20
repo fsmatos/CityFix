@@ -1,7 +1,6 @@
 package pt.isec.amov.cityfix.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,6 +11,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordUiState
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
@@ -54,7 +54,7 @@ fun ForgotPasswordContent(
         )
         FormMessage(state.error, isError = true)
         FormMessage(if (state.sent) R.string.forgot_sent else null, isError = false)
-        Button(
+        PrimaryButton(
             onClick = onSend,
             enabled = !state.isBusy,
             modifier = Modifier.fillMaxWidth(),

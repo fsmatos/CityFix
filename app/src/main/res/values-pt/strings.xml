@@ -132,7 +132,6 @@
     <string name="cd_navigate_back">Voltar</string>
     <string name="cd_expand_tickets">Expandir ocorrências</string>
     <string name="cd_collapse_tickets">Recolher ocorrências</string>
-    <string name="cd_report_ticket">Reportar ocorrência</string>
     <string name="cd_loading_session">A carregar a sessão</string>
 
     <!-- Dashboard -->
@@ -198,17 +197,22 @@
     <!-- Role navigation (D-009) -->
     <string name="top_bar_title_pending">Registo pendente</string>
     <string name="top_bar_title_operator_panel">Painel de gestão</string>
-    <string name="top_bar_title_my_tickets">As minhas ocorrências</string>
     <string name="top_bar_title_profile">Perfil</string>
     <string name="top_bar_title_approvals">Validação de registos</string>
     <string name="top_bar_title_categories">Categorias</string>
     <string name="top_bar_title_account_problem">Conta</string>
-    <string name="cd_more_options">Mais opções</string>
-    <string name="menu_my_tickets">As minhas ocorrências</string>
-    <string name="menu_profile">Perfil</string>
-    <string name="menu_approvals">Validação de registos</string>
-    <string name="menu_categories">Categorias</string>
     <string name="menu_log_out">Terminar sessão</string>
+    <string name="nav_dashboard">Painel</string>
+    <string name="nav_active">Ocorrências ativas</string>
+    <string name="nav_profile">Perfil</string>
+    <string name="nav_operator_panel">Painel</string>
+    <string name="nav_approvals">Aprovações</string>
+    <string name="nav_categories">Categorias</string>
+    <string name="top_bar_title_active">Ocorrências ativas</string>
+    <string name="top_bar_title_edit_profile">Alterar detalhes</string>
+    <string name="active_see_more">Ver mais</string>
+    <string name="profile_edit_details">Alterar detalhes</string>
+    <string name="profile_my_tickets">As minhas ocorrências</string>
     <string name="pending_title">O seu registo aguarda validação</string>
     <string name="pending_message">A autarquia tem de validar o seu registo antes de poder reportar ocorrências. Entretanto, pode consultar as ocorrências públicas.</string>
     <string name="pending_browse">Ver ocorrências públicas</string>

@@ -10,9 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +37,7 @@ import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionRow
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
@@ -160,29 +160,15 @@ fun ProfileContent(
                     )
                 }
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.profile_log_out))
             }
             return@FormColumn
         }
 
         // A photo picked now, else the one saved in this visit (until its upload ends), else the
-        // stored one. The stored photo's cache key includes photoUpdatedAt: an overwrite may keep
-        // the same URL, and Coil would otherwise show the cached old image (D-011 R4).
-        val context = LocalContext.current
-        val storedPhoto = profile.photo
-        val storedPhotoModel: Any? = remember(storedPhoto, state.photoUpdatedAt) {
-            if (storedPhoto == null || state.photoUpdatedAt == null) {
-                storedPhoto
-            } else {
-                val key = "$storedPhoto#${state.photoUpdatedAt}"
-                ImageRequest.Builder(context)
-                    .data(storedPhoto)
-                    .memoryCacheKey(key)
-                    .diskCacheKey(key)
-                    .build()
-            }
-        }
+        // stored one.
+        val storedPhotoModel = rememberProfilePhotoModel(profile.photo, state.photoUpdatedAt)
         val localPhoto = state.newPhotoPath ?: state.savedPhotoPath
         ProfilePhotoPicker(
             photo = localPhoto?.let { File(it) } ?: storedPhotoModel,
@@ -247,21 +233,43 @@ fun ProfileContent(
         }
 
         FormMessage(state.notice, isError = false)
-        Button(
+        PrimaryButton(
             onClick = onSave,
             enabled = state.hasChanges && !state.isCopyingPhoto,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.profile_save))
         }
-        OutlinedButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_change_email))
         }
-        OutlinedButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onChangePassword, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_change_password))
         }
-        OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_log_out))
+        }
+    }
+}
+
+/**
+ * The Coil model of the stored profile photo. Its cache key includes [photoUpdatedAt]: an
+ * overwrite may keep the same URL, and Coil would otherwise show the cached old image (D-011 R4).
+ * Shared by Edit profile and the Profile tab (D-016).
+ */
+@Composable
+internal fun rememberProfilePhotoModel(photo: String?, photoUpdatedAt: Long?): Any? {
+    val context = LocalContext.current
+    return remember(photo, photoUpdatedAt) {
+        if (photo == null || photoUpdatedAt == null) {
+            photo
+        } else {
+            val key = "$photo#$photoUpdatedAt"
+            ImageRequest.Builder(context)
+                .data(photo)
+                .memoryCacheKey(key)
+                .diskCacheKey(key)
+                .build()
         }
     }
 }

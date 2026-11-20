@@ -15,11 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +52,8 @@ import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.MessageThread
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.viewmodel.MAX_PROOF_ATTACHMENTS
@@ -250,19 +250,20 @@ fun OperatorTicketContent(
                 onResolveClick = onResolveClick,
             )
         }
+        // D-016: contacts and the thread are section cards.
         if (ticket != null) {
-            HorizontalDivider()
-            ContactsSection(ticket = ticket, people = state.people)
+            SectionCard { ContactsSection(ticket = ticket, people = state.people) }
         }
-        HorizontalDivider()
-        MessageThread(
-            messages = state.messages,
-            currentUserId = operator.id,
-            draft = state.draft,
-            canSend = canSend,
-            onDraftChange = onDraftChange,
-            onSendClick = onSendClick,
-        )
+        SectionCard {
+            MessageThread(
+                messages = state.messages,
+                currentUserId = operator.id,
+                draft = state.draft,
+                canSend = canSend,
+                onDraftChange = onDraftChange,
+                onSendClick = onSendClick,
+            )
+        }
     }
 
     // Only while its move is still offered (review N1); the stateful half then dismisses it.
@@ -291,17 +292,17 @@ private fun ActionsRow(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (TicketStatus.IN_PROGRESS in moves) {
-            Button(onClick = onStartWorkClick) {
+            PrimaryButton(onClick = onStartWorkClick) {
                 Text(stringResource(R.string.operator_action_start_work))
             }
         }
         if (TicketStatus.RESOLVED in moves) {
-            Button(onClick = onResolveClick) {
+            PrimaryButton(onClick = onResolveClick) {
                 Text(stringResource(R.string.operator_action_resolve))
             }
         }
         if (TicketStatus.INFO_REQUESTED in moves) {
-            OutlinedButton(onClick = onRequestInfoClick) {
+            FilledTonalButton(onClick = onRequestInfoClick) {
                 Text(stringResource(R.string.operator_action_request_info))
             }
         }
@@ -349,10 +350,10 @@ private fun ResolveSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(onClick = onAddFromGalleryClick, enabled = state.canAddProof) {
+            FilledTonalButton(onClick = onAddFromGalleryClick, enabled = state.canAddProof) {
                 Text(stringResource(R.string.resolve_add_gallery))
             }
-            OutlinedButton(onClick = onTakePhotoClick, enabled = state.canAddProof) {
+            FilledTonalButton(onClick = onTakePhotoClick, enabled = state.canAddProof) {
                 Text(stringResource(R.string.resolve_take_photo))
             }
         }
@@ -377,7 +378,7 @@ private fun ResolveSection(
             TextButton(onClick = onCancel, enabled = !state.isCopying && !state.isResolving) {
                 Text(stringResource(R.string.resolve_cancel))
             }
-            Button(onClick = onConfirm, enabled = state.canConfirmResolve) {
+            PrimaryButton(onClick = onConfirm, enabled = state.canConfirmResolve) {
                 if (state.isResolving) {
                     CircularProgressIndicator(
                         modifier = Modifier

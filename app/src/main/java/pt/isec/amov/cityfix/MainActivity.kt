@@ -3,32 +3,44 @@ package pt.isec.amov.cityfix
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +50,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -60,20 +74,26 @@ import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Operator
+import pt.isec.amov.cityfix.model.isActive
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionEffect
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
+import pt.isec.amov.cityfix.ui.navigation.ActiveTicketsRoute
 import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
+import pt.isec.amov.cityfix.ui.navigation.BottomTab
 import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
 import pt.isec.amov.cityfix.ui.navigation.ChangeEmailRoute
 import pt.isec.amov.cityfix.ui.navigation.ChangePasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
+import pt.isec.amov.cityfix.ui.navigation.EditProfileRoute
+import pt.isec.amov.cityfix.ui.navigation.IslandClearance
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.LoginRoute
+import pt.isec.amov.cityfix.ui.navigation.MainBottomBar
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
-import pt.isec.amov.cityfix.ui.navigation.MyTicketsRoute
 import pt.isec.amov.cityfix.ui.navigation.OperatorPanelRoute
 import pt.isec.amov.cityfix.ui.navigation.PendingCitizenRoute
 import pt.isec.amov.cityfix.ui.navigation.PendingValidationRoute
@@ -84,9 +104,11 @@ import pt.isec.amov.cityfix.ui.navigation.RequireAccess
 import pt.isec.amov.cityfix.ui.navigation.TicketDetailRoute
 import pt.isec.amov.cityfix.ui.navigation.TicketListRoute
 import pt.isec.amov.cityfix.ui.navigation.TopBarScreen
+import pt.isec.amov.cityfix.ui.navigation.bottomTabsFor
 import pt.isec.amov.cityfix.ui.navigation.homeFor
-import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
+import pt.isec.amov.cityfix.ui.navigation.tabRootScreens
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
+import pt.isec.amov.cityfix.ui.screens.ActiveTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
 import pt.isec.amov.cityfix.ui.screens.CategoriesScreen
 import pt.isec.amov.cityfix.ui.screens.ChangeCredentialScreen
@@ -97,11 +119,11 @@ import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
 import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
-import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
 import pt.isec.amov.cityfix.ui.screens.OperatorPanelScreen
 import pt.isec.amov.cityfix.ui.screens.OperatorTicketScreen
 import pt.isec.amov.cityfix.ui.screens.PendingCitizensScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
+import pt.isec.amov.cityfix.ui.screens.ProfileOverviewScreen
 import pt.isec.amov.cityfix.ui.screens.ProfileScreen
 import pt.isec.amov.cityfix.ui.screens.RegisterScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
@@ -109,6 +131,7 @@ import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.EXTRA_TICKET_ID
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
@@ -168,12 +191,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // The app is light-only, so keep dark system bar icons even when the
-        // device is in dark mode (the default style follows the device).
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-        )
+        // D-016: light and dark themes, so the default style is used: the system bar icons follow
+        // the device's dark mode, like CityFixTheme.
+        enableEdgeToEdge()
         // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
         val app = application as CityFixApplication
         // Only on a fresh start: after a rotation the same intent must not open the ticket again.
@@ -406,6 +426,43 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val showGate = role == AccessRole.ANONYMOUS && !onAuthScreen &&
         gateState.status != GateStatus.INSIDE
 
+    // D-016: the report button is on the Dashboard tab only.
+    val showReportFab = session.canReport && !showGate && screen == TopBarScreen.DASHBOARD
+
+    // D-016: bottom bar with the role's tabs (RoleAccess.kt). Hidden on the login flow, on Edit
+    // profile and its credential screens (Gate 1), and while the gate covers the app. A screen
+    // outside every tab (detail, report) keeps the last tab selected.
+    val tabs = bottomTabsFor(role)
+    val currentTab = tabs.firstOrNull { screen in it.screens }
+    var lastTab by rememberSaveable { mutableStateOf<BottomTab?>(null) }
+    SideEffect { if (currentTab != null) lastTab = currentTab }
+    val selectedTab = currentTab ?: lastTab?.takeIf { it in tabs }
+    val showBottomBar = tabs.isNotEmpty() && !showGate && !onAuthScreen && screen !in setOf(
+        TopBarScreen.ACCOUNT_PROBLEM,
+        TopBarScreen.EDIT_PROFILE,
+        TopBarScreen.CHANGE_PASSWORD,
+        TopBarScreen.CHANGE_EMAIL,
+    )
+    val islandShown = showBottomBar && session != Session.Loading
+    // What the island covers at the bottom of the screen (system bar + margin + island), plus a
+    // 16dp gap, plus the report button on the Dashboard: the end padding of scrolling screens.
+    val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomBarPadding = if (islandShown) {
+        navigationBarBottom + IslandClearance + Dimens.lg +
+            if (showReportFab) Dimens.reportButtonHeight + Dimens.lg else 0.dp
+    } else {
+        0.dp
+    }
+    // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
+    // stack saved and restored when the user comes back to it.
+    val openTab = { tab: BottomTab ->
+        navController.navigate(tab.route) {
+            popUpTo(homeFor(role)) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     // The gate is drawn over the app instead of replacing it, so the NavHost (and its graph)
     // exists when the gate's "Log in" navigates.
     Box(modifier = Modifier.fillMaxSize()) {
@@ -423,21 +480,14 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     // While the gate covers the app, no bar control stays reachable behind it
                     // (keyboard or switch focus); the gate has its own Log in.
                     // Nor while Register holds the redirect: leaving it mid-registration is not allowed.
-                    canNavigateBack = canNavigateBack && !showGate && !holdRedirect,
+                    // A tab's own screen has no back arrow (D-016); system Back still goes home.
+                    canNavigateBack = canNavigateBack && !showGate && !holdRedirect &&
+                        screen !in tabRootScreens,
                     isExpanded = isExpanded,
                     showExpandToggle = canExpandCards,
-                    showAddAction = session.canReport && screen != TopBarScreen.REPORT,
                     accountAction = if (showGate) AccountAction.NONE else accountAction,
-                    // The auth screens show neither the add button nor the menu.
-                    menuItems = if (onAuthScreen) emptyList() else menuItemsFor(role),
                     onBackClick = { navController.navigateUp() },
                     onToggleExpandedClick = { isExpanded = !isExpanded },
-                    onAddClick = {
-                        navController.navigate(ReportTicketRoute()) { launchSingleTop = true }
-                    },
-                    onMenuItemClick = { item ->
-                        navController.navigate(item.route) { launchSingleTop = true }
-                    },
                     onAccountClick = {
                         if (accountAction == AccountAction.LOG_OUT) {
                             // The session becomes Anonymous and the redirect goes to the dashboard.
@@ -448,7 +498,35 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     },
                 )
             },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            // Report an issue (D-015, Q5): an active citizen on the dashboard (D-016). The icon has no description. The label is also set as the button's
+            // contentDescription: on the device the FAB's Text did not reach the accessibility
+            // tree (uiautomator and TalkBack saw an unnamed button), so the name is explicit.
+            floatingActionButton = {
+                if (showReportFab) {
+                    val reportLabel = stringResource(R.string.top_bar_title_report)
+                    // D-016: indigo with white text in both themes (primaryContainer), 16dp
+                    // corners, 52dp high; the label style is the theme's labelLarge (weight 500).
+                    ExtendedFloatingActionButton(
+                        onClick = { navController.navigate(ReportTicketRoute()) { launchSingleTop = true } },
+                        // Above the floating island (the Scaffold already adds the system bar).
+                        modifier = Modifier
+                            .padding(bottom = if (islandShown) IslandClearance else 0.dp)
+                            .height(Dimens.reportButtonHeight)
+                            .semantics { contentDescription = reportLabel },
+                        shape = MaterialTheme.shapes.medium,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        text = { Text(reportLabel) },
+                    )
+                }
+            },
+            snackbarHost = {
+                SnackbarHost(
+                    snackbarHostState,
+                    modifier = Modifier.padding(bottom = if (islandShown) IslandClearance else 0.dp),
+                )
+            },
         ) { innerPadding ->
             if (session == Session.Loading) {
                 // Until the account and profile are known, show nothing role-specific: an operator
@@ -465,18 +543,44 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                 }
                 return@Scaffold
             }
+            // With the island the content goes down to the bottom of the screen and scrolls under
+            // it; the screens add LocalBottomBarPadding at the end of their scroll instead.
+            val layoutDirection = LocalLayoutDirection.current
+            val contentPadding = if (islandShown) {
+                PaddingValues(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                    bottom = 0.dp,
+                )
+            } else {
+                innerPadding
+            }
+            CompositionLocalProvider(LocalBottomBarPadding provides bottomBarPadding) {
             NavHost(
                 navController = navController,
                 startDestination = DashboardRoute,
                 // consumeWindowInsets: ReportContent's imePadding() must not add these insets again.
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding),
+                    .padding(contentPadding)
+                    .consumeWindowInsets(contentPadding),
             ) {
                 composable<DashboardRoute> {
                     DashboardScreen(
                         stats = stats,
                         onSeeTicketsClick = {
+                            navController.navigate(TicketListRoute) { launchSingleTop = true }
+                        },
+                    )
+                }
+                composable<ActiveTicketsRoute> {
+                    // The first active tickets of the same list; "See more" opens the full list.
+                    ActiveTicketsScreen(
+                        tickets = tickets.filter { it.isActive },
+                        onTicketClick = { id ->
+                            navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
+                        },
+                        onSeeMoreClick = {
                             navController.navigate(TicketListRoute) { launchSingleTop = true }
                         },
                     )
@@ -615,23 +719,45 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         )
                     }
                 }
-                composable<MyTicketsRoute> {
-                    RequireAccess(role = role, allowed = setOf(AccessRole.CITIZEN), onDenied = goHome) {
-                        // The guard lets only an active citizen in, so the session holds their profile.
-                        val citizenId = session.ticketsUser?.id ?: return@RequireAccess
-                        // The citizen's list already holds their own tickets (F-011); keep the ones
-                        // they created or follow, any scope or status (brief I.2.E).
-                        MyTicketsScreen(
-                            tickets = tickets.filter { it.isParticipant(citizenId) },
+                // Profile and credential changes: any signed-in user with a profile.
+                composable<ProfileRoute> {
+                    RequireAccess(
+                        role = role,
+                        allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                        onDenied = goHome,
+                    ) {
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        // The overview only reads the ViewModel's state (D-016).
+                        val profileViewModel: ProfileViewModel = viewModel(
+                            factory = ProfileViewModelFactory(
+                                user.id,
+                                app.usersRepository,
+                                app.authRepository,
+                                app.attachmentStorage,
+                            ),
+                        )
+                        // As on the former My tickets (F-014): an active citizen's list already
+                        // holds their own tickets; keep the ones they created or follow. A pending
+                        // citizen has none yet; an operator gets no tickets section.
+                        val myTickets = when (role) {
+                            AccessRole.CITIZEN -> tickets.filter { it.isParticipant(user.id) }
+                            AccessRole.PENDING_CITIZEN -> emptyList()
+                            else -> null
+                        }
+                        ProfileOverviewScreen(
+                            viewModel = profileViewModel,
+                            myTickets = myTickets,
                             now = System.currentTimeMillis(),
+                            onEditDetails = {
+                                navController.navigate(EditProfileRoute) { launchSingleTop = true }
+                            },
                             onTicketClick = { id ->
                                 navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                             },
                         )
                     }
                 }
-                // Profile and credential changes: any signed-in user with a profile.
-                composable<ProfileRoute> {
+                composable<EditProfileRoute> {
                     RequireAccess(
                         role = role,
                         allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
@@ -759,6 +885,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     }
                 }
             }
+            }
 
             // Redirect to the role's home when the role changes (login, logout, activation) and on a
             // fresh start with a stored session, so an operator or a setup user does not stay on the
@@ -788,6 +915,17 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
             }
         }
 
+        // D-016: the bottom bar is a floating island drawn over the content (not the Scaffold's
+        // bottomBar slot), so lists pass under it; it handles the system bar insets itself.
+        if (islandShown) {
+            MainBottomBar(
+                tabs = tabs,
+                selected = selectedTab,
+                onTabClick = openTab,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+
         if (showGate) {
             // Surface: an opaque background that also takes the touches meant for the app behind.
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -809,6 +947,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
 /** Maps the current destination to the bar's enum. Add new routes here: `else` will not warn. */
 private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     this == null -> TopBarScreen.DASHBOARD
+    hasRoute<ActiveTicketsRoute>() -> TopBarScreen.ACTIVE_TICKETS
     hasRoute<TicketListRoute>() -> TopBarScreen.LIST
     hasRoute<TicketDetailRoute>() -> TopBarScreen.DETAIL
     hasRoute<ReportTicketRoute>() -> TopBarScreen.REPORT
@@ -816,8 +955,8 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<ForgotPasswordRoute>() -> TopBarScreen.FORGOT_PASSWORD
     hasRoute<PendingValidationRoute>() -> TopBarScreen.PENDING_VALIDATION
     hasRoute<OperatorPanelRoute>() -> TopBarScreen.OPERATOR_PANEL
-    hasRoute<MyTicketsRoute>() -> TopBarScreen.MY_TICKETS
     hasRoute<ProfileRoute>() -> TopBarScreen.PROFILE
+    hasRoute<EditProfileRoute>() -> TopBarScreen.EDIT_PROFILE
     hasRoute<ApprovalsRoute>() -> TopBarScreen.APPROVALS
     hasRoute<CategoriesRoute>() -> TopBarScreen.CATEGORIES
     hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM

@@ -9,9 +9,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object DashboardRoute
 
-/** List of public active tickets. */
+/** Full list of public active tickets, opened by "See more" on the Active issues tab. */
 @Serializable
 data object TicketListRoute
+
+/** Active issues tab (D-016): the first few active tickets and "See more". */
+@Serializable
+data object ActiveTicketsRoute
 
 /**
  * Detail of one ticket. Carries only the id; the screen takes the ticket from the collected
@@ -45,19 +49,22 @@ data object PendingValidationRoute
 @Serializable
 data object OperatorPanelRoute
 
-/** Tickets the signed-in active citizen created or follows (F-014). */
-@Serializable
-data object MyTicketsRoute
-
-/** Profile of the signed-in user (D-011). */
+/**
+ * Profile tab (D-016): the signed-in user's details and, for citizens, the tickets they created
+ * or follow (the former My tickets screen, F-014).
+ */
 @Serializable
 data object ProfileRoute
 
-/** Change password, from Profile (D-011). */
+/** Edit form of the profile (D-011), opened by "Edit details" on the Profile tab. */
+@Serializable
+data object EditProfileRoute
+
+/** Change password, from Edit profile (D-011). */
 @Serializable
 data object ChangePasswordRoute
 
-/** Change e-mail (verification link), from Profile (D-011). */
+/** Change e-mail (verification link), from Edit profile (D-011). */
 @Serializable
 data object ChangeEmailRoute
 

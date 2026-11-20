@@ -5,9 +5,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.AccountSetupUiState
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
@@ -80,13 +80,13 @@ fun AccountSetupContent(
             )
             FormMessage(state.error, isError = true)
             FormMessage(state.notice, isError = false)
-            Button(onClick = onCheckVerified, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
+            PrimaryButton(onClick = onCheckVerified, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_verified_button))
             }
             TextButton(onClick = onResendEmail, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_resend_email))
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.menu_log_out))
             }
         }
@@ -113,10 +113,10 @@ fun AccountSetupContent(
                     .semantics { if (phoneError != null) error(phoneError) },
             )
             FormMessage(state.error, isError = true)
-            Button(onClick = onSendCode, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
+            PrimaryButton(onClick = onSendCode, enabled = !state.isBusy, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_send_code))
             }
-            OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.menu_log_out))
             }
         }

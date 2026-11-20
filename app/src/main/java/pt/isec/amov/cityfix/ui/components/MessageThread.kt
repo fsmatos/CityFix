@@ -121,8 +121,10 @@ private fun MessageRow(
     ) {
         Surface(
             shape = MaterialTheme.shapes.medium,
+            // D-016: neutral bubbles (the accent is kept for main actions); the alignment says
+            // whose message it is.
             color = if (isMine) {
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.secondaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             },

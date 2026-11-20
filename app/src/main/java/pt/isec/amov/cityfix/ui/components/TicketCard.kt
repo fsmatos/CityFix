@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,6 +27,7 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.formatDate
 
 /** Returns the string resource id with the localised label of [situation]. */
@@ -39,7 +39,8 @@ fun situationLabelRes(situation: Situation): Int = when (situation) {
 }
 
 /**
- * Clickable ticket summary (brief I.1.B); [isExpanded] also shows the description and date.
+ * Clickable ticket summary (brief I.1.B): thumbnail, category, situation and status dot on the
+ * app card (D-016); [isExpanded] also shows the description and date.
  * [status] is the badge; My tickets passes `ticket.effectiveStatus(now)` so an expired RESOLVED
  * ticket shows CLOSED (decision 0011).
  */
@@ -53,16 +54,16 @@ fun TicketCard(
 ) {
     val noCategory = stringResource(R.string.ticket_no_category)
 
-    Card(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+    CityCard(onClick = onClick, modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(Dimens.md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.lg),
         ) {
             TicketThumbnail(ticket.attachments.firstOrNull())
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = ticket.categoryName.ifBlank { noCategory },
@@ -72,9 +73,10 @@ fun TicketCard(
                 )
                 Text(
                     text = stringResource(situationLabelRes(ticket.situation)),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                StatusBadge(status)
+                StatusBadge(status, modifier = Modifier.padding(top = Dimens.xs))
                 if (isExpanded) {
                     if (ticket.description.isNotBlank()) {
                         Text(
@@ -103,9 +105,9 @@ fun TicketCard(
 private fun TicketThumbnail(attachment: Attachment?) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(Dimens.thumbnail)
             .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surface),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         val contentDescription = stringResource(R.string.ticket_thumbnail_description)

@@ -8,10 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.GateStatus
@@ -96,7 +96,7 @@ fun LocationGateContent(
             GateStatus.OUTSIDE -> MessageAndTryAgain(R.string.gate_outside, onTryAgainClick)
         }
         if (onLoginClick != null) {
-            OutlinedButton(onClick = onLoginClick, modifier = Modifier.fillMaxWidth()) {
+            FilledTonalButton(onClick = onLoginClick, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.gate_log_in))
             }
         }
@@ -106,7 +106,7 @@ fun LocationGateContent(
 @Composable
 private fun MessageAndTryAgain(@StringRes text: Int, onTryAgainClick: () -> Unit) {
     Text(stringResource(text), textAlign = TextAlign.Center)
-    Button(onClick = onTryAgainClick, modifier = Modifier.fillMaxWidth()) {
+    PrimaryButton(onClick = onTryAgainClick, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.location_try_again))
     }
 }
