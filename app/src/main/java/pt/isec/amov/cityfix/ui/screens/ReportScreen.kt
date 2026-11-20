@@ -70,9 +70,11 @@ import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
+import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
@@ -277,7 +279,7 @@ fun ReportContent(
                 .padding(16.dp)
                 // Room to scroll above the floating island (D-016).
                 .padding(bottom = LocalBottomBarPadding.current),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(Dimens.md),
         ) {
             ChoicesPane(
                 state = state,
@@ -308,10 +310,11 @@ private fun ChoicesPane(
     onSituationSelected: (Situation) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimens.md)) {
         Text(
             text = stringResource(R.string.report_required_note),
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         CategoryDropdown(
             categories = state.categories,
@@ -319,14 +322,17 @@ private fun ChoicesPane(
             error = state.categoryError,
             onSelect = onCategorySelected,
         )
-        RadioGroupSection(
-            title = stringResource(R.string.report_situation_title),
-            options = Situation.entries,
-            selected = state.situation,
-            label = { stringResource(situationLabelRes(it)) },
-            error = state.situationError,
-            onSelect = onSituationSelected,
-        )
+        // D-016: each group of the form is a section card.
+        SectionCard {
+            RadioGroupSection(
+                title = stringResource(R.string.report_situation_title),
+                options = Situation.entries,
+                selected = state.situation,
+                label = { stringResource(situationLabelRes(it)) },
+                error = state.situationError,
+                onSelect = onSituationSelected,
+            )
+        }
     }
 }
 
@@ -345,32 +351,38 @@ private fun DetailsPane(
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimens.md)) {
         DescriptionField(
             value = state.description,
             error = state.descriptionError,
             onValueChange = onDescriptionChange,
         )
-        AttachmentsSection(
-            state = state,
-            onAddFromGalleryClick = onAddFromGalleryClick,
-            onTakePhotoClick = onTakePhotoClick,
-            onRemoveAttachment = onRemoveAttachment,
-        )
-        LocationSection(
-            state = state,
-            onTryAgainClick = onLocationTryAgainClick,
-            onOpenSettingsClick = onOpenSettingsClick,
-            onRefreshClick = onRefreshLocationClick,
-        )
-        RadioGroupSection(
-            title = stringResource(R.string.report_scope_title),
-            options = Scope.entries,
-            selected = state.scope,
-            label = { stringResource(scopeLabelRes(it)) },
-            error = state.scopeError,
-            onSelect = onScopeSelected,
-        )
+        SectionCard {
+            AttachmentsSection(
+                state = state,
+                onAddFromGalleryClick = onAddFromGalleryClick,
+                onTakePhotoClick = onTakePhotoClick,
+                onRemoveAttachment = onRemoveAttachment,
+            )
+        }
+        SectionCard {
+            LocationSection(
+                state = state,
+                onTryAgainClick = onLocationTryAgainClick,
+                onOpenSettingsClick = onOpenSettingsClick,
+                onRefreshClick = onRefreshLocationClick,
+            )
+        }
+        SectionCard {
+            RadioGroupSection(
+                title = stringResource(R.string.report_scope_title),
+                options = Scope.entries,
+                selected = state.scope,
+                label = { stringResource(scopeLabelRes(it)) },
+                error = state.scopeError,
+                onSelect = onScopeSelected,
+            )
+        }
         if (state.showErrorSummary) {
             ErrorText(R.string.report_error_summary)
         }
