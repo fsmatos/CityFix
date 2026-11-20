@@ -117,7 +117,7 @@ fun OperatorPanelContent(
                 end = 16.dp,
                 bottom = maxOf(16.dp, LocalBottomBarPadding.current),
             ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "filters") {
                 FilterHeader(
