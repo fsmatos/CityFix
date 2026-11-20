@@ -84,6 +84,21 @@ class FirestoreTicketsRepository(
                 TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
             }
 
+    /** The participant query read once with get(), as the class demo reads (F-016 worker). */
+    override suspend fun participantTicketsOnce(userId: String): List<Ticket> =
+        firestore.collection(TICKETS)
+            .whereArrayContains("participantIds", userId)
+            .get()
+            .await()
+            .documents.map { it.toTicket() }
+
+    /** Every full ticket read once with get() (F-016 worker, operators). */
+    override suspend fun allTicketsOnce(): List<Ticket> =
+        firestore.collection(TICKETS)
+            .get()
+            .await()
+            .documents.map { it.toTicket() }
+
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     override fun stats(): Flow<DashboardStats> =
         firestore.document(STATS_SUMMARY)

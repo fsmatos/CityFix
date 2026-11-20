@@ -34,6 +34,12 @@ interface TicketsRepository {
     /** Every full ticket, newest first (operators). */
     fun allTickets(): Flow<List<Ticket>>
 
+    /** [participantTickets] read once (F-016 worker), not live. */
+    suspend fun participantTicketsOnce(userId: String): List<Ticket>
+
+    /** [allTickets] read once (F-016 worker, operators), not live. */
+    suspend fun allTicketsOnce(): List<Ticket>
+
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     fun stats(): Flow<DashboardStats>
 

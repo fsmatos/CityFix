@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.CityFixApplication
+import pt.isec.amov.cityfix.data.TicketCheckWorker
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.User
@@ -18,11 +19,15 @@ class NotificationsViewModel(private val app: CityFixApplication) : ViewModel() 
 
     /**
      * Called when the session's tickets user changes: an active citizen or an operator, or null
-     * for everyone else (anonymous, pending, logged out).
+     * for everyone else (anonymous, pending, logged out). Saves the FCM token and starts the
+     * periodic background check for that user, or stops it when there is none (Gate 1 Q2, Q7).
      */
     fun onUserChanged(user: User?) {
         if (user != null) {
             viewModelScope.launch { app.pushTokens.register(user.id) }
+            TicketCheckWorker.schedule(app, user.id, user is Operator)
+        } else {
+            TicketCheckWorker.cancel(app)
         }
     }
 
