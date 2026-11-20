@@ -1,6 +1,11 @@
 # 0010: Firestore and Storage layout
 
-Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012, F-013 and F-014 (below).
+Status: accepted (F-010, Gate 1 on 2026-11-10; Diogo agreed the schema before the Gate; rules tightened after the F-010 review on 2026-11-10, adding `tickets/{id}/reports/{uid}` for grouping; review round 2 added the server-timestamped `resolvedAt`; the round 3 fixes bound the first history entry's `dateTime` and require `ticketLocations.active == false` in the closing batch). Rules drafted in `firestore.rules` and `storage.rules`, not deployed (Q5 in [decision 0012](0012-firebase-plan-notifications-close-maps.md)). Amended by F-011, F-012, F-013, F-014 and F-016 (below).
+
+Amended by F-016 (2026-11-20, see [decision 0024](0024-notifications.md)):
+- `tickets/{id}.lastMessageAt` (Long, optional) and `lastMessageAuthorId` (String, optional): time and author of the newest message, written in the same batch as the message so the ticket listener sees it; never in `publicTickets`.
+- `tickets/{id}.lastOperatorNearbyAt` (Long, optional): time of the last operator arrival within 20 m of an IN_PROGRESS ticket; no operator id or location; never in `publicTickets` (D-014, decision 0022).
+- `users/{uid}.fcmTokens` is now written (`arrayUnion`) at session start and on a new token.
 
 Amended by F-014 (2026-11-15, see [decision 0018](0018-citizen-tickets-messages-reopen.md)):
 - `messages` documents gain `byOperator` (Boolean); `authorId` = the Auth uid; written with `document().set()` (queued offline).

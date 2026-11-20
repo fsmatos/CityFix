@@ -144,6 +144,15 @@ internal fun messageDocument(text: String, sentAt: Long, author: User): Map<Stri
     "byOperator" to (author is Operator),
 )
 
+/**
+ * The ticket fields that point at its newest message (F-016 Q4), taken from a [messageDocument]
+ * written in the same batch: `lastMessageAt` = its sentAt, `lastMessageAuthorId` = its authorId.
+ */
+internal fun lastMessageFields(message: Map<String, Any>): Map<String, Any> = hashMapOf(
+    "lastMessageAt" to message.getValue("sentAt"),
+    "lastMessageAuthorId" to message.getValue("authorId"),
+)
+
 /** The `categories/{id}` document (written by CategoriesRepository, D-012). */
 internal fun Category.toCategoryDocument(): Map<String, Any?> = hashMapOf(
     "name" to name,
@@ -198,6 +207,8 @@ internal fun DocumentSnapshot.toTicket(): Ticket = Ticket(
     statusHistory = getMapList("statusHistory").map { it.toStatusHistory() },
     attachments = attachments(),
     lastOperatorNearbyAt = getLong("lastOperatorNearbyAt"),
+    lastMessageAt = getLong("lastMessageAt"),
+    lastMessageAuthorId = getString("lastMessageAuthorId"),
 )
 
 /**

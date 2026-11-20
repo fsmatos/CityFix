@@ -100,6 +100,8 @@
     <string name="report_error_location">A ocorrência precisa da sua localização.</string>
     <string name="report_joined">Esta ocorrência já tinha sido reportada perto daqui. Passou a acompanhá-la.</string>
     <string name="report_already_following">Já acompanha esta ocorrência perto daqui.</string>
+    <string name="impact_suggestion">Possível buraco detetado. Reportar?</string>
+    <string name="impact_report_action">Reportar</string>
     <string name="report_submitted">Ocorrência enviada.</string>
 
     <!-- Location and the 10 km gate (F-012) -->
@@ -392,4 +394,15 @@
     <string name="resolve_error_failed">Não foi possível preparar a prova, ou esta ocorrência já não pode ser resolvida.</string>
     <string name="resolve_camera_unavailable">Não foi possível usar a câmara.</string>
     <string name="cd_resolve_busy">A guardar a resolução</string>
+    <!-- F-016 notificacoes -->
+    <string name="channel_tickets">Atualizações de ocorrências</string>
+    <string name="channel_messages">Mensagens</string>
+    <string name="channel_proximity">Município por perto</string>
+    <string name="notifications_denied">As notificações estão desligadas: não será avisado quando as suas ocorrências mudarem. Pode ligá-las nas Definições.</string>
+    <string name="notif_status">Novo estado: %1$s</string>
+    <string name="notif_status_with_reason">%1$s: %2$s</string>
+    <string name="notif_new_message">Nova mensagem</string>
+    <string name="notif_operator_nearby">Um operador municipal está perto desta ocorrência.</string>
+    <string name="notif_closing_soon">Encerra dentro de 24 horas. Reabra-a agora se o problema não estiver resolvido.</string>
+    <string name="notif_closed">Esta ocorrência foi encerrada.</string>
 </resources>

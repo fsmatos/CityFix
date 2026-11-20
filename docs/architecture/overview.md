@@ -486,7 +486,7 @@ Screen composables in `ui/screens/`. In phase 1 they are stateless (data in, eve
     - **`consumeWindowInsets(innerPadding)`** after `padding(innerPadding)`, on the `NavHost`: the `Scaffold` padding already includes these insets, and `imePadding()` would otherwise add them again while the keyboard is open.
     - `ReportScreen` now uses `collectAsStateWithLifecycle()`.
     - Emulator: a half-filled form kept its values on rotation, and leaving started it empty. Still open: the keyboard over the description and the double bottom gap; TalkBack behaviour (N2); the report screen under the cutout (F-003 review N3).
-  - Other handovers to Diogo: confirm the three new files F-006 added in his folders (`viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, Gate 1 Q7a; `SampleCategories.kt` was deleted by D-015, `6c0fbf0`); later, impact detection (I.2.F) prefills the form through a new `ReportViewModel` event (for example `prefill(situation, categoryId)`), not added now (Q7d).
+  - Other handovers to Diogo: confirm the three new files F-006 added in his folders (`viewmodel/ReportUiState.kt`, `viewmodel/ReportViewModel.kt`, `data/SampleCategories.kt`, Gate 1 Q7a; `SampleCategories.kt` was deleted by D-015, `6c0fbf0`); later, impact detection (I.2.F) prefills the form through a new `ReportViewModel` event (for example `prefill(situation, categoryId)`), not added now (Q7d). **Done by F-015** with the route argument `ReportTicketRoute(fromImpact)` instead of an event.
   - **F-007 handovers to Diogo** (his files, not edited by F-007 unless stated):
     - `TicketsViewModel.reportTicket`: F-007 added the `attachments` parameter, as agreed, and also changed its KDoc (review S3, comment only). Since F-008 the function lives in `TicketsRepository`/`LocalTicketsRepository`, so this item is superseded by the F-008 handover in "App shell (D-006)".
     - `model/Attachment.kt` KDoc: `id` says "Firestore document id. Empty until persisted", but F-007 stores the file name (N7); `file` says "Local content/file URI", but F-007 stores an absolute path (Q12).
@@ -716,7 +716,7 @@ Decision: [0016](../decisions/0016-registration.md). The number 0016 is used bec
 ### Handover (D-010)
 - **D-011 (Diogo), profile:** a photo change reuses `ProfilePhotoUploader.enqueue(uid, localPath)` (same path `users/{uid}/photo.jpg`, `photoPath` = download URL). The draft `storage.rules` allow the owner `create, update` there, so an overwrite is accepted. `name`, `nif` and (citizen) `georeferencing` are not editable (draft update rule, I.2.C / I.3.C). Prefill from `Session.SignedIn.user`. Possible improvement: prefill the MFA phone with the registration phone. **Done by D-011 (2026-11-15)**, with unique work (`REPLACE`) and a `photoUpdatedAt` version; Profile listens to `users/{uid}` itself rather than prefilling from the session (see "Profile (D-011)").
 - **D-012 (Diogo), validation:** pending citizens have `registrationStatus: "PENDING"`, `photoPath` (a URL, when the upload finished) and `georeferencing` (`GeoPoint`). Activation sets `registrationStatus: "ACTIVE"`, `validatedBy` (the operator's uid) and `validatedAt`; nothing else may change (draft rule). The citizen's app switches live through the `users/{uid}` listener.
-- **F-015 (Francisco), impact detection** (corrected by D-011: this line first said "D-014 (Diogo)"; D-014 is the operator geofence): read `impactDetection` from `users/{uid}` (`Citizen.impactDetection`, already mapped by `toProfile()`). The exact condition is in "Handover (D-011)".
+- **F-015 (Francisco), impact detection** (corrected by D-011: this line first said "D-014 (Diogo)"; D-014 is the operator geofence): read `impactDetection` from `users/{uid}` (`Citizen.impactDetection`, already mapped by `toProfile()`). The exact condition is in "Handover (D-011)". **Done by F-015 (2026-11-19)**, see "Impact detection (F-015)".
 - **Francisco:**
   - **`firestore.rules` (shared) changed in `1760f28`:** the operator branch of the `users` create rule no longer has `request.auth.token.email_verified == true`. The domain term stays, there is a comment, and it is not deployed. He must be told.
   - Shared strings: new `register_*`, `auth_error_email_in_use`, `auth_error_weak_password`, `top_bar_title_register` and `cd_register_*` keys in both `strings.xml` files (expect merge conflicts; keep both sides).
@@ -1182,6 +1182,52 @@ Build and lint pass after every slice and both review rounds: 0 errors, 22 warni
 - **Rules (whoever deploys):** add an operator-only, throttled `allow update` for `lastOperatorNearbyAt` to the draft `tickets/{ticketId}` block before any deploy (terms in decision 0022). Needs Diogo's explicit OK; no `firebase deploy` without the person.
 - **D-015 (Diogo), demo and delivery:** two emulators (operator and the ticket's creator). Start work on a ticket with a known location, then on the operator emulator `adb emu geo fix` about 100 m away, then about 15 m away (offsets above); show `lastOperatorNearbyAt` in the console (and the notification once F-016 exists). Say at the defence: foreground only, no background permission (brief V as a limit), the rules are not deployed and the draft would refuse this write.
 
+### Impact detection (F-015)
+Decision: [0023](../decisions/0023-impact-detection.md). Code: `utils/ImpactDetector.kt`, `viewmodel/ImpactViewModel(+Factory).kt`, `ui/components/ImpactDetectionEffect.kt`, `ui/navigation/Destinations.kt` (`ReportTicketRoute`), `viewmodel/ReportViewModel(+Factory).kt`, `MainActivity.kt`, strings EN + PT. Based on the slides' `PotholeDetector` and the demo `Sensors.kt`.
+
+- **Detection:** `TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`; total acceleration `sqrt(x²+y²+z²)` outside `MIN`..`MAX` = 6..14 m/s²; at most one `onImpact` per `COOLDOWN_MS` (30 s). Also reacts to non-vertical jolts (decision 0023).
+- **Who:** `detectImpacts = role == CITIZEN && Citizen.impactDetection`; anyone else never registers the sensor.
+- **Lifecycle (foreground only):** `ImpactDetectionEffect` starts on ON_START (or at once if already STARTED), stops on ON_STOP, on `enabled = false` and on dispose; `ImpactViewModel.onCleared` stops too. Logcat tag `CityFix`: "ImpactDetector start" / "stop".
+- **Suggestion:** `impactDetected` -> long snackbar "Report" with dismiss; skipped on the report form (Q9, cooldown still starts); "Report" does not navigate if the form is already open.
+- **Prefill:** `ReportTicketRoute(fromImpact = true)` -> `ReportViewModel` sets DAMAGE and, while no category is chosen, the category with id `pavement`; location read as usual.
+- **Emulator test:** `adb emu sensor set acceleration 0:0:20` (jolt), then `0:9.8:0` (upright at rest, never triggers). Results in `docs/work/F-015-impact-detection/state.md`.
+
+### Handover (F-015)
+- **D-011 (Diogo), profile:** saving the toggle updates `impactDetection`, the session follows, and the detector stops or starts by itself; nothing to call.
+- **D-012/D-015 (Diogo):** keep a category with id `pavement` once DebugSeed is removed, or the prefill leaves the category empty.
+- **Diogo, `MainActivity.kt`:** imports (`ImpactDetectionEffect`, `ImpactViewModel`, `ImpactViewModelFactory`, `SnackbarDuration`); the impact block after `canNavigateBack` (~lines 189-215); "+" now navigates to `ReportTicketRoute()`; the `composable<ReportTicketRoute>` reads `fromImpact` with `toRoute` and passes it to `ReportViewModelFactory`.
+
+### Notifications (F-016)
+Decision: [0024](../decisions/0024-notifications.md) (client-only, per [0012](../decisions/0012-firebase-plan-notifications-close-maps.md); amends [0010](../decisions/0010-firestore-schema.md)). Class sources: P11 FCM + Firebase demo, slides 10/11 WorkManager, slides 09 SharedPreferences.
+
+- **Files:**
+  - `utils/Notifications.kt`: channels `tickets`, `messages`, `proximity`; `showNotification` (skips without `POST_NOTIFICATIONS`); `EXTRA_TICKET_ID`.
+  - `model/TicketNotifications.kt`: pure rule `Ticket.eventsFor(userId, isOperator, since, now)`, kinds STATUS, MESSAGE, OPERATOR_NEARBY, CLOSING_SOON, CLOSED.
+  - `data/NotificationPrefs.kt` (`lastCheckedAt` per uid), `data/TicketNotifier.kt` (rule -> notifications, saves the time), `data/TicketCheckWorker.kt`, `data/PushTokens.kt`, `data/CityFixMessagingService.kt`.
+  - `viewmodel/NotificationsViewModel(+Factory).kt`: `onUserChanged`, `onLoggedOut`, `watch`.
+  - `CityFixApplication` creates the channels and holds `ticketNotifier`, `pushTokens`; manifest: permission, `singleTop`, FCM service.
+- **Event rule:** events in `(lastCheckedAt, now]`, never one's own; citizen only on tickets they take part in; operator only for a participant citizen's action; automatic `system` CLOSED replaced by the time-based CLOSED; info-request message folded into the STATUS text.
+- **Last check:** SharedPreferences `notifications`, one time per uid; the first check only saves `now`.
+- **App open:** `watch` collects its own listener, `TicketsRepository.ticketsFromServer(uid, isOperator)` (`MetadataChanges.INCLUDE`; lists with `metadata.isFromCache` are skipped), inside `repeatOnLifecycle(STARTED)`. Cached lists never move `lastCheckedAt`, so changes made while the app was closed or offline are notified once the server answers (review B1, then the offline gap found on device). The worker's one-off reads use `get(Source.SERVER)`.
+- **App closed:** `TicketCheckWorker`, unique periodic `ticket-check`, 15 min, network constraint, input `uid`/`isOperator`; skips if another account is signed in; `retry()` on error. Scheduled when the session's tickets user is known (not while Loading, review S3), cancelled at Log out.
+- **Notification id:** `(ticketId + kind).hashCode()`, so app and worker replace each other's.
+- **FCM:** `onMessageReceived` reads notification title/body, else data `title`/`body`, and data `ticketId`; token `arrayUnion` into `users/{uid}.fcmTokens` at session start and in `onNewToken`.
+- **Tap:** extra `ticketId`; cold start reads it only when `savedInstanceState == null`; open app gets it in `onNewIntent`; `CityFixApp` navigates to `TicketDetailRoute` after the role redirect.
+- **Permission:** API 33+, once per session for CITIZEN/OPERATOR, after the start-up location answer; denied -> snackbar `notifications_denied`.
+- **Log out:** `onLoggedOut()` clears the tray (`cancelAll`, review S1).
+- **Test steps:**
+  - console "Send test message" with custom data `ticketId`, app in background and foreground;
+  - App Inspection > Background Task Inspector > `ticket-check` "run now" with the app swiped away;
+  - temporary `CLOSING_WARNING_MS = 2 min` on a RESOLVED ticket: warning, then Encerrado (revert);
+  - set `lastOperatorNearbyAt` in the console: one proximity notification.
+- **Known limits:** no real push without a server; closed-app alerts up to ~15 min late (Doze more); device clock skew can drop an event; review nits N1-N7 not done (unbounded message/nearby times, token kept after Log out, Recents replay, no rationale, system icon).
+
+### Handover (F-016)
+- **Diogo, `MainActivity.kt` (~60 lines):** `openTicketId` + `onNewIntent`; `NotificationsViewModel` above the `logOut` lambda (calls `onLoggedOut`); `locationAnswered` set in the location callback (one line in his code); the notification permission request and snackbar; the `onUserChanged` / `watch` effects; the tap effect after the role redirect. Manifest: `singleTop`.
+- **D-014 contract confirmed** with the Q8 change: trigger is `lastOperatorNearbyAt > lastCheckedAt` and less than 1 h old (decision 0022 line added).
+- **Any new message writer** must set `lastMessageAt` and `lastMessageAuthorId` in the same batch (use `lastMessageFields` in `FirestoreMapping`), or the message is not notified.
+- **Rules (whoever deploys):** the draft would refuse `fcmTokens`, `lastMessageAt`, `lastMessageAuthorId`; not edited.
+
 ## Roles
 Anonymous citizen (public, active issues only, no personal data), registered citizen, municipal operator. Since D-009 the app has one `AccessRole` per home screen ([decision 0015](../decisions/0015-session-role-navigation-mfa.md); `homeFor` and `menuItemsFor` in `ui/navigation/RoleAccess.kt`):
 
@@ -1208,6 +1254,8 @@ How the guard works: (1) entry points are hidden (add button, menu entries); (2)
 **Since D-013 ([decision 0021](../decisions/0021-operator-panel-and-lifecycle.md))**, the operator's home `OperatorPanelRoute` is the real operations panel (every ticket, PUBLIC and PRIVATE, with status / category filters and sort). Opening a ticket gives the operator its own detail (exact map, full history with "By <name>", all media, the author's and followers' contacts, the thread) with the actions D-008 allows: Request information, Start work, Resolve with proof. Citizens and anonymous users never get the contacts, the names or the actions; as for D-012, this is enforced by the app only.
 
 **Since D-014 ([decision 0022](../decisions/0022-operator-proximity-alert.md))**, an `OPERATOR` with precise location and the app in the foreground is watched against the 20 m circle of every IN_PROGRESS ticket; an entry records only a time on the ticket (`lastOperatorNearbyAt`). Other roles are never watched. Citizens will be notified by F-016; anonymous users never receive the field.
+
+**Since F-016 ([decision 0024](../decisions/0024-notifications.md))**, `CITIZEN` and `OPERATOR` get local notifications (app open and a 15 min worker); a citizen for tickets they take part in, an operator for participant citizens' actions. Anonymous, pending and setup users get none.
 
 ## References
 Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`. Notes for the technical report: `docs/report/notes.md`.

@@ -13,8 +13,8 @@ const val ANONYMOUS_COORDINATE_DECIMALS = 2
  *
  * Dropped: description (free text that may hold personal data), statusHistory (I.1.C shows
  * only media and map, and its first entry holds the creator's id), creatorId, followerIds,
- * messages, lastOperatorNearbyAt (D-014) and every Attachment.uploadedById. The location is
- * rounded to [ANONYMOUS_COORDINATE_DECIMALS].
+ * messages, lastOperatorNearbyAt (D-014), lastMessageAt and lastMessageAuthorId (F-016) and
+ * every Attachment.uploadedById. The location is rounded to [ANONYMOUS_COORDINATE_DECIMALS].
  *
  * Kept: id, situation, scope, currentStatus (status badge), createdAt (ordering only, never
  * shown to anonymous users), categoryId, categoryName, and the attachments' id, type, file,
@@ -38,6 +38,8 @@ fun Ticket.toAnonymousView(): Ticket = copy(
     messages = emptyList(),
     statusHistory = emptyList(),
     lastOperatorNearbyAt = null,
+    lastMessageAt = null,
+    lastMessageAuthorId = null,
     attachments = attachments.map { it.copy(uploadedById = "") },
 )
 

@@ -5,9 +5,11 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -83,6 +85,50 @@ class FirestoreTicketsRepository(
             .listen { snapshot ->
                 TicketsList(snapshot.documents.map { it.toTicket() }).getAllSorted()
             }
+
+    /**
+     * The participant query read once from the server (F-016 worker). Source.SERVER: offline it
+     * fails instead of returning the cache, so a check never runs on old data.
+     */
+    override suspend fun participantTicketsOnce(userId: String): List<Ticket> =
+        firestore.collection(TICKETS)
+            .whereArrayContains("participantIds", userId)
+            .get(Source.SERVER)
+            .await()
+            .documents.map { it.toTicket() }
+
+    /** Every full ticket read once from the server (F-016 worker, operators). */
+    override suspend fun allTicketsOnce(): List<Ticket> =
+        firestore.collection(TICKETS)
+            .get(Source.SERVER)
+            .await()
+            .documents.map { it.toTicket() }
+
+    /**
+     * The tickets to notify about (F-016 in-app watch): the participant query for a citizen, every
+     * ticket for an operator, live, but only lists confirmed by the server. Cached lists are
+     * skipped (they can be older than the last check, so checking them would hide newer changes).
+     */
+    override fun ticketsFromServer(userId: String, isOperator: Boolean): Flow<List<Ticket>> {
+        val query: Query = if (isOperator) {
+            firestore.collection(TICKETS)
+        } else {
+            firestore.collection(TICKETS).whereArrayContains("participantIds", userId)
+        }
+        return callbackFlow {
+            // INCLUDE: Firestore also calls back when the same data is confirmed by the server.
+            val registration = query.addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "listen failed", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && !snapshot.metadata.isFromCache) {
+                    trySend(snapshot.documents.map { it.toTicket() })
+                }
+            }
+            awaitClose { registration.remove() }
+        }
+    }
 
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     override fun stats(): Flow<DashboardStats> =
@@ -202,15 +248,20 @@ class FirestoreTicketsRepository(
 
     /**
      * Adds a message by [author] to ticket [ticketId]; false when the trimmed [text] is empty.
+     * One batch (F-016 Q4): the message and the ticket's lastMessageAt/lastMessageAuthorId, so
+     * the tickets listener of the other side sees that there is a new message.
      * Not awaited, as in reportTicket: offline the write is queued and this device's listener
      * shows the message at once; failures are only logged.
      */
     override fun sendMessage(ticketId: String, text: String, author: User): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
-        firestore.collection(TICKETS).document(ticketId).collection(MESSAGES).document()
-            .set(messageDocument(trimmed, System.currentTimeMillis(), author))
-            .addOnFailureListener { Log.w(TAG, "message not saved", it) }
+        val message = messageDocument(trimmed, System.currentTimeMillis(), author)
+        val ticketRef = firestore.collection(TICKETS).document(ticketId)
+        val batch = firestore.batch()
+        batch.set(ticketRef.collection(MESSAGES).document(), message)
+        batch.update(ticketRef, lastMessageFields(message))
+        batch.commit().addOnFailureListener { Log.w(TAG, "message not saved", it) }
         return true
     }
 
@@ -322,12 +373,14 @@ class FirestoreTicketsRepository(
     ) {
         val ticketRef = firestore.collection(TICKETS).document(after.id)
         val batch = firestore.batch()
-        val fields: Map<String, Any> = if (newAttachments.isEmpty()) {
+        var fields: Map<String, Any> = if (newAttachments.isEmpty()) {
             after.toStatusFields()
         } else {
             after.toStatusFields() +
                 ("attachments" to FieldValue.arrayUnion(*newAttachments.map { it.toDocument() }.toTypedArray()))
         }
+        // F-016 Q4: a message in the same batch also marks the ticket as having a new message.
+        if (message != null) fields = fields + lastMessageFields(message)
         batch.update(ticketRef, fields)
         if (message != null) {
             batch.set(ticketRef.collection(MESSAGES).document(), message)

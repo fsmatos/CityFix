@@ -29,12 +29,15 @@ import java.io.File
  * follow changes while the form is open. Picked media are copied off the main thread by
  * [attachmentStorage]. The ticket's location is the reporter's GPS fix from [locationRepository],
  * read when the form opens and on "Refresh location", so Submit does not wait for GPS.
+ * [fromImpact] (F-015): opened from an impact suggestion, so Damage and the Pavement category are
+ * chosen; the user can still change them.
  */
 class ReportViewModel(
     private val repository: TicketsRepository,
     private val attachmentStorage: AttachmentStorage,
     private val locationRepository: LocationRepository,
     private val creatorId: String,
+    fromImpact: Boolean,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportUiState())
@@ -42,9 +45,17 @@ class ReportViewModel(
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
     init {
+        if (fromImpact) {
+            _uiState.update { it.copy(situation = Situation.DAMAGE) }
+        }
         viewModelScope.launch {
             repository.activeCategories().collect { list ->
                 _uiState.update { it.copy(categories = list) }
+                // Only while no category is chosen, so a later user choice is kept.
+                val pavement = list.find { it.id == PAVEMENT_ID }
+                if (fromImpact && _uiState.value.categoryId.isBlank() && pavement != null) {
+                    onCategorySelected(pavement)
+                }
             }
         }
     }
@@ -276,4 +287,9 @@ class ReportViewModel(
     /** The summary stays only while something is still missing. */
     private fun ReportUiState.withSummaryRefreshed(): ReportUiState =
         copy(showErrorSummary = showErrorSummary && !isValid)
+
+    companion object {
+        /** Category id of Pavement in the Firestore `categories` collection (F-015 Q8). */
+        const val PAVEMENT_ID = "pavement"
+    }
 }

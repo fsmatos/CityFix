@@ -418,7 +418,7 @@ Decision: [0008](../decisions/0008-report-form-state.md) (related to [0006](../d
 ### Improvement opportunities
 - `SavedStateHandle` in `ReportViewModel` so a draft survives process death.
 - In the Firebase phase, a categories repository (active categories of the municipality) and ticket creation through a repository, injected with a `ViewModelProvider.Factory` (the doc's "later" list); then a `suspend` submit with a progress state ("Sending...") instead of the synchronous `Boolean`.
-- Impact-detection prefill (brief I.2.F): a `prefill(situation, categoryId)` event that opens the form for a pavement anomaly.
+- Impact-detection prefill (brief I.2.F): **built by F-015** as the route argument `ReportTicketRoute(fromImpact = true)` (Damage + Pavement), not a `prefill` event; see "F-015: Impact detection".
 - A description length limit with a character counter, if the data layer needs one.
 - Defence checks from the doc: rotate a half-filled form (values and errors stay), force-close the app (the draft is gone, by design), leave and reopen (empty).
 - Nits left open by the person's choice (review), with their fixes:
@@ -1368,3 +1368,67 @@ Brief: V (languages, orientation, dynamic bars and FABs, accessibility, MVVM) an
 - Localised category names (per-locale fields on `categories`).
 - Deployed security rules.
 - A CI job that builds the ZIP and checks it.
+
+## F-015: Impact detection
+Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detection (F-015)", "Handover (F-015)". Brief I.2.F.
+
+### Technical solutions
+- **As in class:** the slides' `PotholeDetector` (`TYPE_ACCELEROMETER`, `SENSOR_DELAY_GAME`, limits 6..14 m/s²) and the `Sensors.kt` demo lifecycle (`DisposableEffect` + `LifecycleEventObserver`: register on ON_START, unregister on ON_STOP).
+- **Total acceleration** `sqrt(x² + y² + z²)` outside 6..14 m/s² = impact; 30 s cooldown so one bump gives one suggestion.
+- **MVVM:** sensor in `utils/ImpactDetector`, owned by `ImpactViewModel`; the composable only says when to start and stop.
+- **Suggestion, never a silent report:** long snackbar "Report" -> `ReportTicketRoute(fromImpact = true)` with Damage + Pavement + current location.
+- **No runtime permission:** the accelerometer needs none.
+
+### Why not the slide's Z axis alone
+- An upright phone reads Z near 0, below 6, so `z < 6` would fire all the time (seen on the emulator).
+- Cost: total acceleration also reacts to non-vertical jolts (phone put down hard), a departure from the brief's "eixo vertical" (decision 0023).
+
+### Verification
+- Emulator checks in `docs/work/F-015-impact-detection/state.md` (jolt `adb emu sensor set acceleration 0:0:20`, back to rest `0:9.8:0`; cooldown, background stop, landscape, prefill).
+
+### Improvement opportunities
+- Foreground service for detection with the app closed (P10 `ProximityService` pattern).
+- Only the vertical part of the jolt (project on gravity).
+- Keep the suggestion across a screen rotation (the snackbar scope belongs to the composition).
+- Movement check with GPS speed, so a dropped phone at rest does not count.
+- Threshold set in the profile.
+- Attach the detected location and time to the ticket.
+
+## F-016: Notifications
+Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (F-016)", "Handover (F-016)". Brief III, V, II.2-II.4.
+
+### Technical solutions
+- **No server (decision 0012):** the app compares the tickets it reads with one stored "last checked" time per user and shows local notifications.
+- **App open:** a Firestore listener that only accepts server-confirmed lists (`isFromCache` skipped), so cached data never advances the last-check time; the worker reads with `Source.SERVER`.
+- **App closed:** a 15 min periodic `CoroutineWorker` (citizens and operators), network constraint.
+- **Pure rule** `Ticket.eventsFor(...)` in `model/`: status, message, operator nearby, 24 h warning, Encerrado; never one's own action.
+- **Messages seen by the ticket listener:** `lastMessageAt` / `lastMessageAuthorId` on the ticket, written in the same batch as the message.
+- **24 h warning and Encerrado:** time checks on each run, no scheduled job per ticket.
+- **FCM:** service and token as in P11, used for console test messages.
+- **Privacy:** title = category; no coordinates or operator data; Log out clears the tray.
+
+### Class material vs beyond class
+- Class: P11 FCM service, channels, `POST_NOTIFICATIONS` request, console sending; WorkManager slides 10/11; SharedPreferences slides 09.
+- Beyond class: `singleTop` + `onNewIntent` for the tap; unique periodic work.
+
+### Options chosen and rejected (Gate 1, 2026-11-20)
+- Client-only delivery, not a Cloud Function (class shows FCM reception only).
+- Worker for operators too (Q2 changed at Gate 1).
+- One time per user, not per ticket; time check, not a one-time job per ticket.
+- Permission at session start, after the location prompt (Android shows one request at a time).
+
+### Limits to state at the defence
+- No real push: the app or the worker must run; Doze can delay the worker beyond 15 min.
+- Device clocks differ: an event dated before the last check is missed.
+- Closed-app alerts up to ~15 min late, including the 24 h warning.
+- Draft rules would refuse the new fields (test mode accepts).
+
+### Verification
+- Device checks listed in `docs/work/F-016-notifications/state.md` (two emulators, console test message, App Inspection "run now", shortened `CLOSING_WARNING_MS`).
+
+### Improvement opportunities
+- Cloud Function on status change or new message -> FCM to `fcmTokens` (real push, no delay).
+- Per-user notification settings (per channel or per ticket).
+- Message preview in the notification.
+- Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
+- Remove the FCM token at Log out; rationale before the permission request.

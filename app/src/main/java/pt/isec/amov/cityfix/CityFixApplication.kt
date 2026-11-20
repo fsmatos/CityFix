@@ -22,8 +22,11 @@ import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
+import pt.isec.amov.cityfix.data.PushTokens
+import pt.isec.amov.cityfix.data.TicketNotifier
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.utils.createNotificationChannels
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -34,6 +37,12 @@ import pt.isec.amov.cityfix.data.UsersRepository
  * before any other Firestore call, so they are applied here, once, when [firestore] is first read.
  */
 class CityFixApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        // F-016: the class creates the channel before any notification is shown.
+        createNotificationChannels(this)
+    }
+
     val ticketsRepository: TicketsRepository by lazy {
         FirestoreTicketsRepository(firestore, attachmentUploader)
     }
@@ -64,6 +73,12 @@ class CityFixApplication : Application() {
     val storage: FirebaseStorage by lazy { Firebase.storage }
 
     val messaging: FirebaseMessaging by lazy { Firebase.messaging }
+
+    /** This installation's FCM token in `users/{uid}.fcmTokens` (F-016). */
+    val pushTokens: PushTokens by lazy { PushTokens(messaging, firestore) }
+
+    /** Ticket changes -> local notifications, for the in-app watch and the worker (F-016). */
+    val ticketNotifier: TicketNotifier by lazy { TicketNotifier(this) }
 
     /** Sign-in, MFA and password reset (D-009), built from [auth]. */
     val authRepository: AuthRepository by lazy { FirebaseAuthRepository(auth) }
