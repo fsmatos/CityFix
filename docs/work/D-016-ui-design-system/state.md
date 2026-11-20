@@ -45,3 +45,22 @@ Remote: none yet
   citizen, TalkBack.
 - Francisco's files changed in Part A (tell him): `MainActivity.kt` (shared), `MyTicketsScreen.kt`
   (deleted), both `strings.xml` (shared).
+- 2026-11-20 Spec revised by Diogo (detailed brief and a reference image): floating icon-only
+  island bar, neutral palette with one accent, status dots, transparent top bar, Inter font,
+  screen states, Active issues first and shown before the rest. Palette: Diogo's reference image
+  instead of options A/B/C; accent indigo #4338CA (report button, white text, both themes, 16dp
+  corners, 52dp high, "+" icon, weight 500). "Ver mais": neutral text button. The branch stays
+  `design` (the brief's `redesign-ui` was an example).
+- 2026-11-20 Code: island bar a074889 (outlined icons, filled when selected, labels as
+  contentDescription, 56dp tabs, 8% content-colour circle; in the Scaffold `bottomBar` slot, so
+  content padding keeps lists above it). Theme 2eaa488: `Color.kt`, `StatusColors.kt`
+  (`LocalStatusColors`, `CityFixTheme.statusColors`), `Theme.kt` (light/dark by system,
+  `primaryContainer` = indigo for the FAB, neutral secondary/tertiary), `Type.kt` (one
+  `AppFontFamily`, weights 400/500/600; system font until Inter is added), `Shape.kt`,
+  `Dimens.kt`, `values-night/themes.xml`, default `enableEdgeToEdge()`; components `CityCard`,
+  `ScreenStates.kt` (Loading/Empty/Error), `StatusBadge` now dot + neutral text (same name and
+  callers), `TicketCard` on `CityCard`; top bar on the background colour. Active issues 2d9ee77
+  (EmptyState, Dimens, neutral "Ver mais", `animateItem`). Verify: assembleDebug pass; lint 0
+  errors / 17 warnings. Device: light and dark screenshots of Active issues (citizen, PT).
+- Open: Inter files not downloaded (permission asked, not answered); Active issues waits for
+  Diogo's look before the other screens.
