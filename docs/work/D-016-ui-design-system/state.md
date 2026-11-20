@@ -81,3 +81,22 @@ Remote: none yet
   Francisco's files touched: `MainActivity.kt`, `CategoriesScreen.kt`, `CitizenApprovalScreen.kt`
   (check `git log`), `DashboardScreen.kt`, `ListScreen.kt`, `ReportScreen.kt`, `ShowScreen.kt`,
   `OperatorPanelScreen.kt`, `PendingCitizensScreen.kt` (bottom padding lines only).
+- 2026-11-20 Diogo approved Active issues ("Continua com os restantes ecrãs"). `design` fast-
+  forwarded to `ilha-navegacao` (20a28cd) so the remaining screens get the floating island; the
+  two branches are equal at that point.
+- 2026-11-20 Code, remaining screens (one commit each, verify 0 errors / 17 warnings every time):
+  b3872db every OutlinedButton -> FilledTonalButton (neutral, no strong outline); 3aa6cf6
+  Dashboard (`CityCard` stat cards, neutral "Ver ocorrências ativas") and full list (EmptyState,
+  Dimens, max width, `animateItem`); 444533d detail (`SectionCard` per section in ShowScreen,
+  TicketDetailScreen and OperatorTicketScreen; neutral message bubbles in MessageThread;
+  EmptyState for "not found"); 5a7d9bf Report form groups in section cards; 94f463a Profile tab
+  (LoadingState/ErrorState, CityCard); e500735 approvals list (CityCard with a person icon,
+  Loading/Empty states), Categories states, operator panel spacing; 6b133c1 citizen approval
+  (states, map section); fbf3b13 neutral icon on PlaceholderScreen; b2180e2 `PrimaryButton`
+  (solid indigo, white text in both themes, `primaryContainer`) for the 20 filled buttons,
+  because the dark `primary` (light indigo, needed for readable accent text) made them pastel.
+  Login, MFA, Register, Forgot password, Account setup, Change credential, Edit profile and the
+  gate only needed the theme, the tonal and primary buttons (no layout change).
+- Device (citizen, PT): Dashboard light, detail (public view) light, Report dark, Profile dark
+  after the PrimaryButton change. Not checked on device: auth screens (would need a log out),
+  operator screens (operator login), landscape after the restyle, TalkBack.
