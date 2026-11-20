@@ -1,6 +1,6 @@
 # F-019: Remove FCM
 Branch: dev/Francisco · Base: 9eadce9
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-20 | slice 1, `8a6a259`; build and lint pass; device check pending |
 | Review | skipped | 2026-11-20 | not run (small removal); can run `/review-code` |
 | Docs | done | 2026-11-20 | slice 2: decision 0027, overview, 0010/0012/0024 lines, CLAUDE.md, report notes |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-20 | origin/dev/Francisco (`26d1ded`) |
 | Merged | pending | | |
 
 ## Log
@@ -19,3 +19,4 @@ Append-only.
 - 2026-11-20: Gate 1 approved as planned. Q1: yes, the owner allow-list in the draft `firestore.rules` loses `'fcmTokens'` (not deployed). Q2: old task files and work folders keep their FCM text as history.
 - 2026-11-20: Slice 1 (`8a6a259 refactor(F-019): remove FCM`): deleted `CityFixMessagingService.kt` and `PushTokens.kt`; removed the manifest service, `messaging`/`pushTokens`, the token save, `fcmTokens: []` at registration, the Gradle dependency and `'fcmTokens'` in the draft rules (Q1). `assembleDebug` and `lint` pass. Device check (status change still notifies, tap opens the ticket) not run yet.
 - 2026-11-20: Slice 2 (docs): new decision 0027; amendment lines in 0010, 0012, 0024; overview (current-state lines and a new "FCM removed (F-019)" section; historical entries left as written, Q2); `CLAUDE.md`; report notes (F-016 section and a new F-019 section). `docs/testing/manual-test-checklist.md` updated too, but it is untracked, so it is not in the commit. Review phase skipped, not run.
+- 2026-11-20: Pushed dev/Francisco to origin (`a0e25b4..26d1ded`). Not merged into main.
