@@ -1,15 +1,21 @@
 package pt.isec.amov.cityfix.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import pt.isec.amov.cityfix.R
 
 /**
- * The app's one font family (D-016). The plan is Inter 400/500/600 from res/font; until those
- * files are added this is the system font. Changing it here changes every text in the app,
- * because the screens only use MaterialTheme.typography.
+ * The app's one font family (D-016): Inter 400/500/600, bundled in res/font so it works offline
+ * (Google Fonts static files, SIL Open Font License, docs/licenses/Inter-OFL.txt). Every text in
+ * the app uses it, because the screens only use MaterialTheme.typography.
  */
-val AppFontFamily: FontFamily = FontFamily.Default
+val AppFontFamily = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+)
 
 private val base = Typography()
 
