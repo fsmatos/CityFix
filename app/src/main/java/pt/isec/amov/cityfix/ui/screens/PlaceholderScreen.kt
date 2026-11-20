@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
@@ -41,7 +41,7 @@ fun PlaceholderScreen(
         Icon(
             imageVector = Icons.Filled.Info,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(48.dp)
                 .align(Alignment.CenterHorizontally),
@@ -81,11 +81,11 @@ fun AccountProblemScreen(
         modifier = modifier,
     ) {
         if (canRetry) {
-            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+            PrimaryButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.account_problem_retry))
             }
         }
-        OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.menu_log_out))
         }
     }

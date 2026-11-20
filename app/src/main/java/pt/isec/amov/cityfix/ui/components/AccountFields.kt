@@ -11,8 +11,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -207,10 +207,10 @@ internal fun ProfilePhotoPicker(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = onPickPhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
+            FilledTonalButton(onClick = onPickPhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.register_photo_gallery))
             }
-            OutlinedButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
+            FilledTonalButton(onClick = onTakePhoto, enabled = enabled, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.register_photo_camera))
             }
         }

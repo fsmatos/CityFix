@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,6 +39,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.LoginStep
 import pt.isec.amov.cityfix.viewmodel.LoginUiState
@@ -159,7 +160,7 @@ fun LoginContent(
                 .semantics { if (passwordError != null) error(passwordError) },
         )
         FormMessage(state.error, isError = true)
-        Button(
+        PrimaryButton(
             onClick = onSignIn,
             enabled = !state.isBusy,
             modifier = Modifier.fillMaxWidth(),
@@ -204,7 +205,9 @@ internal fun FormColumn(
             modifier = Modifier
                 .widthIn(max = 480.dp)
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                // Room to scroll above the floating island where it is shown (D-016).
+                .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )

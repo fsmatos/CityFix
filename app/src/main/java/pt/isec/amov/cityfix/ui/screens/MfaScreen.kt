@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -20,6 +19,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
@@ -75,7 +75,7 @@ fun MfaCodeContent(
         )
         FormMessage(messageRes, isError = true)
         FormMessage(noticeRes, isError = false)
-        Button(onClick = onConfirm, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
+        PrimaryButton(onClick = onConfirm, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.mfa_confirm))
         }
         TextButton(onClick = onResend, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {

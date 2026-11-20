@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -55,6 +56,7 @@ import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.model.filteredFor
 import pt.isec.amov.cityfix.ui.components.TicketCard
 import pt.isec.amov.cityfix.ui.components.statusLabelRes
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelUiState
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
@@ -109,8 +111,14 @@ fun OperatorPanelContent(
             modifier = Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            // The last item scrolls above the floating island (D-016).
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 16.dp,
+                end = 16.dp,
+                bottom = maxOf(16.dp, LocalBottomBarPadding.current),
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "filters") {
                 FilterHeader(
@@ -215,6 +223,10 @@ private fun FilterHeader(
                     contentDescription = null,
                 )
             },
+            // D-016: neutral icon; the accent is kept for main actions.
+            colors = AssistChipDefaults.assistChipColors(
+                leadingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
             modifier = Modifier.semantics { contentDescription = sortDescription },
         )
     }

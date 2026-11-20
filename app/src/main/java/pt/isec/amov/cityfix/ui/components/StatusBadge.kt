@@ -1,21 +1,26 @@
 package pt.isec.amov.cityfix.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.TicketStatus
-import pt.isec.amov.cityfix.ui.theme.CityFixGreen
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 
 /** Returns the string resource id with the localised label of [status]. */
 fun statusLabelRes(status: TicketStatus): Int = when (status) {
@@ -26,58 +31,53 @@ fun statusLabelRes(status: TicketStatus): Int = when (status) {
     TicketStatus.CLOSED -> R.string.status_closed
 }
 
-/** Small, non-clickable coloured label with the localised name of [status]. */
+/**
+ * Non-clickable status of a ticket (D-016): a small coloured dot and the localised name in
+ * neutral text, no coloured chip. The dot colour comes from the theme (CityFixTheme.statusColors)
+ * and is decorative: the text alone says the status.
+ */
 @Composable
 fun StatusBadge(status: TicketStatus, modifier: Modifier = Modifier) {
-    val containerColor: Color
-    val textColor: Color
-    when (status) {
-        TicketStatus.OPEN -> {
-            containerColor = MaterialTheme.colorScheme.primary
-            textColor = MaterialTheme.colorScheme.onPrimary
-        }
-        TicketStatus.INFO_REQUESTED -> {
-            containerColor = MaterialTheme.colorScheme.tertiary
-            textColor = MaterialTheme.colorScheme.onTertiary
-        }
-        TicketStatus.IN_PROGRESS -> {
-            containerColor = MaterialTheme.colorScheme.secondary
-            textColor = MaterialTheme.colorScheme.onSecondary
-        }
-        TicketStatus.RESOLVED -> {
-            containerColor = CityFixGreen
-            textColor = Color.White
-        }
-        TicketStatus.CLOSED -> {
-            containerColor = MaterialTheme.colorScheme.inverseSurface
-            textColor = MaterialTheme.colorScheme.inverseOnSurface
-        }
-    }
-
-    Surface(
+    Row(
         modifier = modifier,
-        shape = MaterialTheme.shapes.small,
-        color = containerColor,
-        contentColor = textColor,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.sm),
     ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(CityFixTheme.statusColors.of(status), CircleShape),
+        )
         Text(
             text = stringResource(statusLabelRes(status)),
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
-@Preview(showBackground = true)
-@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
-private fun StatusBadgePreview() {
+private fun AllStatuses() {
     CityFixTheme {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TicketStatus.entries.forEach { StatusBadge(it) }
+        Surface {
+            Column(
+                modifier = Modifier.padding(Dimens.lg),
+                verticalArrangement = Arrangement.spacedBy(Dimens.sm),
+            ) {
+                TicketStatus.entries.forEach { StatusBadge(it) }
+            }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun StatusBadgeLightPreview() {
+    AllStatuses()
+}
+
+@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun StatusBadgeDarkPreview() {
+    AllStatuses()
 }

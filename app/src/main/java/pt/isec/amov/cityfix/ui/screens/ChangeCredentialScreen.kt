@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.PasswordField
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.CredentialChange
 import pt.isec.amov.cityfix.viewmodel.CredentialChangeUiState
@@ -105,7 +105,7 @@ fun ChangeCredentialContent(
                 },
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
+            PrimaryButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.credential_back_to_profile))
             }
             return@FormColumn
@@ -156,7 +156,7 @@ fun ChangeCredentialContent(
         if (!isEmail) NewPasswordFields(state, enabled, onNewPasswordChange, onConfirmPasswordChange)
         FormMessage(state.error, isError = true)
         val progressDescription = stringResource(R.string.cd_credential_progress)
-        Button(onClick = onSubmit, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        PrimaryButton(onClick = onSubmit, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
             if (state.isBusy) {
                 CircularProgressIndicator(
                     strokeWidth = 2.dp,

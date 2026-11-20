@@ -1,6 +1,5 @@
 package pt.isec.amov.cityfix.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,12 +43,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Category
+import pt.isec.amov.cityfix.ui.components.EmptyState
+import pt.isec.amov.cityfix.ui.components.LoadingState
+import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.CategoriesUiState
 import pt.isec.amov.cityfix.viewmodel.CategoriesViewModel
@@ -90,33 +90,21 @@ fun CategoriesContent(
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when {
-            state.isLoading -> {
-                val loadingDescription = stringResource(R.string.cd_categories_loading)
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .semantics { contentDescription = loadingDescription },
-                )
-            }
-            state.categories.isEmpty() -> {
-                Text(
-                    text = stringResource(R.string.categories_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(horizontal = 32.dp),
-                )
-            }
+            state.isLoading -> LoadingState(descriptionRes = R.string.cd_categories_loading)
+            state.categories.isEmpty() -> EmptyState(messageRes = R.string.categories_empty)
             else -> {
                 LazyColumn(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxSize()
                         .widthIn(max = 600.dp),
-                    // Bottom padding so the last row clears the FAB.
-                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp),
+                    // Bottom padding so the last row clears the FAB and the floating island.
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 88.dp + LocalBottomBarPadding.current,
+                    ),
                 ) {
                     items(state.categories, key = { it.id }) { category ->
                         CategoryRow(
@@ -137,7 +125,8 @@ fun CategoriesContent(
                 text = { Text(stringResource(R.string.categories_add)) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
+                    // Above the floating island (D-016).
+                    .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = maxOf(16.dp, LocalBottomBarPadding.current)),
             )
         }
     }

@@ -14,10 +14,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -49,6 +48,7 @@ import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionRow
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
 import pt.isec.amov.cityfix.ui.components.PasswordField
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
@@ -307,7 +307,7 @@ fun RegisterContent(
             FormMessage(R.string.register_error_summary, isError = true)
         }
         val progressDescription = stringResource(R.string.cd_register_progress)
-        Button(
+        PrimaryButton(
             onClick = onSubmit,
             enabled = enabled && !state.isCopyingPhoto,
             modifier = Modifier.fillMaxWidth(),
@@ -401,7 +401,7 @@ private fun CitizenLocation(
             style = MaterialTheme.typography.bodyMedium,
         )
         FormMessage(state.locationError, isError = true)
-        OutlinedButton(
+        FilledTonalButton(
             onClick = onUseMyLocation,
             enabled = enabled && !state.isLocating,
             modifier = Modifier.fillMaxWidth(),
