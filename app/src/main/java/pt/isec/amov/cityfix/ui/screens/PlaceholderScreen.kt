@@ -41,7 +41,7 @@ fun PlaceholderScreen(
         Icon(
             imageVector = Icons.Filled.Info,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(48.dp)
                 .align(Alignment.CenterHorizontally),
