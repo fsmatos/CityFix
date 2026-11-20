@@ -22,6 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,6 +110,9 @@ fun CitizenApprovalContent(
     // Hoisted so the positions survive rotation (as ShowScreen).
     val detailsScroll = rememberScrollState()
     val locationScroll = rememberScrollState()
+    // F-018: the column holding the map stops scrolling while a finger is on it (as ShowScreen)
+    var mapTouched by remember { mutableStateOf(false) }
+    val onMapTouchChange: (Boolean) -> Unit = { mapTouched = it }
 
     if (isLandscape) {
         Row(
@@ -126,22 +132,23 @@ fun CitizenApprovalContent(
             )
             CitizenLocation(
                 location = citizen.georeferencing,
+                onMapTouchChange = onMapTouchChange,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll),
+                    .verticalScroll(locationScroll, enabled = !mapTouched),
             )
         }
     } else {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(detailsScroll)
+                .verticalScroll(detailsScroll, enabled = !mapTouched)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CitizenDetails(citizen, state, onActivateClick)
-            CitizenLocation(citizen.georeferencing)
+            CitizenLocation(citizen.georeferencing, onMapTouchChange = onMapTouchChange)
         }
     }
 
@@ -236,7 +243,11 @@ private fun LabelledValue(label: String, value: String) {
 
 /** The registered location on the exact map (F-012), or "Location not available" for (0, 0). */
 @Composable
-private fun CitizenLocation(location: Coordinates, modifier: Modifier = Modifier) {
+private fun CitizenLocation(
+    location: Coordinates,
+    modifier: Modifier = Modifier,
+    onMapTouchChange: (Boolean) -> Unit = {},
+) {
     val mapDescription = stringResource(R.string.cd_citizen_map)
     Column(
         modifier = modifier,
@@ -262,6 +273,7 @@ private fun CitizenLocation(location: Coordinates, modifier: Modifier = Modifier
                     .height(220.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .semantics { contentDescription = mapDescription },
+                onTouchChange = onMapTouchChange,
             )
         }
     }

@@ -21,6 +21,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,6 +137,10 @@ fun ShowScreen(
     // Hoisted so both orientations share the same call sites and the position survives rotation
     val detailsScroll = rememberScrollState()
     val locationScroll = rememberScrollState()
+    // F-018: while a finger is on the exact map the column holding it stops scrolling, so a pinch
+    // or a vertical pan goes to the map (TicketMap's onTouchChange)
+    var mapTouched by remember { mutableStateOf(false) }
+    val onMapTouchChange: (Boolean) -> Unit = { mapTouched = it }
 
     if (isLandscape) {
         Row(
@@ -157,17 +165,18 @@ fun ShowScreen(
                 locale = locale,
                 responsibleNames = responsibleNames,
                 participantContent = participantContent,
+                onMapTouchChange = onMapTouchChange,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll),
+                    .verticalScroll(locationScroll, enabled = !mapTouched),
             )
         }
     } else {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(detailsScroll)
+                .verticalScroll(detailsScroll, enabled = !mapTouched)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -178,6 +187,7 @@ fun ShowScreen(
                 locale,
                 responsibleNames = responsibleNames,
                 participantContent = participantContent,
+                onMapTouchChange = onMapTouchChange,
             )
         }
     }
@@ -218,6 +228,7 @@ private fun LocationPane(
     modifier: Modifier = Modifier,
     responsibleNames: Map<String, String> = emptyMap(),
     participantContent: @Composable ColumnScope.() -> Unit = {},
+    onMapTouchChange: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier = modifier,
@@ -228,7 +239,7 @@ private fun LocationPane(
             DetailAudience.PUBLIC -> CoarseLocationMap(ticket.location)
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
                 // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
-                ExactLocationSection(ticket.location)
+                ExactLocationSection(ticket.location, onMapTouchChange = onMapTouchChange)
                 HorizontalDivider()
                 StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
                 participantContent()
@@ -242,6 +253,7 @@ private fun LocationPane(
 private fun ExactLocationSection(
     location: Coordinates,
     modifier: Modifier = Modifier,
+    onMapTouchChange: (Boolean) -> Unit = {},
 ) {
     val mapDescription = stringResource(R.string.cd_ticket_map_exact)
     Column(
@@ -268,6 +280,7 @@ private fun ExactLocationSection(
                     .height(200.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .semantics { contentDescription = mapDescription },
+                onTouchChange = onMapTouchChange,
             )
         }
     }
