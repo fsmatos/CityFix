@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -132,9 +131,6 @@ fun MainBottomBar(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier
-                .widthIn(max = 480.dp)
-                .fillMaxWidth(),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -142,9 +138,9 @@ fun MainBottomBar(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
                     .selectableGroup(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 tabs.forEach { tab ->
@@ -160,7 +156,7 @@ fun MainBottomBar(
 }
 
 /**
- * One 48dp tab: the icon, with a discreet circle behind it when selected. The circle is the
+ * One 56dp tab (above the 48dp minimum): the icon, with a discreet circle behind it when selected. The circle is the
  * content colour at low alpha, so it is slightly darker on a light theme and lighter on a dark one.
  */
 @Composable
@@ -179,7 +175,7 @@ private fun IslandTab(tab: BottomTab, isSelected: Boolean, onClick: () -> Unit) 
     )
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(56.dp)
             .clip(CircleShape)
             .background(circle)
             .selectable(selected = isSelected, onClick = onClick, role = Role.Tab),

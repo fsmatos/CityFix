@@ -3,12 +3,10 @@ package pt.isec.amov.cityfix
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -121,6 +121,7 @@ import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.EXTRA_TICKET_ID
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
@@ -180,12 +181,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // The app is light-only, so keep dark system bar icons even when the
-        // device is in dark mode (the default style follows the device).
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-        )
+        // D-016: light and dark themes, so the default style is used: the system bar icons follow
+        // the device's dark mode, like CityFixTheme.
+        enableEdgeToEdge()
         // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
         val app = application as CityFixApplication
         // Only on a fresh start: after a rotation the same intent must not open the ticket again.
@@ -491,9 +489,16 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
             floatingActionButton = {
                 if (showReportFab) {
                     val reportLabel = stringResource(R.string.top_bar_title_report)
+                    // D-016: indigo with white text in both themes (primaryContainer), 16dp
+                    // corners, 52dp high; the label style is the theme's labelLarge (weight 500).
                     ExtendedFloatingActionButton(
                         onClick = { navController.navigate(ReportTicketRoute()) { launchSingleTop = true } },
-                        modifier = Modifier.semantics { contentDescription = reportLabel },
+                        modifier = Modifier
+                            .height(Dimens.reportButtonHeight)
+                            .semantics { contentDescription = reportLabel },
+                        shape = MaterialTheme.shapes.medium,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                         text = { Text(reportLabel) },
                     )

@@ -1,44 +1,119 @@
 package pt.isec.amov.cityfix.ui.theme
 
-import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.graphics.Color
 
+// D-016: neutral schemes with one accent. `background` is the page and `surface` the cards, the
+// island and the fields. `primaryContainer` is the indigo report button in both themes (the
+// ExtendedFloatingActionButton's default colour). `secondary`/`tertiary` are neutral, so Material
+// components that use them stay grey. surfaceTint = surface: no tonal tint on elevated surfaces.
 private val LightColorScheme = lightColorScheme(
-    primary = CityFixBlue,
-    secondary = CityFixTeal,
-    tertiary = CityFixOrange
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = Indigo,
     onPrimary = Color.White,
+    primaryContainer = Indigo,
+    onPrimaryContainer = Color.White,
+    inversePrimary = IndigoLight,
+    secondary = LightTextMuted,
     onSecondary = Color.White,
+    secondaryContainer = LightContainerHigh,
+    onSecondaryContainer = LightText,
+    tertiary = LightTextMuted,
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    tertiaryContainer = LightContainerHigh,
+    onTertiaryContainer = LightText,
+    background = LightPage,
+    onBackground = LightText,
+    surface = LightCard,
+    onSurface = LightText,
+    surfaceVariant = LightThumb,
+    onSurfaceVariant = LightTextMuted,
+    surfaceTint = LightCard,
+    inverseSurface = Color(0xFF2B2B2A),
+    inverseOnSurface = Color(0xFFF2F2EF),
+    error = LightError,
+    onError = Color.White,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
+    outline = LightOutline,
+    outlineVariant = LightLine,
+    surfaceBright = LightCard,
+    surfaceDim = LightContainerHighest,
+    surfaceContainerLowest = LightCard,
+    surfaceContainerLow = LightContainerLow,
+    surfaceContainer = LightContainer,
+    surfaceContainerHigh = LightContainerHigh,
+    surfaceContainerHighest = LightContainerHighest,
 )
 
+private val DarkColorScheme = darkColorScheme(
+    primary = IndigoLight,
+    onPrimary = IndigoDeep,
+    primaryContainer = Indigo,
+    onPrimaryContainer = Color.White,
+    inversePrimary = Indigo,
+    secondary = DarkTextMuted,
+    onSecondary = DarkPage,
+    secondaryContainer = DarkContainerHigh,
+    onSecondaryContainer = DarkText,
+    tertiary = DarkTextMuted,
+    onTertiary = DarkPage,
+    tertiaryContainer = DarkContainerHigh,
+    onTertiaryContainer = DarkText,
+    background = DarkPage,
+    onBackground = DarkText,
+    surface = DarkCard,
+    onSurface = DarkText,
+    surfaceVariant = DarkThumb,
+    onSurfaceVariant = DarkTextMuted,
+    surfaceTint = DarkCard,
+    inverseSurface = DarkText,
+    inverseOnSurface = Color(0xFF2B2B2A),
+    error = DarkError,
+    onError = DarkOnError,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
+    outline = DarkOutline,
+    outlineVariant = DarkLine,
+    surfaceBright = DarkContainerHighest,
+    surfaceDim = DarkPage,
+    surfaceContainerLowest = DarkContainerLowest,
+    surfaceContainerLow = DarkContainerLow,
+    surfaceContainer = DarkContainer,
+    surfaceContainerHigh = DarkContainerHigh,
+    surfaceContainerHighest = DarkContainerHighest,
+)
+
+/**
+ * The app theme (D-016): light or dark following the system setting. Dynamic colour is not used,
+ * so the CityFix palette is the same on every device. Also provides the status dot colours.
+ */
 @Composable
 fun CityFixTheme(
-    // Off by default: on Android 12+ dynamic colour would replace the CityFix colours
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme =
-        if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            dynamicLightColorScheme(LocalContext.current)
-        } else {
-            LightColorScheme
-        }
+    CompositionLocalProvider(
+        LocalStatusColors provides if (darkTheme) DarkStatusColors else LightStatusColors,
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            typography = Typography,
+            shapes = Shapes,
+            content = content,
+        )
+    }
+}
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+/** Shortcut for the status dot colours of the current theme: `CityFixTheme.statusColors`. */
+object CityFixTheme {
+    val statusColors: StatusColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalStatusColors.current
 }
