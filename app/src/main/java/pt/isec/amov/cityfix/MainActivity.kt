@@ -131,6 +131,8 @@ import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.NotificationsViewModel
+import pt.isec.amov.cityfix.viewmodel.NotificationsViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModel
@@ -374,6 +376,13 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
             // Q10: no UI; the operator keeps working without the proximity alert.
             Log.i(TAG, "No precise location: operator proximity watch not started")
         }
+    }
+
+    // F-016: notifications follow the session's tickets user (active citizen or operator).
+    val notificationsViewModel: NotificationsViewModel =
+        viewModel(factory = NotificationsViewModelFactory(app))
+    LaunchedEffect(session.ticketsUser?.id) {
+        notificationsViewModel.onUserChanged(session.ticketsUser)
     }
 
     // Brief I.1: only the anonymous user is limited to 10 km around Pr. Republica; registered

@@ -39,6 +39,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <!-- F-016: receives FCM messages (P11). -->
+        <service
+            android:name=".data.CityFixMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <!-- Google Maps key, as in class (P10). The key must have no Android-app restriction so the grader's build shows the map (decision 0014). -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
