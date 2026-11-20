@@ -134,7 +134,6 @@
     <string name="cd_navigate_back">Go back</string>
     <string name="cd_expand_tickets">Expand tickets</string>
     <string name="cd_collapse_tickets">Collapse tickets</string>
-    <string name="cd_report_ticket">Report an issue</string>
     <string name="cd_loading_session">Loading your session</string>
 
     <!-- Dashboard -->
