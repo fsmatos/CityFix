@@ -98,5 +98,17 @@ interface AuthRepository {
     /** Enrols the phone as second factor with the typed code, then updates [account]. Null on success. */
     suspend fun enrolSecondFactor(verificationId: String, code: String): AuthError?
 
+    /**
+     * Re-authenticates the signed-in user with [password]. An enrolled account answers
+     * SecondFactorRequired; finish it with sendSecondFactorCode + resolveSecondFactor.
+     */
+    suspend fun reauthenticate(password: String): SignInResult
+
+    /** After a recent re-authentication. Null on success. */
+    suspend fun changePassword(newPassword: String): AuthError?
+
+    /** Sends the verification link to [newEmail] (verifyBeforeUpdateEmail). Null on success. */
+    suspend fun requestEmailChange(newEmail: String): AuthError?
+
     fun signOut()
 }

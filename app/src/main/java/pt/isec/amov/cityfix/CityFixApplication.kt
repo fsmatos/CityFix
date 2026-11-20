@@ -1,7 +1,6 @@
 package pt.isec.amov.cityfix
 
 import android.app.Application
-import android.content.pm.ApplicationInfo
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
@@ -16,14 +15,18 @@ import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.AuthRepository
-import pt.isec.amov.cityfix.data.DebugSeed
+import pt.isec.amov.cityfix.data.CategoriesRepository
 import pt.isec.amov.cityfix.data.FirebaseAuthRepository
+import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
+import pt.isec.amov.cityfix.data.PushTokens
+import pt.isec.amov.cityfix.data.TicketNotifier
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
+import pt.isec.amov.cityfix.utils.createNotificationChannels
 
 /**
  * One container for the whole app, like ContactsApp in Contacts_#3 (decision 0009): it holds the
@@ -34,6 +37,12 @@ import pt.isec.amov.cityfix.data.UsersRepository
  * before any other Firestore call, so they are applied here, once, when [firestore] is first read.
  */
 class CityFixApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        // F-016: the class creates the channel before any notification is shown.
+        createNotificationChannels(this)
+    }
+
     val ticketsRepository: TicketsRepository by lazy {
         FirestoreTicketsRepository(firestore, attachmentUploader)
     }
@@ -65,6 +74,12 @@ class CityFixApplication : Application() {
 
     val messaging: FirebaseMessaging by lazy { Firebase.messaging }
 
+    /** This installation's FCM token in `users/{uid}.fcmTokens` (F-016). */
+    val pushTokens: PushTokens by lazy { PushTokens(messaging, firestore) }
+
+    /** Ticket changes -> local notifications, for the in-app watch and the worker (F-016). */
+    val ticketNotifier: TicketNotifier by lazy { TicketNotifier(this) }
+
     /** Sign-in, MFA and password reset (D-009), built from [auth]. */
     val authRepository: AuthRepository by lazy { FirebaseAuthRepository(auth) }
 
@@ -76,11 +91,6 @@ class CityFixApplication : Application() {
         FirestoreUsersRepository(firestore, auth, profilePhotoUploader)
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        // DEBUG ONLY (F-011 Q5): sample data in an empty database. Remove before delivery (D-015).
-        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
-            DebugSeed.seedIfEmpty(firestore)
-        }
-    }
+    /** Category management for operators (D-012), built from [firestore] so the cache settings apply. */
+    val categoriesRepository: CategoriesRepository by lazy { FirestoreCategoriesRepository(firestore) }
 }

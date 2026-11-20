@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-14 | Round 1: changes requested (B1, S1-S3, N1-N7). Round 2 (5be47fd..HEAD): approved; B1, S1-S3, N1, N2, N4-N6 resolved, N3/N7 deferred, 4 new nits (R2-N1..N4); build + lint 0 errors, 22 warnings = baseline; device checks pending |
 | Docs | done | 2026-11-14 | New decision 0016; 0015 (session) amended; overview, report notes, task file updated; N7 and the deferred nits documented; nothing committed |
 | Pushed | done | 2026-11-15 | f41f0f0 to origin/dev/Diogo (first push 2026-11-14 eba8aa2) |
-| Merged | pending | | |
+| Merged | done | 2026-11-15 | main at 4184511, pushed by Diogo |
 
 ## Log
 Append-only.
@@ -106,3 +106,4 @@ Append-only.
 - 2026-11-15 Landscape check (screenshots with `-gpu swiftshader_indirect`): the Register form is centred at the 480dp max width, field errors, supporting text, the impact switch row, the photo buttons and Create account are all fully visible when scrolling; nothing clipped.
 - 2026-11-15 Acceptance boxes ticked in the task file; status set to done.
 - 2026-11-15 Push: device-check records pushed to origin/dev/Diogo at f41f0f0 (docs only since the last push, so build and lint were not re-run). Not merged into main.
+- 2026-11-15 Merge: `origin/main` (F-014 planning docs and the F-013 merge record) merged into dev/Diogo as a0c45e5, with no conflicts; assembleDebug and lint passed (0 errors, 22 warnings). dev/Diogo merged into main as 4184511 (`--no-ff`, same tree as a0c45e5) at Diogo's request; main pushed by Diogo (the session's push of main was blocked by permissions). dev/Diogo fast-forwarded to main. The draft `firestore.rules` edit is now on main (still not deployed); Francisco still has to be told.

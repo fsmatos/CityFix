@@ -17,8 +17,10 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Uploads the profile photo chosen at registration to `users/{uid}/photo.jpg` and stores its https
- * download URL in `users/{uid}.photoPath` (decision 0010, D-010 Q4). ProfilePhotoUploader enqueues
- * it with a network constraint, after the registration transaction committed.
+ * download URL in `users/{uid}.photoPath` (decision 0010, D-010 Q4), with `photoUpdatedAt` (epoch
+ * ms) in the same update: an overwrite may keep the same URL, so the Profile screen uses the time
+ * as the photo's version (D-011 R4). ProfilePhotoUploader enqueues it with a network constraint,
+ * after the registration transaction committed (D-010) or after Save on Profile (D-011).
  *
  * Each attempt compresses the picked file with ImageCompression (long side 1600 px, JPEG, no EXIF;
  * the thumbnail it also writes is not needed and is deleted), uploads, then updates the document.
@@ -63,7 +65,9 @@ class ProfilePhotoWorker(context: Context, params: WorkerParameters) : Coroutine
             val ref = app.storage.reference.child("users/$uid/photo.jpg")
             ref.putFile(Uri.fromFile(target), storageMetadata { contentType = "image/jpeg" }).await()
             val url = ref.downloadUrl.await()
-            app.firestore.collection("users").document(uid).update("photoPath", url.toString()).await()
+            app.firestore.collection("users").document(uid)
+                .update(mapOf("photoPath" to url.toString(), "photoUpdatedAt" to System.currentTimeMillis()))
+                .await()
             File(source).delete()
             target.delete()
             Result.success()

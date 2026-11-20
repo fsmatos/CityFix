@@ -1,7 +1,12 @@
 package pt.isec.amov.cityfix
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,11 +37,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -48,6 +59,7 @@ import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Citizen
+import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionEffect
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
@@ -55,12 +67,15 @@ import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
 import pt.isec.amov.cityfix.ui.navigation.ApprovalsRoute
 import pt.isec.amov.cityfix.ui.navigation.CategoriesRoute
+import pt.isec.amov.cityfix.ui.navigation.ChangeEmailRoute
+import pt.isec.amov.cityfix.ui.navigation.ChangePasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.DashboardRoute
 import pt.isec.amov.cityfix.ui.navigation.ForgotPasswordRoute
 import pt.isec.amov.cityfix.ui.navigation.LoginRoute
 import pt.isec.amov.cityfix.ui.navigation.MainTopAppBar
 import pt.isec.amov.cityfix.ui.navigation.MyTicketsRoute
 import pt.isec.amov.cityfix.ui.navigation.OperatorPanelRoute
+import pt.isec.amov.cityfix.ui.navigation.PendingCitizenRoute
 import pt.isec.amov.cityfix.ui.navigation.PendingValidationRoute
 import pt.isec.amov.cityfix.ui.navigation.ProfileRoute
 import pt.isec.amov.cityfix.ui.navigation.RegisterRoute
@@ -73,6 +88,9 @@ import pt.isec.amov.cityfix.ui.navigation.homeFor
 import pt.isec.amov.cityfix.ui.navigation.menuItemsFor
 import pt.isec.amov.cityfix.ui.screens.AccountProblemScreen
 import pt.isec.amov.cityfix.ui.screens.AccountSetupScreen
+import pt.isec.amov.cityfix.ui.screens.CategoriesScreen
+import pt.isec.amov.cityfix.ui.screens.ChangeCredentialScreen
+import pt.isec.amov.cityfix.ui.screens.CitizenApprovalScreen
 import pt.isec.amov.cityfix.ui.screens.DashboardScreen
 import pt.isec.amov.cityfix.ui.screens.DetailAudience
 import pt.isec.amov.cityfix.ui.screens.ForgotPasswordScreen
@@ -80,18 +98,30 @@ import pt.isec.amov.cityfix.ui.screens.ListScreen
 import pt.isec.amov.cityfix.ui.screens.LocationGateScreen
 import pt.isec.amov.cityfix.ui.screens.LoginScreen
 import pt.isec.amov.cityfix.ui.screens.MyTicketsScreen
+import pt.isec.amov.cityfix.ui.screens.OperatorPanelScreen
+import pt.isec.amov.cityfix.ui.screens.OperatorTicketScreen
+import pt.isec.amov.cityfix.ui.screens.PendingCitizensScreen
 import pt.isec.amov.cityfix.ui.screens.PendingValidationScreen
-import pt.isec.amov.cityfix.ui.screens.PlaceholderScreen
+import pt.isec.amov.cityfix.ui.screens.ProfileScreen
 import pt.isec.amov.cityfix.ui.screens.RegisterScreen
 import pt.isec.amov.cityfix.ui.screens.ReportScreen
 import pt.isec.amov.cityfix.ui.screens.ShowScreen
 import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.EXTRA_TICKET_ID
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
 import pt.isec.amov.cityfix.viewmodel.AccessRole
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CategoriesViewModel
+import pt.isec.amov.cityfix.viewmodel.CategoriesViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
+import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.CredentialChange
+import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModel
+import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.GateStatus
@@ -101,6 +131,18 @@ import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 import pt.isec.amov.cityfix.viewmodel.LoginViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.NotificationsViewModel
+import pt.isec.amov.cityfix.viewmodel.NotificationsViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
+import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModel
+import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
+import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
+import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModelFactory
+import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
+import pt.isec.amov.cityfix.viewmodel.ProfileViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
@@ -117,7 +159,13 @@ import pt.isec.amov.cityfix.viewmodel.ticketsUser
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 
+/** Logcat tag for CityFixApp (D-014). Never log coordinates with it. */
+private const val TAG = "CityFixApp"
+
 class MainActivity : ComponentActivity() {
+    /** F-016: ticket a tapped notification asked to open; CityFixApp opens it and clears it. */
+    private var openTicketId by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The app is light-only, so keep dark system bar icons even when the
@@ -128,11 +176,19 @@ class MainActivity : ComponentActivity() {
         )
         // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
         val app = application as CityFixApplication
+        // Only on a fresh start: after a rotation the same intent must not open the ticket again.
+        if (savedInstanceState == null) openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
         setContent {
             CityFixTheme {
-                CityFixApp(app)
+                CityFixApp(app, openTicketId, onTicketOpened = { openTicketId = null })
             }
         }
+    }
+
+    /** singleTop (manifest): a notification tapped while the app is open arrives here. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
     }
 }
 
@@ -142,7 +198,7 @@ class MainActivity : ComponentActivity() {
  * shares one instance of each. [app] holds the repositories the ViewModel factories receive.
  */
 @Composable
-private fun CityFixApp(app: CityFixApplication) {
+private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketOpened: () -> Unit) {
     val ticketsViewModel: TicketsViewModel =
         viewModel(factory = TicketsViewModelFactory(app.ticketsRepository, null))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
@@ -177,6 +233,7 @@ private fun CityFixApp(app: CityFixApplication) {
     val reportSubmittedMessage = stringResource(R.string.report_submitted)
     val reportJoinedMessage = stringResource(R.string.report_joined)
     val reportAlreadyFollowingMessage = stringResource(R.string.report_already_following)
+    val citizenActivatedMessage = stringResource(R.string.citizen_approval_activated)
     val loadingDescription = stringResource(R.string.cd_loading_session)
 
     val navController = rememberNavController()
@@ -232,8 +289,12 @@ private fun CityFixApp(app: CityFixApplication) {
     // Every Log out path (top bar, account setup, account problem). The list is cleared first,
     // synchronously, so the next frame never shows the previous user's tickets to an anonymous
     // user; the LaunchedEffect(ticketsUser) that follows with null is then a no-op.
+    // F-016 (review S1): the previous user's notifications are removed from the tray too.
+    val notificationsViewModel: NotificationsViewModel =
+        viewModel(factory = NotificationsViewModelFactory(app))
     val logOut = {
         ticketsViewModel.setUser(null)
+        notificationsViewModel.onLoggedOut()
         sessionViewModel.signOut()
     }
 
@@ -247,18 +308,96 @@ private fun CityFixApp(app: CityFixApplication) {
         else -> AccountAction.NONE
     }
 
+    // D-014: whether precise location is granted, for the operator's 20 m watch below. Read again
+    // on every resume: the user may change it in Settings, and the start-up permission dialog
+    // pauses and resumes the activity, so its answer is picked up here too.
+    val context = LocalContext.current
+    var hasPrecise by remember { mutableStateOf(hasPreciseLocationPermission(context)) }
+    LifecycleResumeEffect(Unit) {
+        hasPrecise = hasPreciseLocationPermission(context)
+        onPauseOrDispose { }
+    }
+
     // Location is requested when the app starts, as in Contacts_#3 (P10). The answer goes to the
     // 10 km gate; the report form checks the permission again when it opens.
     val gateViewModel: LocationGateViewModel =
         viewModel(factory = LocationGateViewModelFactory(app.locationRepository))
     val gateState by gateViewModel.uiState.collectAsStateWithLifecycle()
+    // F-016: the notification request below waits for this answer.
+    var locationAnswered by remember { mutableStateOf(false) }
+    // F-016: saveable, so a rotation does not ask (or show the denied snackbar) again.
+    var askedNotifications by rememberSaveable { mutableStateOf(false) }
     val locationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         gateViewModel.onPermissionResult(permissions.values.any { it })
+        locationAnswered = true
     }
     LaunchedEffect(Unit) {
         locationPermissionRequest.launch(LOCATION_PERMISSIONS)
+    }
+
+    // F-016 (Gate 1 Q6): ask for notifications when a citizen or operator session starts, as P11
+    // asks with RequestPermission (Android 13+). Only after the location answer, because Android
+    // shows one permission request at a time. Asked once per session; denied -> a snackbar.
+    val notificationsDeniedMessage = stringResource(R.string.notifications_denied)
+    val notificationPermissionRequest = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            snackbarScope.launch { snackbarHostState.showSnackbar(notificationsDeniedMessage) }
+        }
+    }
+    LaunchedEffect(role, locationAnswered) {
+        if (role != AccessRole.CITIZEN && role != AccessRole.OPERATOR) {
+            askedNotifications = false
+        } else if (!askedNotifications && locationAnswered &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            askedNotifications = true
+            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // Brief II.3 (D-014): while an operator with precise location has the app in the foreground,
+    // check the 20 m geofence of the IN_PROGRESS tickets (Gate 1 Q1: foreground only, no
+    // background permission). repeatOnLifecycle stops the location updates when the app goes to
+    // the background and starts them again on return; a new operator or Log out (operator null)
+    // cancels the effect, and with it the watch.
+    val proximityViewModel: OperatorProximityViewModel = viewModel(
+        factory = OperatorProximityViewModelFactory(app.locationRepository, app.ticketsRepository)
+    )
+    val operator = session.ticketsUser as? Operator
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(operator?.id, hasPrecise) {
+        if (operator != null && hasPrecise) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                proximityViewModel.watch(operator.id, ticketsViewModel.tickets)
+            }
+        } else if (operator != null) {
+            // Q10: no UI; the operator keeps working without the proximity alert.
+            Log.i(TAG, "No precise location: operator proximity watch not started")
+        }
+    }
+
+    // F-016: notifications follow the session's tickets user (active citizen or operator). Not
+    // while Loading (review S3): the user is not known yet, and a null there would cancel and
+    // re-enqueue the worker on every app start.
+    val isLoading = session == Session.Loading
+    LaunchedEffect(session.ticketsUser?.id, isLoading) {
+        if (!isLoading) notificationsViewModel.onUserChanged(session.ticketsUser)
+    }
+    // While the app is in the foreground, check the user's tickets for changes (like the
+    // proximity watch below); a new user or Log out cancels it. Anonymous users get nothing.
+    val notifiedUser = session.ticketsUser
+    LaunchedEffect(notifiedUser?.id) {
+        if (notifiedUser != null) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                notificationsViewModel.watch(notifiedUser)
+            }
+        }
     }
 
     // Brief I.1: only the anonymous user is limited to 10 km around Pr. Republica; registered
@@ -361,6 +500,20 @@ private fun CityFixApp(app: CityFixApplication) {
                     val audience = detailAudience(user, ticket)
                     if (user == null || audience == DetailAudience.PUBLIC) {
                         ShowScreen(ticket = ticket, audience = audience, now = System.currentTimeMillis())
+                    } else if (user is Operator) {
+                        // D-013 Q1: the operator's own view of the same route (contacts, actions).
+                        // Inside the branch: scoped to this entry, so the messages and profile
+                        // listeners end with it, and never created for a citizen.
+                        val operatorViewModel: OperatorTicketViewModel = viewModel(
+                            factory = OperatorTicketViewModelFactory(
+                                app.ticketsRepository,
+                                app.usersRepository,
+                                app.attachmentStorage,
+                                id,
+                                user,
+                            ),
+                        )
+                        OperatorTicketScreen(ticket = ticket, operator = user, viewModel = operatorViewModel)
                     } else {
                         // Inside the destination: scoped to this entry, so leaving the ticket
                         // removes its messages listener.
@@ -477,29 +630,132 @@ private fun CityFixApp(app: CityFixApplication) {
                         )
                     }
                 }
-                // Placeholders: the later tasks replace the content of these destinations.
+                // Profile and credential changes: any signed-in user with a profile.
                 composable<ProfileRoute> {
                     RequireAccess(
                         role = role,
                         allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
                         onDenied = goHome,
                     ) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_profile)
+                        // The guard lets only a signed-in user in, so the session holds their profile.
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val profileViewModel: ProfileViewModel = viewModel(
+                            factory = ProfileViewModelFactory(
+                                user.id,
+                                app.usersRepository,
+                                app.authRepository,
+                                app.attachmentStorage,
+                            ),
+                        )
+                        ProfileScreen(
+                            viewModel = profileViewModel,
+                            onChangeEmail = {
+                                navController.navigate(ChangeEmailRoute) { launchSingleTop = true }
+                            },
+                            onChangePassword = {
+                                navController.navigate(ChangePasswordRoute) { launchSingleTop = true }
+                            },
+                            onLogOut = logOut,
+                        )
+                    }
+                }
+                composable<ChangePasswordRoute> {
+                    RequireAccess(
+                        role = role,
+                        allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                        onDenied = goHome,
+                    ) {
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            factory = CredentialChangeViewModelFactory(
+                                CredentialChange.PASSWORD,
+                                user is Operator,
+                                app.authRepository,
+                                app.usersRepository,
+                            ),
+                        )
+                        ChangeCredentialScreen(
+                            viewModel = credentialViewModel,
+                            onDone = { navController.navigateUp() },
+                        )
+                    }
+                }
+                composable<ChangeEmailRoute> {
+                    RequireAccess(
+                        role = role,
+                        allowed = setOf(AccessRole.CITIZEN, AccessRole.PENDING_CITIZEN, AccessRole.OPERATOR),
+                        onDenied = goHome,
+                    ) {
+                        val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
+                        val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            factory = CredentialChangeViewModelFactory(
+                                CredentialChange.EMAIL,
+                                user is Operator,
+                                app.authRepository,
+                                app.usersRepository,
+                            ),
+                        )
+                        ChangeCredentialScreen(
+                            viewModel = credentialViewModel,
+                            onDone = { navController.navigateUp() },
+                        )
                     }
                 }
                 composable<OperatorPanelRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_operator_panel)
+                        // Inside the guard: scoped to this entry, so the categories listener ends with it.
+                        val panelViewModel: OperatorPanelViewModel =
+                            viewModel(factory = OperatorPanelViewModelFactory(app.categoriesRepository))
+                        // The shared list is allTickets() for an operator (TicketsViewModel.setUser).
+                        OperatorPanelScreen(
+                            tickets = tickets,
+                            viewModel = panelViewModel,
+                            onTicketClick = { id ->
+                                navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
+                            },
+                        )
                     }
                 }
                 composable<ApprovalsRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_approvals)
+                        // Inside the guard: scoped to this entry, so the users listener ends with it.
+                        val approvalsViewModel: PendingCitizensViewModel =
+                            viewModel(factory = PendingCitizensViewModelFactory(app.usersRepository))
+                        PendingCitizensScreen(
+                            viewModel = approvalsViewModel,
+                            onCitizenClick = { id ->
+                                navController.navigate(PendingCitizenRoute(id)) { launchSingleTop = true }
+                            },
+                        )
+                    }
+                }
+                composable<PendingCitizenRoute> { entry ->
+                    RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
+                        // The guard lets only an operator in, so the session holds their profile.
+                        val operatorId = session.ticketsUser?.id ?: return@RequireAccess
+                        val citizenId = entry.toRoute<PendingCitizenRoute>().citizenId
+                        // Inside the guard: scoped to this entry, so the citizen listener ends with it.
+                        val approvalViewModel: CitizenApprovalViewModel = viewModel(
+                            factory = CitizenApprovalViewModelFactory(citizenId, operatorId, app.usersRepository),
+                        )
+                        CitizenApprovalScreen(
+                            viewModel = approvalViewModel,
+                            // As the report's onSubmitted: the write is queued, so confirm and go back.
+                            onActivated = {
+                                snackbarScope.launch {
+                                    snackbarHostState.showSnackbar(citizenActivatedMessage)
+                                }
+                                navController.navigateUp()
+                            },
+                        )
                     }
                 }
                 composable<CategoriesRoute> {
                     RequireAccess(role = role, allowed = setOf(AccessRole.OPERATOR), onDenied = goHome) {
-                        PlaceholderScreen(titleRes = R.string.top_bar_title_categories)
+                        // Inside the guard: the only category writes come from this ViewModel.
+                        val categoriesViewModel: CategoriesViewModel =
+                            viewModel(factory = CategoriesViewModelFactory(app.categoriesRepository))
+                        CategoriesScreen(viewModel = categoriesViewModel)
                     }
                 }
             }
@@ -519,6 +775,15 @@ private fun CityFixApp(app: CityFixApplication) {
                     // null = fresh start: the NavHost is on the dashboard, so only other homes navigate.
                     if (handledRole != null || homeFor(role) != DashboardRoute) goHome()
                     handledRole = role
+                }
+            }
+
+            // F-016: a tapped notification opens its ticket. After the redirect above, so the
+            // role's home is set first and the ticket goes on top of it; never while Loading.
+            LaunchedEffect(openTicketId, role) {
+                if (openTicketId != null) {
+                    navController.navigate(TicketDetailRoute(openTicketId)) { launchSingleTop = true }
+                    onTicketOpened()
                 }
             }
         }
@@ -558,5 +823,8 @@ private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     hasRoute<AccountProblemRoute>() -> TopBarScreen.ACCOUNT_PROBLEM
     hasRoute<AccountSetupRoute>() -> TopBarScreen.ACCOUNT_SETUP
     hasRoute<RegisterRoute>() -> TopBarScreen.REGISTER
+    hasRoute<ChangePasswordRoute>() -> TopBarScreen.CHANGE_PASSWORD
+    hasRoute<ChangeEmailRoute>() -> TopBarScreen.CHANGE_EMAIL
+    hasRoute<PendingCitizenRoute>() -> TopBarScreen.PENDING_CITIZEN
     else -> TopBarScreen.DASHBOARD
 }

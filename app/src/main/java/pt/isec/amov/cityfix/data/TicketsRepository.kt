@@ -34,6 +34,15 @@ interface TicketsRepository {
     /** Every full ticket, newest first (operators). */
     fun allTickets(): Flow<List<Ticket>>
 
+    /** [participantTickets] read once (F-016 worker), not live. */
+    suspend fun participantTicketsOnce(userId: String): List<Ticket>
+
+    /** [allTickets] read once (F-016 worker, operators), not live. */
+    suspend fun allTicketsOnce(): List<Ticket>
+
+    /** Live tickets to notify [userId] about, server-confirmed lists only (F-016 in-app watch). */
+    fun ticketsFromServer(userId: String, isOperator: Boolean): Flow<List<Ticket>>
+
     /** Dashboard figures from stats/summary (decision 0005 meaning; private tickets counted). */
     fun stats(): Flow<DashboardStats>
 
@@ -84,6 +93,32 @@ interface TicketsRepository {
      * [by] and the ticket moves to INFO_REQUESTED with the question as justification, in one
      * write. Returns false when the lifecycle rejects it (blank question, not an active
      * participant, ticket not OPEN or IN_PROGRESS); otherwise true once the write is queued.
+     * Also the operator's request for information (D-013): same batch, the text is the
+     * justification and a message by the operator.
      */
     fun askForClarification(ticket: Ticket, by: User, question: String): Boolean
+
+    /**
+     * The operator starts work (brief II.3, I.3.E, D-013): IN_PROGRESS with an optional [note] as
+     * justification, one batch (ticket, publicTickets status, ticketLocations, stats). Returns
+     * false when the lifecycle rejects it; otherwise true once the write is queued.
+     */
+    fun startWork(ticket: Ticket, by: User, note: String? = null): Boolean
+
+    /**
+     * The operator resolves [ticket] with [proof] (brief I.3.E: photo/video of the finished work,
+     * D-013): prepares each file (AttachmentUploader), then one batch with RESOLVED, the proof
+     * appended (phase RESOLUTION) and the companions, then one upload worker. Returns false when
+     * the lifecycle rejects it or no proof could be prepared; nothing is written then. Otherwise
+     * true once the write is queued.
+     */
+    suspend fun resolveTicket(ticket: Ticket, by: User, proof: List<Attachment>, note: String? = null): Boolean
+
+    /**
+     * Records that an operator is within 20 m of [ticket] (brief I.3 Obs, II.3; D-014): sets only
+     * tickets/{id}.lastOperatorNearbyAt = [now]. No operator id or location is written. False
+     * when canRecordOperatorNearby(now) is false; otherwise true once the write is queued. F-016
+     * turns it into the participants' notification.
+     */
+    fun recordOperatorNearby(ticket: Ticket, now: Long): Boolean
 }

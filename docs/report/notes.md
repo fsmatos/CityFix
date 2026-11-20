@@ -872,7 +872,7 @@ Decisions: [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md) (
 - Device checks D1-D10 not run yet.
 - Thumbnails are empty in the anonymous list until F-013 uploads the media; other devices show the card placeholder.
 - Test data with stand-in ids (`dev-citizen-1`, `citizen-1`, `citizen-2`) is in the shared test database.
-- `DebugSeed` must be removed before delivery (D-015 checklist).
+- `DebugSeed` must be removed before delivery (D-015 checklist). Done in D-015 (2026-11-17, `6c0fbf0`).
 - The `currentUser` seam is temporary; D-009 replaces it with the signed-in user.
 - A write the server later refuses (only once rules are deployed, or after the test mode ends on 2026-12-10) is only logged, not shown.
 - Counters drift if a future write path forgets `statsIncrements` (D-013 and F-014 must add it). Repair: recompute the four counters by hand from `tickets/` in the console.
@@ -1027,7 +1027,7 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - **Role-prefixed NIF ids** (`CITIZEN_<nif>`, `OPERATOR_<nif>`): a citizen and an operator may share one NIF, as "unique for the role" reads.
 - **`photoPath` = the https download URL (Q4)**, as F-013 does for ticket media. Profile and validation screens load it with Coil directly.
 - **Council domain read from `municipality/main` (Q9)**, not a constant. The council's data stays in one document, as the domain model's `Municipio.dominioEmail` says.
-- **The impact switch is only stored** (`impactDetection`); F-015 uses it.
+- **The impact switch is only stored** (`impactDetection`); F-015 (Francisco) uses it. (This line first said D-014; corrected by D-011.)
 - **Phone: mobile or landline (Q6)**; **password: 8 characters with a letter and a digit, plus a confirmation (Q7)**; **NIF: any valid check digit (Q5)**, not only individuals' prefixes.
 - **Rejected:** ViewModel orchestration of two repositories (Q13; the cleanup rule would depend on a screen's scope); an inline upload (blocks on a slow network, breaks "uploads through WorkManager"); a batch (no read, so no uniqueness); deferring the operator document (local store, two paths); the map pick (slice 6, skipped).
 
@@ -1074,6 +1074,72 @@ Brief: I.2.A (citizen: name, e-mail, phone, NIF, georeferencing, optional photo,
 - A map pick to adjust the citizen's location (slice 6).
 - **Housekeeping:** two decision records share the number 0015 (`0015-media-preparation-and-uploads.md`, `0015-session-role-navigation-mfa.md`). D-010 used 0016, and the authors should renumber one. **Resolved 2026-11-15 (F-014):** F-013's record was renamed to `0017-media-preparation-and-uploads.md`; D-009 keeps 0015.
 
+## D-011: Profile editing
+Decision: [0019](../decisions/0019-profile-editing.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (session e-mail sync, re-authentication) and [0016](../decisions/0016-registration.md) (shared fields, unique photo work), and suggests an amendment to [0010](../decisions/0010-firestore-schema.md). Code: `ui/components/AccountFields.kt`, `ui/screens/ProfileScreen.kt`, `ui/screens/ChangeCredentialScreen.kt`, `viewmodel/Profile*`, `viewmodel/CredentialChange*`, `viewmodel/SessionViewModel.kt`, `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/ProfilePhotoUploader.kt`, `data/ProfilePhotoWorker.kt`, `data/AuthRepository.kt`, `data/FirebaseAuthRepository.kt`, `firestore.rules` (draft). Overview: "Profile (D-011)", "Handover (D-011)".
+
+Brief: I.2.C (the citizen may not change name, NIF, georeferencing), I.3.C (the operator may not change name, NIF), I.2.A / I.2.F (impact detection is a profile choice).
+
+### Technical solutions
+- **Shared stateless field components.** The Register fields moved to `ui/components/AccountFields.kt` (`AccountTextField` with a new `readOnly` flag, `PasswordField`, `ImpactDetectionRow`, `ProfilePhotoPicker`). Register and Profile use the same components; the locked fields on Profile are the same text field with `readOnly = true`, so there is no keyboard and TalkBack says "read only". The move was a pure refactor (slice 1), checked by the reviewer as verbatim.
+- **An allow-list in code.** `updateProfile` builds its map only from `phone` and, for a `Citizen`, `impactDetection`; the photo goes through the worker; the e-mail has its own path. Name, NIF and georeferencing have no write path at all.
+- **Save without `await()`.** The Firestore `update()` is queued in the local cache and returns at once, also offline (as F-011's report batch). The `users/{uid}` snapshot listener that feeds the session sees the cached write immediately, so the impact setting changes in `Session.SignedIn.user` the moment Save is pressed, without a network.
+- **Two listeners, one cache.** Profile listens to `users/{uid}` itself, next to the session's listener; both are served by the same cache, so this costs no extra server reads. The editable values are taken from the first snapshot only, so later snapshots (the photo worker, an operator's validation) never overwrite what the user types.
+- **Re-authentication of an MFA account.** `reauthenticate(EmailAuthProvider.getCredential(email, password))` throws `FirebaseAuthMultiFactorException`, exactly as sign-in does. The same resolver flow (hint -> `PhoneAuthOptions` with the MFA session -> `verifyPhoneNumber` -> SMS code -> `PhoneMultiFactorGenerator.getAssertion` -> `resolver.resolveSignIn`) completes it, then `updatePassword` or `verifyBeforeUpdateEmail` runs at once. The `signIn` code was refactored to share one private `challengeOf(e)`.
+- **The e-mail change and why the Firestore copy is synced from the session.** `verifyBeforeUpdateEmail` only sends a link; the Auth e-mail changes whenever the link is opened, maybe on another device. The session owns both values (the Auth account and the profile), so it compares them on the first profile snapshot after each sign-in or reload and writes `users/{uid}.email` when they differ. It runs whether or not Profile is reopened, which D-012 needs (the operator sees the current contact e-mail).
+- **A sync that cannot loop.** The first version compared on every snapshot. The review found two loops: a stale second device writing the old e-mail back against the up-to-date one, and a refused write retrying without end (the listener reverts the cache, the next snapshot mismatches again). Checking only the first snapshot of each account branch removes both. A good defence example of a reactive feedback loop.
+- **WorkManager unique work for the photo.** `enqueueUniqueWork("profile_photo_<uid>", REPLACE, ...)`: a newer photo cancels an older upload, so two quick saves cannot finish in the wrong order.
+- **A cache key for an overwritten image.** The photo is overwritten at the same Storage path, so its download URL may not change, and Coil keys its memory and disk caches by URL. The worker also writes `photoUpdatedAt`, and Profile uses `"<url>#<photoUpdatedAt>"` as the Coil cache key; the "uploading" notice clears on that version, not on the URL.
+- **Back during a running change.** A `changing` flag makes Back do nothing while `updatePassword` / `verifyBeforeUpdateEmail` runs, so the form cannot be resubmitted mid-change (review N1).
+
+### Options chosen and why (Gate 1, 2026-11-15)
+- **Profile phone separate from the SMS factor (Q1).** The phone is contact data from registration; the factor was enrolled in Account setup and D-010 never prefilled it, so the two may already differ. Re-enrolling on a phone change would add two SMS flows and an unenrolment, with a lockout risk, for something the brief does not ask. A hint under the field says so.
+- **Password + SMS for every re-authentication (Q2):** Firebase requires it for an enrolled account.
+- **Sync from the session plus a reload on Profile (Q3):** see above.
+- **Draft rules allow-list (Q4):** the old deny-list forbade any `email` change, so the sync would be refused once the rules are deployed. Not deployed (Q5).
+- **One Save for phone, photo and impact (Q6)**, rather than a switch that writes at once: one write path.
+- **No stored-photo removal (Q7):** it would need a Storage delete.
+- **Unique work with REPLACE (Q8).**
+- **Pending citizens may edit and see the switch (Q9);** the detector runs only for active citizens.
+- **Routes, not dialogs, for the e-mail and password changes (Q10):** the non-serialisable `MultiFactorResolver` and rotation are easier in a route-scoped ViewModel, as on Login. One ViewModel serves both routes (`CredentialChange { EMAIL, PASSWORD }`).
+- **Single centred column in landscape (Q11), a Log out button on Profile (Q12), coordinates only for the georeferencing (Q13).**
+- **Rejected:** an immediate impact switch; dialogs; syncing from the Profile ViewModel (would not run unless Profile is reopened); a `pendingEmail` field (a second source of truth); MFA re-enrolment; photo removal; a two-pane landscape.
+
+### Class material vs beyond class
+- **As in class:** P08 form state with `@StringRes` errors and a computed validity; P09 `PickVisualMedia` and `TakePicture` with the FileProvider; the WorkManager pattern of slides 08 / P10 (`CoroutineWorker`, network constraint); type-safe Navigation routes; `SavedStateHandle` through the factory's `CreationExtras`.
+- **Beyond class (Firebase docs):** MFA re-authentication through `MultiFactorResolver`; `verifyBeforeUpdateEmail` and its out-of-band lifecycle; `enqueueUniqueWork` with `ExistingWorkPolicy.REPLACE`; Coil `memoryCacheKey` / `diskCacheKey`; Firestore rules `changedKeys().hasOnly(...)`.
+
+### Limits to state at the defence
+- **The rules are not deployed**, so a direct write to name or NIF succeeds against the test-mode database (R8). The allow-list can be shown only in the draft (Rules Playground; not run). The draft also does not type-check the allowed fields (review N5, R2-N2): suggested `is bool` / `is string` / `is int` / phone regex terms are in decision 0019.
+- **The operator domain is enforced by the client only** for the Auth e-mail (R7): no Cloud Functions, and `isOperator()` checks only `email_verified`.
+- **No MFA phone change, no photo removal, no account deletion.**
+- **Device findings (2026-11-16):**
+  - R1: the session survives the MFA re-authentication; Profile is still signed in after a password change.
+  - R2: opening the e-mail link signs this device out at the next reload (reopening Profile), and the user lands on the anonymous dashboard **without a message**.
+  - R3: e-mail enumeration protection hides "address already in use" at request time; the app says the link was sent, and the clash can only show when the link is opened.
+  - R4: the `photoUpdatedAt` cache key works; the new photo shows after an overwrite.
+  - R6 (revert link may unenrol MFA) comes from the Firebase docs and was not tried.
+- **The e-mail check runs once per subscription (R2-N1).** After more than 5 s in the background the session flow resubscribes (`WhileSubscribed(5_000)`), so a second device with a stale account can write the old e-mail once per return to the foreground, until its token is refused. No loop; accepted. The `SessionViewModel` KDoc says this cannot happen and should be reworded.
+- **`currentEmail` is read once** in the change screen (N6). **Two photos saved before the first upload ends** can briefly show the first one (R2-N3).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` before every Kotlin commit and after both review rounds: 0 errors, 22 warnings (the baseline ids, none new). EN and PT key sets equal.
+- Two review rounds: round 1 approve with should-fix (S1 the sync loop, S2 the stale photo, S3 the device checks; N1-N6), round 2 approve (3 nits).
+- **Device checks run (2026-11-16, emulator, test numbers, PT locale):** read-only fields; phone error and Save online; Save offline with a rotation before Save; landscape; camera and gallery photo with the new image shown after upload; wrong current password; the full password change with the SMS code and Back right after Confirm; the e-mail checks before Firebase; an address already in use (R3); the e-mail link and the sign-out (R2); login with the new e-mail and the new password.
+- **Impact detection** was checked through the session/profile value only (switched off offline, still off after reopening Profile); F-015 does not exist yet, so the detector stopping is not shown.
+- **Still open:** the console values (`phone`, `impactDetection`, `photoPath` + `photoUpdatedAt`, `users/{uid}.email` after the change); Register with a photo after the worker change; two devices on one account; the old password refused at login; the Rules Playground.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy the rules with the allow-list, plus the type checks (N5, R2-N2).
+- A Cloud Function (or a blocking function) to enforce the operator domain on the Auth e-mail.
+- An MFA phone change with re-enrolment (enrol new, unenrol old, both after re-authentication).
+- Photo removal with a Storage delete.
+- A message after the involuntary sign-out caused by the e-mail link ("Your e-mail changed; sign in with the new address").
+- A truly once-per-account e-mail check (compare the checked `AuthAccount` by identity in the ViewModel), and collect `auth.account` in the change screen (N6).
+- A retry UI for a dropped profile photo; a two-pane landscape profile (P07).
+- (Done in D-011 itself: the `photoUpdatedAt` cache key, first listed here as "if R4 shows a stale photo".)
+
 ## F-014: My tickets, message thread and reopen
 Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview: "Citizen tickets, messages and reopen (F-014)", "Handover (F-014)".
 
@@ -1102,6 +1168,207 @@ Decision: [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Overview
 - A detail listener on the single ticket instead of the list.
 - `hasPendingWrites` to mark messages not yet sent.
 
+## D-012: Approvals and categories
+Decision: [0020](../decisions/0020-operator-approvals-and-categories.md). It amends [0015](../decisions/0015-session-role-navigation-mfa.md) (the placeholders become real screens; new `PendingCitizenRoute`) and suggests amendments to [0010](../decisions/0010-firestore-schema.md) and [0013](../decisions/0013-firestore-reads-and-dashboard-counters.md). Code: `data/UsersRepository.kt`, `data/FirestoreUsersRepository.kt`, `data/CategoriesRepository.kt`, `data/FirestoreCategoriesRepository.kt`, `viewmodel/PendingCitizens*`, `viewmodel/CitizenApproval*`, `viewmodel/Categories*`, `ui/screens/PendingCitizensScreen.kt`, `ui/screens/CitizenApprovalScreen.kt`, `ui/screens/CategoriesScreen.kt`, `MainActivity.kt`. Overview: "Approvals and categories (D-012)", "Handover (D-012)".
+
+Brief: I.3.D (view a registration with name, georeferencing and NIF, and activate it; the wording is the task file's, the PDF was not reread, plan R6), I.3.E (create, activate, deactivate and edit categories; citizens report only on active ones).
+
+### Technical solutions
+- **Activation without a push or a restart.** The citizen's session already listens to `users/{uid}` (D-009). When the operator writes `registrationStatus: "ACTIVE"`, the citizen's snapshot turns the role from `PENDING_CITIZEN` into `CITIZEN`, the role redirect opens the dashboard and "+" appears. No code was added on the citizen's side: a good defence example of the reactive design (state flows from the database to the UI, not commands between devices).
+- **The pending list as a live query.** One equality filter (`registrationStatus == "PENDING"`) and `snapshots()`, so a new registration or another operator's activation shows without a refresh. The oldest-first order is a client-side sort on `createdAt`; an `orderBy` on a second field would need a composite index, one filter uses the automatic one.
+- **One write with exactly the rule's three keys.** `registrationStatus`, `validatedBy` (the operator's uid) and `validatedAt` (epoch ms), the shape the draft rule allows; idempotent, so two operators cannot corrupt it.
+- **Category changes never rewrite tickets.** A ticket keeps its `categoryName` snapshot (decision 0003), so a rename or deactivation is one small write on `categories/{id}`; old tickets still show their name. The report form's `activeCategories()` listener follows the change live: a deactivated category leaves the open form, a renamed one shows its new name.
+- **Admin writes work offline.** None of the writes is awaited: they go to the persistent cache, the listeners show them at once, and Firestore sends them when online (as F-011 and D-011).
+- **Guarding a double tap in the ViewModel.** `activate()` needs the confirm dialog open and closes it before writing, so a fast double tap writes, shows the snackbar and goes back once (review S2). Validation and the editor dialog also live in the ViewModel, so rotation keeps the typed name.
+
+### Options chosen and why (Gate 1, 2026-11-16)
+- **Activate only, no Reject (Q2):** the brief asks only to activate; a REJECTED status needs a new enum value, a session state and a citizen screen. A wrong registration stays pending (console delete).
+- **Detail with contact data and photo (Q3):** name, NIF and the map (brief) plus e-mail, phone and photo, so the operator can check a doubtful registration.
+- **Oldest first (Q4)**, a queue; **a confirmation dialog (Q5)**, because there is no undo; **`validatedAt` as client epoch ms (Q6)**, like every other time in the app.
+- **A separate `CategoriesRepository` (Q1):** Diogo's new files, so Francisco's `TicketsRepository` and report form are untouched; only a KDoc line in his mapping file changed.
+- **Name rules (Q7):** trimmed, required, at most 40 characters, unique ignoring case (inactive ones included). **No delete (Q8):** deactivation is the safe delete.
+- **No `SavedStateHandle` (Q9), no rules edit (Q10), title "Registration" (Q11), pending citizens still not gated (Q12).**
+- **An extra detail route and two ViewModels** instead of the task's single `OperatorAdminViewModel`: the same list -> detail pattern as tickets, each listener scoped to its own screen.
+- **Rejected:** Reject / REJECTED; one admin ViewModel; a list/detail two-pane with in-ViewModel selection (needs a `BackHandler`, Up behaves differently per orientation); writes in `TicketsRepository`; category delete; a server timestamp for `validatedAt`; a second `role` filter.
+
+### Class material vs beyond class
+- **As in class:** type-safe Navigation routes with an argument (`PendingCitizenRoute(citizenId)`, `toRoute`); ViewModel + `StateFlow` + a plain `ViewModelProvider.Factory` (Contacts_#3); `LazyColumn` with keys; `AlertDialog` and the FAB (P08); `@StringRes` validation errors (P08); the Maps Compose marker (Contacts_#3, F-012's `TicketMap`); `Collator` sorting and the two-pane landscape (P07).
+- **Beyond class (Firebase docs):** Firestore `snapshots()` flows on a query, not only on a document; not-awaited writes queued in the persistent cache; `toggleable(role = Role.Switch)` with a state description for TalkBack.
+
+### Limits to state at the defence
+- **The rules are not deployed (R1).** Only the app (menu, `RequireAccess`, ViewModels inside the guard, one write path) stops a citizen from writing categories or activating themselves; against the test-mode database any client could. The draft rules show the server design, and even they check the validation's changed keys, not the values (review N3; suggested terms in decision 0020).
+- **Duplicate names** are possible offline with an empty cache or with two operators at once: the check is client-side (R5).
+- **No Reject and no category delete** (by choice).
+- **A rename while a citizen's form is open** keeps the old name on that new ticket (R4, Francisco's form).
+- **A hand-edited wrong-typed `users` document** makes the strict `toProfile()` throw, which empties the pending list and ends its listener until the screen is reopened (R2-N1, pre-existing mapping).
+- **The confirm dialog stays open** if another operator activates the same citizen meanwhile (R2-N2, rare).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the five slices and both review rounds: 0 errors, 22 warnings (the baseline ids, none new). EN and PT key sets equal apart from the three non-translatable keys.
+- Two review rounds: round 1 approve with should-fix (S1 dialog focus crash risk, S2 double tap, S3 switch description; N1-N6), all should-fixes and N1, N2, N5, N6 fixed; round 2 approve (two nits, R2-N1 and R2-N2, recorded as limits).
+- **Device checks: none run yet.** Still open: the list and empty state; the detail and map; Activate and the console fields; the **two-device activation** (citizen waiting screen -> dashboard with "+", report submitted); Activate offline; double tap on Activate; category add / rename / toggle; validation errors; the report form after a deactivation and a rename, with old tickets keeping their name; rotation with each dialog open; landscape; citizens and anonymous users sent home.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy the rules, with a tightened `categories` block (`keys().hasOnly(['name', 'active'])`, `name is string && name.size() > 0`, `active is bool`, `delete: if false`) and the validation value checks (N3).
+- A Reject with a reason, shown to the citizen, and a notification on activation or rejection (F-016).
+- Category delete with a "used by N tickets" check.
+- A list/detail two-pane for approvals in landscape.
+- Server-side unique category names (a `categoryNames/{lowercase}` index document written in a transaction, like `nifs`).
+- Lenient `toProfile()` (`runCatching` per document) and closing the confirm dialog when the citizen stops being PENDING (R2-N1, R2-N2).
+- Refresh the selected category's name in the report form at submit (R4).
+
+## D-013: Operations panel and lifecycle
+Decision: [0021](../decisions/0021-operator-panel-and-lifecycle.md). It amends [0011](../decisions/0011-ticket-lifecycle-rules.md) (D-013 is the operator caller, no INFO_REQUESTED -> OPEN) and [0020](../decisions/0020-operator-approvals-and-categories.md) (the panel reads `allCategories()`), and suggests amendments to [0017](../decisions/0017-media-preparation-and-uploads.md) and [0018](../decisions/0018-citizen-tickets-messages-reopen.md). Code: `model/TicketFilter.kt`, `model/TicketLifecycle.kt`, `viewmodel/OperatorPanel*`, `viewmodel/OperatorTicket*`, `ui/screens/OperatorPanelScreen.kt`, `ui/screens/OperatorTicketScreen.kt`, `ui/screens/ShowScreen.kt`, `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`, `MainActivity.kt`. Overview: "Operations panel and lifecycle (D-013)", "Handover (D-013)".
+
+Brief: I.3.E (operations panel with every report, coordinates, the author's contacts and the full history with media; status changes with timestamps, request for information, start of work, photo/video of the finished work), II.2-II.5 (transition order and the locked CLOSED state; section II not checked in the PDF).
+
+### Technical solutions
+- **One source of truth for tickets.** The panel and the detail read the shared `TicketsViewModel` list (already `allTickets()` for an operator), so no second listener is opened and the detail updates live when any device changes the status. The filter is a pure function on the **effective** status: an expired RESOLVED ticket counts as CLOSED with no write.
+- **Every action goes through D-008's `transition`.** The UI offers only `allowedTransitions(operator, now)`, and the repository runs `transition` again before writing, so a stale screen or a forged call cannot store an invalid move. One batch per move keeps `tickets`, `publicTickets`, `ticketLocations` and `stats/summary` consistent (decision 0004).
+- **Request information = status + message in one batch** (reusing `askForClarification`): the text is the history justification and appears in the citizen's thread as "Municipality".
+- **Offline-safe resolve.** The proof is compressed locally (F-013), the batch waits in the Firestore cache, and WorkManager uploads with a network constraint, even after the app is closed. The proof is appended with `FieldValue.arrayUnion`, so the resolve does not overwrite another device's upload update of the same array. A dry run of the transition before any file work means a rejected move prepares nothing.
+- **Privacy by construction, not only by hiding.** The author's and followers' contacts are read live from `users/{uid}` only inside the operator branch of the detail destination, in a ViewModel that is never created for a citizen; the history names map is empty for everyone else.
+- **A D-014 hook in the pure model:** `needsOperatorGeofence(now)` (effectively IN_PROGRESS, real location), so the geofence needs no extra signal.
+
+### Options chosen and why (Gate 1, 2026-11-16)
+- **Methods in Francisco's repository (Q2)** instead of a second repository: `startWork` and `resolveTicket` over his `commitStatusChange`, so the batch and counter logic exist once. Small additive edits to his files, agreed through the handover.
+- **No new route (Q1):** one detail route, one view per role (decision 0007's idea); tickets opened from the panel or the public list land on the same screen.
+- **Panel on the shared list (Q5)**, pure filter in `model/`.
+- **Start work with a confirmation and optional note (Q6)**, because there is no undo; **one ViewModel per screen (Q7)**, with its own thread.
+- **Names in the history for operators only (Q3, Q13); "Resolution proof" label for everyone (Q4)** (not personal data).
+- **No INFO_REQUESTED -> OPEN (Q8):** the brief's order; the operator answers in the thread.
+- **No rules edit, no `resolvedAt` (Q9); 1 to 3 proof media, no video recording (Q11); optional map and joiners' reports only if time remained (Q12): not done.**
+- **Rejected:** a separate operator repository with its own batch; a generic `changeStatus(to)` (could skip proof or the message); `addResolutionProof` as a separate write; a second `allTickets()` listener; a new detail route; rewriting the whole `attachments` array.
+
+### Class material vs beyond class
+- **As in class:** Navigation with an argument (`TicketDetailRoute(ticketId)`), ViewModel + `StateFlow` + a plain factory (Contacts_#3), `LazyColumn` with keys, `FilterChip` and the exposed dropdown, `AlertDialog`, `TakePicture` + `FileProvider` and `PickVisualMedia` (P09), Coil, the Maps Compose marker, WorkManager `CoroutineWorker` with constraints (slides 08).
+- **Beyond class:** Firestore batches with `FieldValue.increment` and `FieldValue.arrayUnion`, snapshot listeners as flows, the composable slot in `ShowScreen`, `stateDescription` / `clearAndSetSemantics` so TalkBack reads the "Private" label once with the card.
+
+### Limits to state at the defence
+- **The rules are not deployed (R4):** only the app stops a citizen from changing status or seeing contacts. The draft rules would even refuse the resolve batch, because it writes no `resolvedAt` (F-014's reopen has the same problem); changing them needs Diogo's OK.
+- **Concurrent status changes are last-write-wins** (no transaction: transactions fail offline). F-013's attachments race is unchanged.
+- **Process death loses the proof draft**, and its local copies stay on the device (review N5); only rotation is covered. Files may also be orphaned if the operator leaves during preparation.
+- **`onCleared` deletes the draft's files on the main thread** (review N2): `viewModelScope` is already cancelled there and there is no application scope; at most 3 small local files.
+- No video recording, no upload retry or progress; `PlaceholderScreen` kept (still used by the pending-validation screen).
+- **Not done:** the panel map (slice 8) and the joiners' reports in the operator detail (slice 9).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the seven slices and both review rounds: 0 errors, 22 warnings (baseline, none new); EN/PT key parity. Slice 1's filter checked by hand with a 3-ticket table (state log).
+- Two review rounds: round 1 approve with should-fix (S1, the Resolve section outliving its move; N1-N6), S1 and N1, N3, N4, N6 fixed, N2 kept with a comment, N5 recorded as a limit; round 2 approve, no new findings.
+- **Device checks: none run yet (D1-D11 open).** They need two devices (operator + citizen) and airplane mode for the offline resolve: panel and "Private"; filters, sort, rotation; detail contacts and "Contact not available"; no contacts or names for citizens and anonymous users; buttons per status; Request information live on the citizen's device; Start work; Resolve and the console fields; offline resolve with the app closed; closed tickets read-only; rotation and landscape.
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Deploy rules matching these batches (accept a missing `resolvedAt`, or write it with `serverTimestamp()` on resolve).
+- A transaction or a precondition on `currentStatus` when online, against concurrent changes.
+- Ticket assignment to operators.
+- Tap-to-call and e-mail intents on the contacts.
+- The panel map with marker clustering (slice 8) and the joiners' reports (slice 9).
+- Counts per status on the filter chips.
+- Keep the proof draft in `SavedStateHandle` (paths only) so process death does not orphan files; an application scope for cleanup off the main thread.
+
+## D-014: Operator 20 m geofence and proximity alert
+Decision: [0022](../decisions/0022-operator-proximity-alert.md). It adds the optional `tickets/{id}.lastOperatorNearbyAt` to the Firestore layout ([0010](../decisions/0010-firestore-schema.md), suggested amendment line only) and keeps [0012](../decisions/0012-firebase-plan-notifications-close-maps.md)'s "no Cloud Functions". Code: `model/OperatorProximity.kt`, `model/Ticket.kt`, `model/TicketPrivacy.kt`, `viewmodel/OperatorProximityViewModel.kt` (+ factory), `MainActivity.kt`, `data/LocationRepository.kt`, `data/TicketsRepository.kt`, `data/FirestoreTicketsRepository.kt`, `data/FirestoreMapping.kt`. Overview: "Operator proximity (D-014)", "Handover (D-014)".
+
+Brief (wording from the task file; the PDF was not reread in this task): I.3 Obs and II.3, an operator within 20 m of an IN_PROGRESS ticket alerts its authors; III, the proximity alert is a notification (delivered by F-016); V, background location among the permissions (**not covered**, see below).
+
+### Technical solutions
+- **Continuous location as a Flow, not a service.** `LocationRepository.locationUpdates()` wraps P10's `requestLocationUpdates` in a `callbackFlow`; `awaitClose` removes the callback, so cancelling the collector is the only "stop" needed. The collector runs under `repeatOnLifecycle(STARTED)`, so the GPS is on only while the operator has the app open.
+- **Exact 20 m check in pure Kotlin.** Haversine on each fix against every ticket that `needsOperatorGeofence` (D-013's hook: effectively IN_PROGRESS, real location), inclusive at 20 m. Fixes less accurate than 25 m are dropped, so a poor fix cannot put the operator inside a 20 m circle.
+- **Entry edge plus an hourly throttle.** Only an outside -> inside change records anything; the stored `lastOperatorNearbyAt` is a throttle shared by all operators (1 h), and an in-memory map covers the gap before the local cache echoes the write. The edge state lives in a ViewModel, so rotation is not a new entry.
+- **One field as the seam to the notifications.** The citizens already listen to their full tickets (`participantTickets`), so a single field on the ticket reaches them with no new listener, query, index or read rule. F-016 turns a fresh, increased value into a local notification (five-point contract in the overview).
+- **Offline by default.** The single-field `update` is not awaited; it lands in the Firestore cache at once (the operator's own list sees it, so no second write) and syncs later.
+
+### Options compared (Gate 1 Q1): Geofencing API vs a foreground Flow
+| | Geofencing API (`GeofencingClient` + `BroadcastReceiver`) | Foreground Flow + Haversine (chosen) |
+| --- | --- | --- |
+| Works with the app closed or the screen off | Yes (OS-managed, up to 100 geofences per app) | No |
+| Accuracy at 20 m | Poor: Google recommends a radius of at least 100-150 m; a 20 m circle can miss or fire late | Exact distance on each fix, poor fixes filtered |
+| ENTER latency | About 2-3 min (the OS batches fixes) | One interval (about 5 s) |
+| Permission | `ACCESS_BACKGROUND_LOCATION` ("Allow all the time", Android 10+; its own settings screen on 11+) | FINE only, already requested at start |
+| Lifecycle code | Register / remove on every list change and logout; lost on reboot and app update (BOOT receiver or re-register); receiver with `goAsync()` | One flow under `repeatOnLifecycle` |
+| Emulator testing | Needs Play location services; routes work with a delay | `adb emu geo fix`, immediate |
+| Brief V | Covered | Not covered |
+
+- **Why the Flow for the deadline:** it meets the 20 m rule exactly, is quick to test with two emulators and short to explain at the defence.
+- **The hybrid as an improvement:** geofences on top for the background, calling the same pure rule and the same repository write, so the stored throttle removes duplicates between the two paths.
+- **Rejected:** a location foreground service (P10's `ProximityService`: persistent notification, `FOREGROUND_SERVICE_LOCATION`, overlaps F-016's channel work); Cloud Functions (decision 0012); a `proximityAlerts` collection (second listener, `whereIn` limit of 30, new rules, a query for the throttle); a server timestamp (null in the cache offline, breaks the throttle); storing the operator id or position; recording whenever inside (three alerts for three hours on site).
+
+### Privacy by design
+- Only a time is stored. No operator id, coordinates or distance leave the operator's device; logcat has no coordinates.
+- Anonymous users never read `tickets`; `publicTickets` gets an explicit 7-key copy, so the field cannot reach it; `toAnonymousView()` clears it as well.
+- A projected (anonymous) ticket can never be written: the rule requires a non-empty history (review S1).
+
+### Throttle without a server
+- The stored field (shared by every operator), the in-memory map and the entry edge.
+- Limits: two operators entering at once while offline can both write (last write wins); device clock skew moves the hour. F-016's freshness and "last notified" checks are the second line.
+
+### Class material vs beyond class
+- **As in class:** P10's `FusedLocationProviderClient.requestLocationUpdates` and `LocationCallback`; `checkSelfPermission` (class 02); ViewModel + factory (Contacts_#3).
+- **Beyond class:** `callbackFlow` + `awaitClose` instead of a service; `repeatOnLifecycle(STARTED)` inside a `LaunchedEffect` keyed on the operator and the permission; `LifecycleResumeEffect` to re-read the permission after Settings; the Haversine distance check and the accuracy filter; a single-field Firestore `update` as a cross-device signal.
+
+### Limits to state at the defence
+- **Foreground only.** Brief V's background location is not covered: nothing is recorded with the app closed, in the background or with the screen off (Gate 1 Q1/Q2).
+- **An arrival made while the app was in the background is not counted** (review R2-N2): an entry counts only if the operator was seen outside the circle while the app was in the foreground. Pressing Home at ticket A, walking away, coming back to A and reopening the app gives no record. This is the price of not counting rotation or Home-and-return as new entries (review N1).
+- **No delivery yet:** the citizen's notification is F-016's; without it, D-014 is verified in the console only.
+- **The draft rules would refuse the write:** no rule allows an update of only `lastOperatorNearbyAt`. Test mode accepts it; a rule is needed before any deploy (needs Diogo's OK).
+- Client-side throttle (offline operators, clock skew); an operator without precise location just gets no alert (log only, Q10); every signed-in operator is watched while the app is open.
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` then `./gradlew lint` after each of the five slices and both review rounds: 0 errors, 22 warnings (baseline, none new). The pure rules checked by hand with a table (15 m in, 25 m out, exactly 20 m in, statuses, (0, 0), 59 / 60 min, future value, null, projected ticket) in the state log.
+- Two review rounds: round 1 approve with should-fixes (S1 projected ticket, S2 missing 2 s minimum interval, S3 hand-offs; N1-N5), S1, S2 and N1-N5 fixed; round 2 approve, two docs nits (R2-N1 file ownership, R2-N2 the background-arrival limit), handled in the docs.
+- **Device checks: none run yet (D1-D11 open).** Two emulators and `adb emu geo fix`: entry from 100 m to 15 m, no record for other statuses or at 25 m, throttle within the hour, a second operator, staying inside (debug-shortened interval), Home / return / Log out, citizens and anonymous, permission states, offline, no coordinates anywhere, and the notification (F-016).
+
+  Never write test e-mails, phone numbers or UIDs here.
+
+### Improvement opportunities
+- Background coverage: the Geofencing API on top (hybrid, with an operator-only rationale for `ACCESS_BACKGROUND_LOCATION`), or a location foreground service while the operator is "on duty".
+- A server-side throttle: deployed rules (operator only, IN_PROGRESS, `hasOnly(['lastOperatorNearbyAt'])`, at least 1 h after the old value) or a Cloud Function.
+- A per-operator "on duty" switch, and a note on the panel when precise location is missing.
+- Adaptive update intervals (slower when far from every active ticket) to save battery.
+- Count a background arrival by forgetting `inside` after a long time in the background.
+
+## D-015: Final pass and delivery
+**Partial (2026-11-17): slices 1-3 only.** Slices 4-6 (strings and screen sweep after the F-015/F-016/F-017 merges, citizen FAB, delivery ZIP), the device checks, the console steps and the test accounts are still to do; the subsections marked "to do" are filled then. For F-017: Diogo hands these notes to Francisco. No decision record yet (0023, delivery package, comes with slice 6). Overview: the D-015 notes in "Code structure", "ViewModel (D-003)", "Report form (F-006)", "Routes", "Firebase (F-010)" and the F-011/F-012 handovers.
+
+Brief: V (languages, orientation, dynamic bars and FABs, accessibility, MVVM) and VI (ZIP name and contents).
+
+### Technical solutions
+- **Clean-up before delivery (slices 1-3, done).**
+  - The debug seed (`DebugSeed.kt`, F-011) and the phase-1 sample categories (`SampleCategories.kt`, F-006) were deleted, with the `onCreate()` override in `CityFixApplication`, which is now only the lazy container (`6c0fbf0`). Categories now come only from the operator's Categories screen (D-012).
+  - `SampleTickets` stays, as preview data only, for one privacy preview (Gate 1 Q2).
+  - The unused `placeholder_message` string was removed from both locales, and `PlaceholderScreen` now requires its `messageRes` (`a3fe6fb`), so there is no silent default text.
+  - Lint warnings cleared: the redundant `android:label` on `<activity>` (the `<application>` label still names the app in the launcher) and the template `res/values/colors.xml`, which nothing referenced (`ade184a`).
+  - Stale comments that still mentioned the seed were reworded (review S1, comment only).
+- **Lint.** 0 errors. The warnings went from 22 to 14; the 14 left are dependency-version notices (13) and one `UseKtx` in `ImageCompression.kt`, left on purpose: no dependency upgrades right before delivery.
+- **Languages (checked before the merges; to repeat after them).** English default (`values/`), Portuguese from the device setting (`values-pt/`). The planner's key diff found every translatable key in both locales; the three keys only in `values/` are `translatable="false"` (`app_name` among them), so `app_name` is not really missing (Gate 1 Q3). No hard-coded UI text outside previews. Category names are data typed by operators, so they are not translated.
+
+### To do (after slices 4-6)
+- Orientation, accessibility, dynamic top bar and FAB: the sweep results (see the docs plan list), the citizen FAB (Q5), the Accessibility Scanner findings.
+- Test accounts table (report section 9; passwords in the PDF only, Q9) and the reCAPTCHA note for the grader's SMS MFA (R3).
+- How to run, the ZIP layout and its verification build, the test-mode date (Q7), the Maps key restriction check (R4).
+- Sweep defects not fixed.
+
+### Limits to state at the defence
+- The security rules are drafts and not deployed: privacy, MFA and role guards are enforced in the app only.
+- Notifications are local, with no server; the operator geofence works in the foreground only.
+- The stand-in test users (`dev-citizen-1`, `citizen-1`, `citizen-2`) are still in the test database until Diogo deletes them in the console (Q4). The seeded sample tickets are kept on purpose, so the dashboard counters match the list (deleting tickets does not update `stats/summary`).
+
+### Verification
+- No automated tests (project choice). `./gradlew assembleDebug` and `./gradlew lint` after each of slices 1-3 and the review fixes: pass, 0 errors, 14 warnings. `app/src` has no reference to `DebugSeed`, `SampleCategories`, `placeholder_message` or the template colours.
+- One review round: approve with should-fix (S1 stale KDoc, S2 overview lines), both handled; nits N2 (the `PlaceholderScreen` name) and N3 (a case-insensitive clean-up grep) are left for slice 4.
+- **Device checks: none run yet** (cold start without the seed, Pending validation / Account problem texts, launcher label).
+
+### Improvement opportunities
+- Automated UI tests for rotation and TalkBack.
+- A `WindowSizeClass`-based layout for tablets.
+- Localised category names (per-locale fields on `categories`).
+- Deployed security rules.
+- A CI job that builds the ZIP and checks it.
+
 ## F-015: Impact detection
 Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detection (F-015)", "Handover (F-015)". Brief I.2.F.
 
@@ -1126,3 +1393,42 @@ Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detec
 - Movement check with GPS speed, so a dropped phone at rest does not count.
 - Threshold set in the profile.
 - Attach the detected location and time to the ticket.
+
+## F-016: Notifications
+Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (F-016)", "Handover (F-016)". Brief III, V, II.2-II.4.
+
+### Technical solutions
+- **No server (decision 0012):** the app compares the tickets it reads with one stored "last checked" time per user and shows local notifications.
+- **App open:** a Firestore listener that only accepts server-confirmed lists (`isFromCache` skipped), so cached data never advances the last-check time; the worker reads with `Source.SERVER`.
+- **App closed:** a 15 min periodic `CoroutineWorker` (citizens and operators), network constraint.
+- **Pure rule** `Ticket.eventsFor(...)` in `model/`: status, message, operator nearby, 24 h warning, Encerrado; never one's own action.
+- **Messages seen by the ticket listener:** `lastMessageAt` / `lastMessageAuthorId` on the ticket, written in the same batch as the message.
+- **24 h warning and Encerrado:** time checks on each run, no scheduled job per ticket.
+- **FCM:** service and token as in P11, used for console test messages.
+- **Privacy:** title = category; no coordinates or operator data; Log out clears the tray.
+
+### Class material vs beyond class
+- Class: P11 FCM service, channels, `POST_NOTIFICATIONS` request, console sending; WorkManager slides 10/11; SharedPreferences slides 09.
+- Beyond class: `singleTop` + `onNewIntent` for the tap; unique periodic work.
+
+### Options chosen and rejected (Gate 1, 2026-11-20)
+- Client-only delivery, not a Cloud Function (class shows FCM reception only).
+- Worker for operators too (Q2 changed at Gate 1).
+- One time per user, not per ticket; time check, not a one-time job per ticket.
+- Permission at session start, after the location prompt (Android shows one request at a time).
+
+### Limits to state at the defence
+- No real push: the app or the worker must run; Doze can delay the worker beyond 15 min.
+- Device clocks differ: an event dated before the last check is missed.
+- Closed-app alerts up to ~15 min late, including the 24 h warning.
+- Draft rules would refuse the new fields (test mode accepts).
+
+### Verification
+- Device checks listed in `docs/work/F-016-notifications/state.md` (two emulators, console test message, App Inspection "run now", shortened `CLOSING_WARNING_MS`).
+
+### Improvement opportunities
+- Cloud Function on status change or new message -> FCM to `fcmTokens` (real push, no delay).
+- Per-user notification settings (per channel or per ticket).
+- Message preview in the notification.
+- Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
+- Remove the FCM token at Log out; rationale before the permission request.

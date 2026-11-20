@@ -2,6 +2,7 @@ package pt.isec.amov.cityfix.data
 
 import android.app.Activity
 import com.google.firebase.FirebaseException
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthMultiFactorException
 import com.google.firebase.auth.FirebaseUser
@@ -24,6 +25,9 @@ import kotlin.coroutines.resume
  * [AuthRepository] over Firebase Auth. Created once in CityFixApplication, so it lives for the
  * whole process: the AuthStateListener registered in `init` is never removed, and there is no
  * screen or activity it could leak.
+ *
+ * [resolveSecondFactor] finishes both a sign-in and a re-authentication (D-011): the resolver
+ * comes from [signIn] or [reauthenticate].
  *
  * The listener fires on sign-in and sign-out only. `reload()` and enrolment change the same
  * FirebaseUser without firing it, so those calls update [account] themselves.
@@ -48,19 +52,64 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             auth.signInWithEmailAndPassword(email, password).await()
             SignInResult.Success
         } catch (e: FirebaseAuthMultiFactorException) {
-            // Right password, enrolled account: Firebase asks for the second factor. Accounts
-            // have one phone factor (D-009 Q13), so the first phone hint is the one.
-            val hint = e.resolver.hints.filterIsInstance<PhoneMultiFactorInfo>().firstOrNull()
-            if (hint == null) {
-                SignInResult.Failure(AuthError.UNKNOWN)
-            } else {
-                SignInResult.SecondFactorRequired(SecondFactorChallenge(e.resolver, hint))
-            }
+            // Right password, enrolled account: Firebase asks for the second factor.
+            challengeOf(e)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             SignInResult.Failure(e.toAuthError())
         }
+
+    /**
+     * Re-authentication (D-011) works like [signIn]: an enrolled account throws the multi-factor
+     * exception, and [resolveSecondFactor] with its resolver completes the re-authentication.
+     */
+    override suspend fun reauthenticate(password: String): SignInResult {
+        val user = auth.currentUser ?: return SignInResult.Failure(AuthError.UNKNOWN)
+        return try {
+            user.reauthenticate(EmailAuthProvider.getCredential(user.email.orEmpty(), password)).await()
+            SignInResult.Success
+        } catch (e: FirebaseAuthMultiFactorException) {
+            challengeOf(e)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            SignInResult.Failure(e.toAuthError())
+        }
+    }
+
+    override suspend fun changePassword(newPassword: String): AuthError? {
+        val user = auth.currentUser ?: return AuthError.UNKNOWN
+        return try {
+            // This device stays signed in; Firebase signs the other devices out.
+            user.updatePassword(newPassword).await()
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            e.toAuthError()
+        }
+    }
+
+    override suspend fun requestEmailChange(newEmail: String): AuthError? {
+        val user = auth.currentUser ?: return AuthError.UNKNOWN
+        return try {
+            // Only sends the link: the Auth e-mail changes when the user opens it.
+            user.verifyBeforeUpdateEmail(newEmail.trim().lowercase()).await()
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            e.toAuthError()
+        }
+    }
+
+    /** Accounts have one phone factor (D-009 Q13), so the first phone hint is the one. */
+    private fun challengeOf(e: FirebaseAuthMultiFactorException): SignInResult {
+        val hint = e.resolver.hints.filterIsInstance<PhoneMultiFactorInfo>().firstOrNull()
+            ?: return SignInResult.Failure(AuthError.UNKNOWN)
+        return SignInResult.SecondFactorRequired(SecondFactorChallenge(e.resolver, hint))
+    }
 
     override suspend fun sendSecondFactorCode(
         activity: Activity,
@@ -79,7 +128,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     ): AuthError? =
         try {
             val credential = PhoneAuthProvider.getCredential(verificationId, code)
-            // Signs the user in: the AuthStateListener then updates the account.
+            // Signs the user in: the AuthStateListener then updates the account. With the
+            // resolver of reauthenticate() it completes the re-authentication instead (D-011).
             challenge.resolver.resolveSignIn(PhoneMultiFactorGenerator.getAssertion(credential)).await()
             null
         } catch (e: CancellationException) {

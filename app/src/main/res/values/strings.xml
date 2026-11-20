@@ -36,6 +36,8 @@
     <string name="ticket_map_exact_title">Location</string>
     <string name="cd_ticket_map_exact">Map with the exact location of the issue</string>
     <string name="ticket_history_system">Closed automatically</string>
+    <string name="ticket_history_by">By %1$s</string>
+    <string name="ticket_media_proof">Resolution proof</string>
 
     <!-- Message thread -->
     <string name="messages_title">Messages</string>
@@ -205,7 +207,6 @@
     <string name="menu_approvals">Registration approvals</string>
     <string name="menu_categories">Categories</string>
     <string name="menu_log_out">Log out</string>
-    <string name="placeholder_message">Coming soon.</string>
     <string name="pending_title">Your registration is waiting for validation</string>
     <string name="pending_message">The council must validate your registration before you can report issues. Meanwhile you can browse the public issues.</string>
     <string name="pending_browse">Browse public issues</string>
@@ -279,4 +280,129 @@
     <string name="register_photo_copy_failed">The photo could not be added. Try again.</string>
     <string name="cd_register_photo">Your profile photo</string>
     <string name="cd_register_photo_copying">Adding the photo</string>
+    <!-- D-011 Profile -->
+    <string name="profile_role_label">Role</string>
+    <string name="profile_status_label">Registration status</string>
+    <string name="profile_status_pending">Waiting for validation</string>
+    <string name="profile_status_active">Active</string>
+    <string name="profile_phone_hint">Contact number. The number that receives your login codes does not change here.</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_saved">Profile saved. Changes made offline sync when you are online.</string>
+    <string name="profile_photo_uploading">Uploading the new photo. Without a connection it waits until you are online.</string>
+    <string name="profile_photo_label">Photo</string>
+    <string name="profile_unavailable">Your profile could not be read. Check your connection and open it again.</string>
+    <string name="profile_log_out">Log out</string>
+    <string name="cd_profile_loading">Loading your profile</string>
+    <!-- D-011 Change password -->
+    <string name="profile_change_password">Change password</string>
+    <string name="credential_current_password_label">Current password</string>
+    <string name="credential_new_password_label">New password</string>
+    <string name="credential_error_current_blank">Enter your current password.</string>
+    <string name="credential_error_current_wrong">The current password is wrong.</string>
+    <string name="credential_continue">Continue</string>
+    <string name="credential_back">Back</string>
+    <string name="credential_password_changed">Password changed. Use the new password the next time you log in.</string>
+    <string name="credential_back_to_profile">Back to profile</string>
+    <string name="cd_credential_progress">Checking</string>
+    <string name="top_bar_title_change_password">Change password</string>
+    <!-- D-011 Change e-mail -->
+    <string name="profile_change_email">Change e-mail</string>
+    <string name="credential_current_email_label">Current e-mail</string>
+    <string name="credential_new_email_label">New e-mail</string>
+    <string name="credential_error_email_same">This is already your e-mail.</string>
+    <string name="credential_email_link_sent">We sent a link to %1$s. Your e-mail changes when you open it; you may have to log in again with the new address.</string>
+    <string name="top_bar_title_change_email">Change e-mail</string>
+    <!-- D-012 Registration approvals -->
+    <string name="approvals_empty">No registrations are waiting.</string>
+    <string name="approvals_nif">NIF %1$s</string>
+    <string name="cd_approvals_loading">Loading the pending registrations</string>
+    <!-- D-012 Pending registration -->
+    <string name="top_bar_title_pending_citizen">Registration</string>
+    <string name="citizen_approval_nif">NIF</string>
+    <string name="citizen_approval_email">E-mail</string>
+    <string name="citizen_approval_phone">Phone</string>
+    <string name="citizen_approval_location_title">Registered location</string>
+    <string name="citizen_approval_no_location">Location not available</string>
+    <string name="citizen_approval_activate">Activate</string>
+    <string name="citizen_approval_confirm_title">Activate this registration?</string>
+    <string name="citizen_approval_confirm_text">%1$s will be able to report issues.</string>
+    <string name="citizen_approval_confirm">Activate</string>
+    <string name="citizen_approval_cancel">Cancel</string>
+    <string name="citizen_approval_already_active">This registration is already active.</string>
+    <string name="citizen_approval_not_found">This registration could not be found.</string>
+    <string name="citizen_approval_activated">Registration activated.</string>
+    <string name="cd_citizen_photo">Citizen photo</string>
+    <string name="cd_citizen_map">Map with the registered location of the citizen</string>
+    <string name="cd_citizen_approval_loading">Loading the registration</string>
+    <!-- D-012 Categories -->
+    <string name="categories_add">Add category</string>
+    <string name="categories_active">Active</string>
+    <string name="categories_inactive">Inactive</string>
+    <string name="categories_empty">No categories yet.</string>
+    <string name="categories_dialog_new">New category</string>
+    <string name="categories_dialog_edit">Edit category</string>
+    <string name="categories_name_label">Name</string>
+    <string name="categories_save">Save</string>
+    <string name="categories_cancel">Cancel</string>
+    <string name="categories_error_blank">Enter a name.</string>
+    <string name="categories_error_too_long">The name is too long (maximum %1$d).</string>
+    <string name="categories_error_duplicate">A category with this name already exists.</string>
+    <string name="cd_category_edit">Edit %1$s</string>
+    <string name="cd_category_active">Active: %1$s</string>
+    <string name="cd_categories_loading">Loading the categories</string>
+    <!-- D-013 operations panel -->
+    <string name="operator_panel_filter_all">All</string>
+    <string name="operator_panel_category_label">Category</string>
+    <string name="operator_panel_category_all">All categories</string>
+    <string name="operator_panel_category_inactive">%1$s (inactive)</string>
+    <string name="operator_panel_sort_newest">Newest first</string>
+    <string name="operator_panel_sort_oldest">Oldest first</string>
+    <string name="operator_panel_private">Private</string>
+    <string name="operator_panel_empty">No tickets yet.</string>
+    <string name="operator_panel_no_match">No tickets match these filters.</string>
+    <string name="cd_operator_panel_sort">Sort by report date: %1$s. Double tap to reverse.</string>
+    <!-- D-013 operator ticket detail -->
+    <string name="operator_ticket_contacts_title">Contacts</string>
+    <string name="operator_ticket_author">Author</string>
+    <string name="operator_ticket_followers">Followers</string>
+    <string name="operator_ticket_no_followers">No followers.</string>
+    <string name="operator_ticket_contact_unavailable">Contact not available</string>
+    <string name="operator_ticket_contact_loading">Loading…</string>
+    <string name="operator_ticket_phone">+351 %1$s</string>
+    <!-- D-013 operator actions -->
+    <string name="operator_action_request_info">Request information</string>
+    <string name="operator_action_start_work">Start work</string>
+    <string name="operator_request_info_title">Request information</string>
+    <string name="operator_request_info_text">The citizen sees this message and the ticket waits for their answer.</string>
+    <string name="operator_request_info_label">What do you need?</string>
+    <string name="operator_request_info_confirm">Send</string>
+    <string name="operator_request_info_error_blank">Write what you need to know.</string>
+    <string name="operator_start_work_title">Start work?</string>
+    <string name="operator_start_work_text">The ticket moves to In progress and the citizens see the change.</string>
+    <string name="operator_start_work_label">Note (optional)</string>
+    <string name="operator_start_work_confirm">Start work</string>
+    <string name="operator_action_error_not_allowed">This action is no longer available.</string>
+    <!-- D-013 resolve with proof -->
+    <string name="operator_action_resolve">Resolve</string>
+    <string name="resolve_title">Proof of the finished work</string>
+    <string name="resolve_hint" tools:ignore="PluralsCandidate">Add at least one photo or video (up to %1$d).</string>
+    <string name="resolve_add_gallery">Add from gallery</string>
+    <string name="resolve_take_photo">Take a photo</string>
+    <string name="resolve_note_label">Note (optional)</string>
+    <string name="resolve_confirm">Confirm resolution</string>
+    <string name="resolve_cancel">Cancel</string>
+    <string name="resolve_error_failed">The proof could not be prepared, or this ticket can no longer be resolved.</string>
+    <string name="resolve_camera_unavailable">The camera could not be used.</string>
+    <string name="cd_resolve_busy">Saving the resolution</string>
+    <!-- F-016 notifications -->
+    <string name="channel_tickets">Ticket updates</string>
+    <string name="channel_messages">Messages</string>
+    <string name="channel_proximity">Municipality nearby</string>
+    <string name="notifications_denied">Notifications are off: you will not be told when your tickets change. You can turn them on in Settings.</string>
+    <string name="notif_status">New status: %1$s</string>
+    <string name="notif_status_with_reason">%1$s: %2$s</string>
+    <string name="notif_new_message">New message</string>
+    <string name="notif_operator_nearby">A municipal operator is near this issue.</string>
+    <string name="notif_closing_soon">Closes in 24 hours. Reopen it now if the problem is not solved.</string>
+    <string name="notif_closed">This ticket is now closed.</string>
 </resources>

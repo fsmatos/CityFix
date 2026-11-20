@@ -9,7 +9,10 @@ import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 
-/** Phase-1 sample tickets near Pr. Republica, Coimbra (no Firebase yet). Times are fixed UTC epoch ms. */
+/**
+ * Sample tickets near Pr. Republica for the previews (`ShowScreenPrivacyPreview`: a raw ticket with
+ * author, follower and exact location). Not written to Firestore. Times are fixed UTC epoch ms.
+ */
 object SampleTickets {
 
     /** 2026-10-20 09:00 UTC. */
