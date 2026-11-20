@@ -32,7 +32,7 @@ Status: accepted (F-010, Gate 1 on 2026-11-10, both authors; Q5 amended 2026-11-
 - **F-016:** notifications arrive only while some client runs (the app or its worker). The report states this limit. F-016 also owns the 24 h warning before the close (point 3).
 - **D-008:** owns the pure "counts as CLOSED" rule; every list and detail uses it, so a stale RESOLVED ticket never looks open.
 - **F-012 and D-014:** use osmdroid. The osmdroid repository was archived in Nov 2024; it still works (a report note). (Superseded by F-012: both use Google Maps Compose through `ui/components/TicketMap`; D-013 calls `TicketMap(exact = true)`.)
-- **D-015 (since F-012):** the ZIP must contain the real Maps key in `AndroidManifest.xml`, not the placeholder.
+- **D-015 (since F-012):** the ZIP must contain the real Maps key in `AndroidManifest.xml`, not the placeholder. (D-015, 2026-11-20: the real key is committed, so a `git archive` of `main` carries it, [decision 0025](0025-delivery-package.md); the console check that it has no Android-app restriction, R4, is not done yet.)
 - **D-009:** SMS MFA needs the debug SHA-1 in the console and test numbers.
-- **D-015:** the ZIP checklist gains "copy `app/google-services.json` and build the unzipped copy".
+- **D-015:** the ZIP checklist gains "copy `app/google-services.json` and build the unzipped copy". (D-015, 2026-11-20: both steps are in `scripts/make-delivery-zip.ps1`, decision 0025; the script has not run yet and no ZIP exists. The test-mode date is still 2026-12-10, Q7 console change not done.)
 - Until the rules are deployed, the test-mode database is open to anyone with the project config; the expiry limits it.

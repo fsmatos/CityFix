@@ -26,7 +26,7 @@
 - If Q6 is approved: a short "how to use" header comment inside `scripts/make-delivery-zip.ps1` is the documentation. Link it from the overview "Delivery (D-015)" section. No separate README.
 
 ## Decisions to record
-- **0023: Delivery package** (short). Record:
+- **0025: Delivery package** (short; numbered 0025 because F-015 took 0023 and F-016 took 0024). Record:
   - the ZIP layout and what is included or excluded (Q8);
   - `google-services.json` copied in by hand (from 0012 Q7);
   - building with `tar.exe` for `/` separators;
