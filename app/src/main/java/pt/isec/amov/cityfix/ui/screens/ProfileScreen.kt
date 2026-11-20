@@ -167,22 +167,8 @@ fun ProfileContent(
         }
 
         // A photo picked now, else the one saved in this visit (until its upload ends), else the
-        // stored one. The stored photo's cache key includes photoUpdatedAt: an overwrite may keep
-        // the same URL, and Coil would otherwise show the cached old image (D-011 R4).
-        val context = LocalContext.current
-        val storedPhoto = profile.photo
-        val storedPhotoModel: Any? = remember(storedPhoto, state.photoUpdatedAt) {
-            if (storedPhoto == null || state.photoUpdatedAt == null) {
-                storedPhoto
-            } else {
-                val key = "$storedPhoto#${state.photoUpdatedAt}"
-                ImageRequest.Builder(context)
-                    .data(storedPhoto)
-                    .memoryCacheKey(key)
-                    .diskCacheKey(key)
-                    .build()
-            }
-        }
+        // stored one.
+        val storedPhotoModel = rememberProfilePhotoModel(profile.photo, state.photoUpdatedAt)
         val localPhoto = state.newPhotoPath ?: state.savedPhotoPath
         ProfilePhotoPicker(
             photo = localPhoto?.let { File(it) } ?: storedPhotoModel,
@@ -262,6 +248,28 @@ fun ProfileContent(
         }
         OutlinedButton(onClick = onLogOut, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_log_out))
+        }
+    }
+}
+
+/**
+ * The Coil model of the stored profile photo. Its cache key includes [photoUpdatedAt]: an
+ * overwrite may keep the same URL, and Coil would otherwise show the cached old image (D-011 R4).
+ * Shared by Edit profile and the Profile tab (D-016).
+ */
+@Composable
+internal fun rememberProfilePhotoModel(photo: String?, photoUpdatedAt: Long?): Any? {
+    val context = LocalContext.current
+    return remember(photo, photoUpdatedAt) {
+        if (photo == null || photoUpdatedAt == null) {
+            photo
+        } else {
+            val key = "$photo#$photoUpdatedAt"
+            ImageRequest.Builder(context)
+                .data(photo)
+                .memoryCacheKey(key)
+                .diskCacheKey(key)
+                .build()
         }
     }
 }
