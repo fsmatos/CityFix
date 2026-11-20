@@ -57,7 +57,7 @@ class TicketsViewModel(private val repository: TicketsRepository, user: User?) :
      */
     fun setUser(user: User?) {
         // D-009: CityFixApp calls this again after rotation and on every profile change (for
-        // example new fcmTokens). Same role and id = same tickets, so keep the running listener.
+        // example a new phone). Same role and id = same tickets, so keep the running listener.
         val key = when (user) {
             null -> "anonymous"
             is Citizen -> "citizen:${user.id}"

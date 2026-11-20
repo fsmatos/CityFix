@@ -171,7 +171,6 @@ class FirestoreUsersRepository(
             "email" to email,
             "phone" to registration.phone,
             "createdAt" to System.currentTimeMillis(),
-            "fcmTokens" to emptyList<String>(),
         )
         when (registration.role) {
             RegistrationRole.CITIZEN -> {
