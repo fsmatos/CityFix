@@ -16,6 +16,7 @@ fun AuthError.messageRes(): Int = when (this) {
     AuthError.CODE_EXPIRED -> R.string.auth_error_code_expired
     AuthError.CODE_NOT_SENT -> R.string.auth_error_code_not_sent
     AuthError.INVALID_PHONE_NUMBER -> R.string.setup_error_phone
+    AuthError.PHONE_IN_USE -> R.string.setup_error_phone_in_use
     AuthError.RECENT_LOGIN_REQUIRED -> R.string.auth_error_recent_login
     AuthError.EMAIL_IN_USE -> R.string.auth_error_email_in_use
     AuthError.WEAK_PASSWORD -> R.string.auth_error_weak_password

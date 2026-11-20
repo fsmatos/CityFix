@@ -23,7 +23,8 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
- * The SMS code step, shared by the login (second factor) and the account setup (enrolment).
+ * The SMS code step, shared by the login (second factor, only for accounts from before F-018)
+ * and the account setup (phone check at sign-up, F-018).
  * Stateless: [phone] is where the code went, [backLabel] names the way back ("Back" on login,
  * "Change number" on setup); [backEnabled] says whether it works while a call is running.
  * [errorRes] belongs to the code field; [messageRes] / [noticeRes] are the call's error and

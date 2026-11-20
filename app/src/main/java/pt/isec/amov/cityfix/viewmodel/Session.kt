@@ -7,8 +7,8 @@ import pt.isec.amov.cityfix.model.User
 
 /**
  * Who is using the app, built by [SessionViewModel] from the Firebase account and the
- * `users/{uid}` profile. Checked in this order: no account, e-mail not verified, no second
- * factor, profile missing or unavailable, signed in.
+ * `users/{uid}` profile. Checked in this order: no account, e-mail not verified, phone not
+ * verified, profile missing or unavailable, signed in.
  */
 sealed interface Session {
     /** The first account and profile reads are not back yet. */
@@ -18,7 +18,8 @@ sealed interface Session {
 
     data class NeedsEmailVerification(val email: String) : Session
 
-    data class NeedsSecondFactor(val email: String) : Session
+    /** E-mail verified, phone not verified by SMS yet (the last sign-up step, F-018). */
+    data class NeedsPhoneVerification(val email: String) : Session
 
     /** An Auth account without a usable `users/{uid}` document (registration not finished). */
     data object ProfileMissing : Session
@@ -38,7 +39,7 @@ val Session.accessRole: AccessRole
         Session.Loading -> AccessRole.LOADING
         Session.Anonymous -> AccessRole.ANONYMOUS
         is Session.NeedsEmailVerification -> AccessRole.SETUP
-        is Session.NeedsSecondFactor -> AccessRole.SETUP
+        is Session.NeedsPhoneVerification -> AccessRole.SETUP
         Session.ProfileMissing -> AccessRole.ACCOUNT_PROBLEM
         Session.ProfileUnavailable -> AccessRole.ACCOUNT_PROBLEM
         is Session.SignedIn -> when (val user = user) {

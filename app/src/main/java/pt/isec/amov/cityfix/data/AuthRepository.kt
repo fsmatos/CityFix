@@ -13,8 +13,11 @@ data class AuthAccount(
     val uid: String,
     val email: String,
     val isEmailVerified: Boolean,
-    /** True when the account has at least one enrolled second factor (SMS). */
-    val hasSecondFactor: Boolean,
+    /**
+     * True when the phone was verified by SMS at sign-up (F-018: a linked phone), or the account
+     * was created before F-018 with the phone enrolled as an MFA factor.
+     */
+    val hasVerifiedPhone: Boolean,
 )
 
 /** Auth failures the screens can show. The ViewModels map each one to a string resource. */
@@ -26,8 +29,10 @@ enum class AuthError {
     WRONG_CODE,
     CODE_EXPIRED,
     CODE_NOT_SENT,
-    /** Firebase refused the phone number given for enrolment. */
+    /** Firebase refused the phone number given at sign-up. */
     INVALID_PHONE_NUMBER,
+    /** The phone is already linked to another account (F-018: one account per phone). */
+    PHONE_IN_USE,
     RECENT_LOGIN_REQUIRED,
     /** Sign-up with an e-mail that already has an account. */
     EMAIL_IN_USE,
@@ -37,7 +42,8 @@ enum class AuthError {
 }
 
 /**
- * The second step of a sign-in with MFA. Opaque to the ViewModels: it wraps the Firebase
+ * The second step of a sign-in with MFA, only for accounts created before F-018 (their phone is
+ * still an enrolled factor, so Firebase keeps asking for the code). Opaque to the ViewModels: it wraps the Firebase
  * [MultiFactorResolver] and the chosen phone hint, so no Firebase type leaves `data/`.
  * Not serialisable: after process death the login starts again from the credentials step.
  */
@@ -62,7 +68,8 @@ sealed interface CodeSendResult {
 }
 
 /**
- * E-mail/password sign-in with an SMS second factor (brief I.2.B, I.3.B). ViewModels depend on
+ * E-mail/password sign-in; the phone is verified by SMS once, at sign-up (F-018, decision 0026).
+ * Accounts created before F-018 still answer the sign-in with an SMS second factor. ViewModels depend on
  * this interface; [FirebaseAuthRepository] is the implementation. For the `AuthError?` returns,
  * `null` means success.
  */
@@ -92,11 +99,11 @@ interface AuthRepository {
     /** Reloads the account and refreshes its token (verified e-mail claim), then updates [account]. Null on success. */
     suspend fun reloadAccount(): AuthError?
 
-    /** Sends the enrolment SMS to [phoneE164]. [activity] is used for reCAPTCHA only and not kept. */
-    suspend fun sendEnrolmentCode(activity: Activity, phoneE164: String): CodeSendResult
+    /** Sends the sign-up SMS to [phoneE164]. [activity] is used for reCAPTCHA only and not kept. */
+    suspend fun sendPhoneCode(activity: Activity, phoneE164: String): CodeSendResult
 
-    /** Enrols the phone as second factor with the typed code, then updates [account]. Null on success. */
-    suspend fun enrolSecondFactor(verificationId: String, code: String): AuthError?
+    /** Links the verified phone to the account with the typed code, then updates [account]. Null on success. */
+    suspend fun linkPhone(verificationId: String, code: String): AuthError?
 
     /**
      * Re-authenticates the signed-in user with [password]. An enrolled account answers

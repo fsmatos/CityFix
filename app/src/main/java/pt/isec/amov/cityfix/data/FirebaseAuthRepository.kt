@@ -26,10 +26,14 @@ import kotlin.coroutines.resume
  * whole process: the AuthStateListener registered in `init` is never removed, and there is no
  * screen or activity it could leak.
  *
- * [resolveSecondFactor] finishes both a sign-in and a re-authentication (D-011): the resolver
- * comes from [signIn] or [reauthenticate].
+ * Phone at sign-up (F-018, decision 0026): [sendPhoneCode] and [linkPhone] verify the phone once
+ * and link it to the account (a phone provider), not as an MFA factor, so later logins need only
+ * e-mail and password. Accounts created before F-018 still have the phone enrolled as a factor:
+ * Firebase then throws the multi-factor exception at sign-in, and [resolveSecondFactor] finishes
+ * both that sign-in and a re-authentication (D-011): the resolver comes from [signIn] or
+ * [reauthenticate].
  *
- * The listener fires on sign-in and sign-out only. `reload()` and enrolment change the same
+ * The listener fires on sign-in and sign-out only. `reload()` and linking change the same
  * FirebaseUser without firing it, so those calls update [account] themselves.
  *
  * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException: `await()`
@@ -52,7 +56,7 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             auth.signInWithEmailAndPassword(email, password).await()
             SignInResult.Success
         } catch (e: FirebaseAuthMultiFactorException) {
-            // Right password, enrolled account: Firebase asks for the second factor.
+            // Right password, account enrolled before F-018: Firebase asks for the second factor.
             challengeOf(e)
         } catch (e: CancellationException) {
             throw e
@@ -175,38 +179,31 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         }
     }
 
-    override suspend fun sendEnrolmentCode(activity: Activity, phoneE164: String): CodeSendResult {
-        val user = auth.currentUser ?: return CodeSendResult.Failure(AuthError.UNKNOWN)
-        val session = try {
-            user.multiFactor.session.await()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            return CodeSendResult.Failure(e.toAuthError())
-        }
+    override suspend fun sendPhoneCode(activity: Activity, phoneE164: String): CodeSendResult {
+        if (auth.currentUser == null) return CodeSendResult.Failure(AuthError.UNKNOWN)
+        // A plain phone verification (no multi-factor session): the code is only used by linkPhone.
         return requestCode(
             PhoneAuthOptions.newBuilder(auth)
                 .setPhoneNumber(phoneE164)
-                .setMultiFactorSession(session)
                 .setActivity(activity),
         )
     }
 
-    override suspend fun enrolSecondFactor(verificationId: String, code: String): AuthError? {
+    override suspend fun linkPhone(verificationId: String, code: String): AuthError? {
         val user = auth.currentUser ?: return AuthError.UNKNOWN
         return try {
             val credential = PhoneAuthProvider.getCredential(verificationId, code)
-            user.multiFactor.enroll(PhoneMultiFactorGenerator.getAssertion(credential), FACTOR_NAME).await()
-            // The AuthStateListener does not fire for an enrolment: reload and re-emit by hand.
-            // The factor is already enrolled on the server, so a failed reload (a network blip)
-            // must not report the enrolment as failed: the reload is best effort.
+            // Adds the phone to the same account; the e-mail/password login is unchanged.
+            user.linkWithCredential(credential).await()
+            // The AuthStateListener does not fire for a link: reload and re-emit by hand. The
+            // phone is already linked on the server, so a failed reload (a network blip) must not
+            // report the link as failed: the reload is best effort.
             try {
                 user.reload().await()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Nothing to report. enroll() is expected to update the local user's factors
-                // too; if it does not, the factor shows after the next login (device check).
+                // Nothing to report: linkWithCredential already updated the local user.
             }
             _account.value = auth.currentUser?.toAccount()
             null
@@ -265,13 +262,10 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         uid = uid,
         email = email.orEmpty(),
         isEmailVerified = isEmailVerified,
-        hasSecondFactor = multiFactor.enrolledFactors.isNotEmpty(),
+        hasVerifiedPhone = !phoneNumber.isNullOrBlank() || multiFactor.enrolledFactors.isNotEmpty(),
     )
 
     private companion object {
         const val SEND_TIMEOUT_MS = 60_000L
-
-        /** The factor's name in the Firebase console; never shown in the app. */
-        const val FACTOR_NAME = "Phone"
     }
 }

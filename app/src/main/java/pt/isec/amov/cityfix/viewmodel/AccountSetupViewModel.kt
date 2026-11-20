@@ -20,8 +20,8 @@ import pt.isec.amov.cityfix.utils.isPortugueseMobile
  * Account setup ViewModel, created per route (inside composable<AccountSetupRoute>).
  *
  * The step follows the same account the session uses: not verified -> VERIFY_EMAIL; verified
- * and no code requested -> PHONE; a code requested -> CODE. When the enrolment succeeds the
- * account gets its factor, the session becomes SignedIn and CityFixApp's redirect leaves this
+ * and no code requested -> PHONE; a code requested -> CODE. When the phone is linked (F-018:
+ * verified once, at sign-up, not asked again at login) the session becomes SignedIn and CityFixApp's redirect leaves this
  * screen. The phone digits and the verification id are kept in [savedState], so the step and
  * the typed number survive process death. The Activity passed to [sendCode] goes straight to
  * the repository and is never stored.
@@ -98,7 +98,7 @@ class AccountSetupViewModel(
         _uiState.update { it.copy(code = digits, codeError = null, error = null) }
     }
 
-    /** Sends (or resends) the enrolment SMS to +351 and the typed digits. */
+    /** Sends (or resends) the verification SMS to +351 and the typed digits. */
     fun sendCode(activity: Activity) {
         val state = _uiState.value
         if (state.isBusy) return
@@ -108,7 +108,7 @@ class AccountSetupViewModel(
         }
         _uiState.update { it.copy(isBusy = true, error = null, notice = null, codeError = null) }
         viewModelScope.launch {
-            when (val result = auth.sendEnrolmentCode(activity, "+351${state.phoneDigits}")) {
+            when (val result = auth.sendPhoneCode(activity, "+351${state.phoneDigits}")) {
                 is CodeSendResult.Sent -> {
                     setVerificationId(result.verificationId)
                     _uiState.update {
@@ -137,13 +137,25 @@ class AccountSetupViewModel(
         }
         _uiState.update { it.copy(isBusy = true, error = null, notice = null) }
         viewModelScope.launch {
-            when (val error = auth.enrolSecondFactor(id, state.code)) {
+            when (val error = auth.linkPhone(id, state.code)) {
                 // Stays busy: the session changes and the redirect leaves this screen.
                 null -> Unit
                 AuthError.WRONG_CODE -> _uiState.update {
                     it.copy(isBusy = false, codeError = R.string.auth_error_wrong_code)
                 }
-                // The enrolment needs a recent login. The message asks the user to log in again,
+                // Another account has this phone: back to the phone step to type another number.
+                AuthError.PHONE_IN_USE -> {
+                    setVerificationId(null)
+                    _uiState.update {
+                        it.copy(
+                            isBusy = false,
+                            step = SetupStep.PHONE,
+                            code = "",
+                            phoneError = R.string.setup_error_phone_in_use,
+                        )
+                    }
+                }
+                // Linking needs a recent login. The message asks the user to log in again,
                 // and Log out is on this screen and in the top bar.
                 else -> _uiState.update { it.copy(isBusy = false, error = error.messageRes()) }
             }

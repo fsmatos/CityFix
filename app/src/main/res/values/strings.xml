@@ -222,11 +222,12 @@
     <string name="setup_verification_sent">Verification e-mail sent.</string>
     <string name="setup_not_verified">Not verified yet. Open the link in the e-mail first.</string>
     <string name="setup_phone_title">Add your phone</string>
-    <string name="setup_phone_intro">Your account needs a second factor. Each time you log in, we will send a code by SMS to this number.</string>
+    <string name="setup_phone_intro">To finish your registration, confirm your mobile number. We will send a code by SMS once; you will not need it to log in.</string>
     <string name="setup_phone_label">Mobile number</string>
     <string name="setup_phone_prefix" translatable="false">+351\u0020</string>
     <string name="setup_phone_display" translatable="false">+351 %1$s</string>
     <string name="setup_error_phone">Enter a Portuguese mobile number: 9 digits starting with 9.</string>
+    <string name="setup_error_phone_in_use">This number is already used by another account.</string>
     <string name="setup_send_code">Send code</string>
     <string name="setup_change_number">Change number</string>
     <string name="mfa_code_intro">Enter the 6-digit code sent by SMS to %1$s.</string>
