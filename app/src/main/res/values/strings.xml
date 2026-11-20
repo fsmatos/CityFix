@@ -38,6 +38,9 @@
     <string name="ticket_history_system">Closed automatically</string>
     <string name="ticket_history_by">By %1$s</string>
     <string name="ticket_media_proof">Resolution proof</string>
+    <string name="media_open_photo">Open photo</string>
+    <string name="media_play_video">Play video</string>
+    <string name="media_viewer_close">Close</string>
 
     <!-- Message thread -->
     <string name="messages_title">Messages</string>

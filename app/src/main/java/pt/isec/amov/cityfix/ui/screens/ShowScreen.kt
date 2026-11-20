@@ -2,6 +2,7 @@ package pt.isec.amov.cityfix.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +58,7 @@ import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
+import pt.isec.amov.cityfix.ui.components.MediaViewer
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
@@ -427,12 +430,22 @@ private fun HistoryRow(
     }
 }
 
-/** Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". */
+/**
+ * Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". Tapping a tile
+ * with a file opens it full screen (F-018, [MediaViewer]); the open attachment's id is saveable, so
+ * the viewer stays open after a rotation.
+ */
 @Composable
 private fun MediaSection(
     attachments: List<Attachment>,
     modifier: Modifier = Modifier,
 ) {
+    var openAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
+    val openAttachment = attachments.firstOrNull { it.id == openAttachmentId }
+    if (openAttachment != null) {
+        MediaViewer(attachment = openAttachment, onDismiss = { openAttachmentId = null })
+    }
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -453,7 +466,9 @@ private fun MediaSection(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                attachments.forEach { attachment -> MediaTile(attachment) }
+                attachments.forEach { attachment ->
+                    MediaTile(attachment, onClick = { openAttachmentId = attachment.id })
+                }
             }
         }
     }
@@ -464,10 +479,13 @@ private fun MediaSection(
  * the placeholder and "Not available yet" instead of drawing a fake photo. With a file, a line says
  * when its upload is still pending or has failed (F-013); uploaded media show no line. The
  * operator's proof of the finished work is labelled "Resolution proof" for every audience (D-013).
+ * A tile with a file is clickable ([onClick] opens it full screen, F-018); TalkBack reads
+ * "Open photo" or "Play video" as the action.
  */
 @Composable
 private fun MediaTile(
     attachment: Attachment,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val labelRes = when (attachment.type) {
@@ -479,10 +497,21 @@ private fun MediaTile(
         UploadState.FAILED -> R.string.ticket_media_upload_failed
         UploadState.UPLOADED -> null
     }
+    val openLabel = stringResource(
+        when (attachment.type) {
+            AttachmentType.IMAGE -> R.string.media_open_photo
+            AttachmentType.VIDEO -> R.string.media_play_video
+        },
+    )
 
     Column(
         modifier = modifier
             .width(120.dp)
+            .clickable(
+                enabled = attachment.file.isNotBlank(),
+                onClickLabel = openLabel,
+                onClick = onClick,
+            )
             .semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
