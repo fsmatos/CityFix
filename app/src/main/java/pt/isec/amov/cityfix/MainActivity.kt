@@ -453,13 +453,17 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                 )
             },
             // Report an issue (D-015, Q5): an active citizen on the dashboard, the list and My
-            // tickets. The label is the accessible name, so the icon has no description.
+            // tickets. The icon has no description. The label is also set as the button's
+            // contentDescription: on the device the FAB's Text did not reach the accessibility
+            // tree (uiautomator and TalkBack saw an unnamed button), so the name is explicit.
             floatingActionButton = {
                 if (showReportFab) {
+                    val reportLabel = stringResource(R.string.top_bar_title_report)
                     ExtendedFloatingActionButton(
                         onClick = { navController.navigate(ReportTicketRoute()) { launchSingleTop = true } },
+                        modifier = Modifier.semantics { contentDescription = reportLabel },
                         icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                        text = { Text(stringResource(R.string.top_bar_title_report)) },
+                        text = { Text(reportLabel) },
                     )
                 }
             },
