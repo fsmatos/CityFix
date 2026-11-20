@@ -10,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionRow
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
@@ -233,7 +233,7 @@ fun ProfileContent(
         }
 
         FormMessage(state.notice, isError = false)
-        Button(
+        PrimaryButton(
             onClick = onSave,
             enabled = state.hasChanges && !state.isCopyingPhoto,
             modifier = Modifier.fillMaxWidth(),

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,7 +37,7 @@ fun LocationDeniedMessage(
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        Button(onClick = onTryAgainClick, modifier = Modifier.fillMaxWidth()) {
+        PrimaryButton(onClick = onTryAgainClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.location_try_again))
         }
         FilledTonalButton(onClick = onOpenSettingsClick, modifier = Modifier.fillMaxWidth()) {

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +52,7 @@ import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.MessageThread
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
@@ -292,12 +292,12 @@ private fun ActionsRow(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (TicketStatus.IN_PROGRESS in moves) {
-            Button(onClick = onStartWorkClick) {
+            PrimaryButton(onClick = onStartWorkClick) {
                 Text(stringResource(R.string.operator_action_start_work))
             }
         }
         if (TicketStatus.RESOLVED in moves) {
-            Button(onClick = onResolveClick) {
+            PrimaryButton(onClick = onResolveClick) {
                 Text(stringResource(R.string.operator_action_resolve))
             }
         }
@@ -378,7 +378,7 @@ private fun ResolveSection(
             TextButton(onClick = onCancel, enabled = !state.isCopying && !state.isResolving) {
                 Text(stringResource(R.string.resolve_cancel))
             }
-            Button(onClick = onConfirm, enabled = state.canConfirmResolve) {
+            PrimaryButton(onClick = onConfirm, enabled = state.canConfirmResolve) {
                 if (state.isResolving) {
                     CircularProgressIndicator(
                         modifier = Modifier

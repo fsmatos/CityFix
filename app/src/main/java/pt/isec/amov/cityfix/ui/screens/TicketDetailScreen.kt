@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
 import pt.isec.amov.cityfix.ui.components.MessageThread
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.DetailDialog
@@ -115,7 +115,7 @@ fun TicketDetailContent(
         if (canReopen || canAskClarification) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (canReopen) {
-                    Button(onClick = onReopenClick) {
+                    PrimaryButton(onClick = onReopenClick) {
                         Text(stringResource(R.string.reopen_button))
                     }
                 }

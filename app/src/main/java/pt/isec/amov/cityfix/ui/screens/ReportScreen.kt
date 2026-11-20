@@ -26,7 +26,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -70,6 +69,7 @@ import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.LocationDeniedMessage
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
@@ -389,7 +389,7 @@ private fun DetailsPane(
         if (state.submitError != null) {
             ErrorText(state.submitError)
         }
-        Button(
+        PrimaryButton(
             onClick = onSubmitClick,
             enabled = !state.submitted && !state.isCopyingAttachments,
             modifier = Modifier.fillMaxWidth(),

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
 /**
@@ -81,7 +81,7 @@ fun AccountProblemScreen(
         modifier = modifier,
     ) {
         if (canRetry) {
-            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+            PrimaryButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.account_problem_retry))
             }
         }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +38,7 @@ import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.ui.components.EmptyState
 import pt.isec.amov.cityfix.ui.components.LoadingState
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
@@ -200,7 +200,7 @@ private fun CitizenDetails(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Button(
+            PrimaryButton(
                 onClick = onActivateClick,
                 enabled = state.canActivate && !state.activated,
                 modifier = Modifier.fillMaxWidth(),

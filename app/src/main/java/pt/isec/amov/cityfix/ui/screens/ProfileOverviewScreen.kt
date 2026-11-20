@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.ui.components.CityCard
 import pt.isec.amov.cityfix.ui.components.ErrorState
 import pt.isec.amov.cityfix.ui.components.LoadingState
+import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.TicketCard
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
@@ -125,7 +125,7 @@ fun ProfileOverviewContent(
         item { ProfileHeader(profile, photo, itemModifier) }
         item { ProfileDetails(profile, email, itemModifier) }
         item {
-            Button(onClick = onEditDetails, modifier = itemModifier) {
+            PrimaryButton(onClick = onEditDetails, modifier = itemModifier) {
                 Text(stringResource(R.string.profile_edit_details))
             }
         }
