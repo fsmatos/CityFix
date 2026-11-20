@@ -30,8 +30,7 @@ fun isPortuguesePhone(digits: String): Boolean = PORTUGUESE_PHONE.matches(digits
 /**
  * The national digits of a stored phone. The app writes 9 digits, but an account created by hand
  * in the console may hold "+351 912 345 678" or "00351912345678"; the screens add "+351" again.
- * Whitespace is removed, then a leading +351 / 00351; other values are returned as they are
- * otherwise.
+ * All whitespace is removed, then a leading +351 or 00351; nothing else is changed.
  */
 fun nationalPhoneDigits(phone: String): String {
     val compact = phone.filterNot { it.isWhitespace() }
