@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-20 | 4 slices, 4 commits; device checks pending (see Log) |
 | Review | done | 2026-11-20 | review.md: 1 blocking (B1), 3 should-fix, 7 nits |
 | Docs | done | 2026-11-20 | overview, 0024, 0010/0022 lines, report notes |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-20 | origin/dev/Francisco |
 | Merged | pending | | |
 
 ## Log
@@ -33,3 +33,4 @@ Append-only.
 
 - 2026-11-20: Review fixes (B1, S1-S3; nits N1-N7 skipped as asked). B1: `NotificationsViewModel.watch` first checks one read like the worker (`allTicketsOnce` / `participantTicketsOnce`; `get()` asks the server when online), because the listener's first list is the offline cache and would move `lastCheckedAt` past changes made while the app was closed; a failed read is skipped. S1: new `onLoggedOut()` clears the tray (`NotificationManagerCompat.cancelAll`), called from the `logOut` lambda only (the ViewModel declaration moved above it). S2: MESSAGE dropped only when a history entry with a justification has the same time as `lastMessageAt` (the info-request message, same `now`). S3: `onUserChanged` not called while the session is Loading, so app start no longer cancels and re-enqueues the worker (the earlier "harmless" note is superseded). assembleDebug and lint pass. Still to verify on device: cold start after a change made while closed notifies once; Log out empties the tray.
 - 2026-11-20: Docs done. New decision `0024-notifications.md`; `overview.md` gains "Notifications (F-016)", "Handover (F-016)" and a Roles line; `0010` amendment (`lastMessageAt`, `lastMessageAuthorId`, D-014's `lastOperatorNearbyAt`, `fcmTokens` now written); `0022` one line "F-016 contract confirmed" with the Q8 change (Diogo's record: tell him); `docs/report/notes.md` F-016 section. Deviation from the docs plan: its "Operators: app-open only" bullet was written before Gate 1; 0024 records the Q2 change (worker for operators too) and lists app-open-only as rejected.
+- 2026-11-20: verify passed (assembleDebug + lint); pushed dev/Francisco to origin. Device checks still pending.
