@@ -18,8 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,9 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,9 +43,13 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.effectiveStatus
+import pt.isec.amov.cityfix.ui.components.CityCard
+import pt.isec.amov.cityfix.ui.components.ErrorState
+import pt.isec.amov.cityfix.ui.components.LoadingState
 import pt.isec.amov.cityfix.ui.components.TicketCard
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 
 /**
@@ -99,32 +98,17 @@ fun ProfileOverviewContent(
     modifier: Modifier = Modifier,
 ) {
     if (profile == null) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (unavailable) {
-                Text(
-                    text = stringResource(R.string.profile_unavailable),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-            } else {
-                val loadingDescription = stringResource(R.string.cd_profile_loading)
-                CircularProgressIndicator(
-                    modifier = Modifier.semantics { contentDescription = loadingDescription },
-                )
-            }
+        if (unavailable) {
+            ErrorState(messageRes = R.string.profile_unavailable, modifier = modifier)
+        } else {
+            LoadingState(descriptionRes = R.string.cd_profile_loading, modifier = modifier)
         }
         return
     }
 
-    // Centred and at most 600dp wide, so the rows do not stretch in landscape.
+    // Centred and at most contentMaxWidth wide, so the rows do not stretch in landscape.
     val itemModifier = Modifier
-        .widthIn(max = 600.dp)
+        .widthIn(max = Dimens.contentMaxWidth)
         .fillMaxWidth()
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -224,7 +208,7 @@ private fun ProfileHeader(profile: User, photo: Any?, modifier: Modifier = Modif
 /** The read-only details, one label/value pair per line. */
 @Composable
 private fun ProfileDetails(profile: User, email: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+    CityCard(modifier = modifier) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
