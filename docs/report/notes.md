@@ -1393,3 +1393,42 @@ Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detec
 - Movement check with GPS speed, so a dropped phone at rest does not count.
 - Threshold set in the profile.
 - Attach the detected location and time to the ticket.
+
+## F-016: Notifications
+Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (F-016)", "Handover (F-016)". Brief III, V, II.2-II.4.
+
+### Technical solutions
+- **No server (decision 0012):** the app compares the tickets it reads with one stored "last checked" time per user and shows local notifications.
+- **App open:** the shared Firestore tickets listener, after one read at start (the listener's first list is the offline cache).
+- **App closed:** a 15 min periodic `CoroutineWorker` (citizens and operators), network constraint.
+- **Pure rule** `Ticket.eventsFor(...)` in `model/`: status, message, operator nearby, 24 h warning, Encerrado; never one's own action.
+- **Messages seen by the ticket listener:** `lastMessageAt` / `lastMessageAuthorId` on the ticket, written in the same batch as the message.
+- **24 h warning and Encerrado:** time checks on each run, no scheduled job per ticket.
+- **FCM:** service and token as in P11, used for console test messages.
+- **Privacy:** title = category; no coordinates or operator data; Log out clears the tray.
+
+### Class material vs beyond class
+- Class: P11 FCM service, channels, `POST_NOTIFICATIONS` request, console sending; WorkManager slides 10/11; SharedPreferences slides 09.
+- Beyond class: `singleTop` + `onNewIntent` for the tap; unique periodic work.
+
+### Options chosen and rejected (Gate 1, 2026-11-20)
+- Client-only delivery, not a Cloud Function (class shows FCM reception only).
+- Worker for operators too (Q2 changed at Gate 1).
+- One time per user, not per ticket; time check, not a one-time job per ticket.
+- Permission at session start, after the location prompt (Android shows one request at a time).
+
+### Limits to state at the defence
+- No real push: the app or the worker must run; Doze can delay the worker beyond 15 min.
+- Device clocks differ: an event dated before the last check is missed.
+- Closed-app alerts up to ~15 min late, including the 24 h warning.
+- Draft rules would refuse the new fields (test mode accepts).
+
+### Verification
+- Device checks listed in `docs/work/F-016-notifications/state.md` (two emulators, console test message, App Inspection "run now", shortened `CLOSING_WARNING_MS`).
+
+### Improvement opportunities
+- Cloud Function on status change or new message -> FCM to `fcmTokens` (real push, no delay).
+- Per-user notification settings (per channel or per ticket).
+- Message preview in the notification.
+- Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
+- Remove the FCM token at Log out; rationale before the permission request.

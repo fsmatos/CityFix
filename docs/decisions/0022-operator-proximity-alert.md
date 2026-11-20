@@ -36,6 +36,7 @@ Status: accepted (D-014, Gate 1 on 2026-11-17, approved by Diogo: Q1-Q11 as reco
   3. Content: "The council team is near your report" plus the category name; no operator name, coordinates or distance. Tap opens `TicketDetailRoute(id)`, on F-016's "proximity" channel.
   4. A change of `lastOperatorNearbyAt` alone is not a status change.
   5. "Work started" (IN_PROGRESS) is F-016's status-change notification; D-014 adds nothing for it.
+  - **F-016 contract confirmed** (2026-11-20, [decision 0024](0024-notifications.md)), with one change to point 2: the trigger is `lastOperatorNearbyAt` after the user's single `lastCheckedAt` (not a per-ticket value) and less than 1 h old.
 - **Local delivery without F-016 (Q8):** optional slice 8, not done; the citizen's device shows nothing until F-016 consumes the field.
 
 ### Rejected

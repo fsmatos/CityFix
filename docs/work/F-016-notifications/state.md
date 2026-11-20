@@ -9,7 +9,7 @@ Remote: origin/dev/Francisco
 | Gate 1: plan approved | done | 2026-11-20 | approved; Q2 changed: worker also for operators |
 | Code | done | 2026-11-20 | 4 slices, 4 commits; device checks pending (see Log) |
 | Review | done | 2026-11-20 | review.md: 1 blocking (B1), 3 should-fix, 7 nits |
-| Docs | pending | | |
+| Docs | done | 2026-11-20 | overview, 0024, 0010/0022 lines, report notes |
 | Pushed | pending | | |
 | Merged | pending | | |
 
@@ -32,3 +32,4 @@ Append-only.
 - 2026-11-20: Review (80801af..HEAD) written to review.md. Blocking B1: the in-app watch checks the cached first snapshot on a cold start and saves lastCheckedAt = now, so changes made since the last worker run are never notified (fix: one server read before collecting). Should-fix: clear the tray at Log out (S1), MESSAGE dropped by unrelated justifications (S2), worker cancelled and re-run on every start, which can duplicate alerts (S3). 7 nits.
 
 - 2026-11-20: Review fixes (B1, S1-S3; nits N1-N7 skipped as asked). B1: `NotificationsViewModel.watch` first checks one read like the worker (`allTicketsOnce` / `participantTicketsOnce`; `get()` asks the server when online), because the listener's first list is the offline cache and would move `lastCheckedAt` past changes made while the app was closed; a failed read is skipped. S1: new `onLoggedOut()` clears the tray (`NotificationManagerCompat.cancelAll`), called from the `logOut` lambda only (the ViewModel declaration moved above it). S2: MESSAGE dropped only when a history entry with a justification has the same time as `lastMessageAt` (the info-request message, same `now`). S3: `onUserChanged` not called while the session is Loading, so app start no longer cancels and re-enqueues the worker (the earlier "harmless" note is superseded). assembleDebug and lint pass. Still to verify on device: cold start after a change made while closed notifies once; Log out empties the tray.
+- 2026-11-20: Docs done. New decision `0024-notifications.md`; `overview.md` gains "Notifications (F-016)", "Handover (F-016)" and a Roles line; `0010` amendment (`lastMessageAt`, `lastMessageAuthorId`, D-014's `lastOperatorNearbyAt`, `fcmTokens` now written); `0022` one line "F-016 contract confirmed" with the Q8 change (Diogo's record: tell him); `docs/report/notes.md` F-016 section. Deviation from the docs plan: its "Operators: app-open only" bullet was written before Gate 1; 0024 records the Q2 change (worker for operators too) and lists app-open-only as rejected.

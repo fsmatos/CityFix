@@ -1197,6 +1197,37 @@ Decision: [0023](../decisions/0023-impact-detection.md). Code: `utils/ImpactDete
 - **D-012/D-015 (Diogo):** keep a category with id `pavement` once DebugSeed is removed, or the prefill leaves the category empty.
 - **Diogo, `MainActivity.kt`:** imports (`ImpactDetectionEffect`, `ImpactViewModel`, `ImpactViewModelFactory`, `SnackbarDuration`); the impact block after `canNavigateBack` (~lines 189-215); "+" now navigates to `ReportTicketRoute()`; the `composable<ReportTicketRoute>` reads `fromImpact` with `toRoute` and passes it to `ReportViewModelFactory`.
 
+### Notifications (F-016)
+Decision: [0024](../decisions/0024-notifications.md) (client-only, per [0012](../decisions/0012-firebase-plan-notifications-close-maps.md); amends [0010](../decisions/0010-firestore-schema.md)). Class sources: P11 FCM + Firebase demo, slides 10/11 WorkManager, slides 09 SharedPreferences.
+
+- **Files:**
+  - `utils/Notifications.kt`: channels `tickets`, `messages`, `proximity`; `showNotification` (skips without `POST_NOTIFICATIONS`); `EXTRA_TICKET_ID`.
+  - `model/TicketNotifications.kt`: pure rule `Ticket.eventsFor(userId, isOperator, since, now)`, kinds STATUS, MESSAGE, OPERATOR_NEARBY, CLOSING_SOON, CLOSED.
+  - `data/NotificationPrefs.kt` (`lastCheckedAt` per uid), `data/TicketNotifier.kt` (rule -> notifications, saves the time), `data/TicketCheckWorker.kt`, `data/PushTokens.kt`, `data/CityFixMessagingService.kt`.
+  - `viewmodel/NotificationsViewModel(+Factory).kt`: `onUserChanged`, `onLoggedOut`, `watch`.
+  - `CityFixApplication` creates the channels and holds `ticketNotifier`, `pushTokens`; manifest: permission, `singleTop`, FCM service.
+- **Event rule:** events in `(lastCheckedAt, now]`, never one's own; citizen only on tickets they take part in; operator only for a participant citizen's action; automatic `system` CLOSED replaced by the time-based CLOSED; info-request message folded into the STATUS text.
+- **Last check:** SharedPreferences `notifications`, one time per uid; the first check only saves `now`.
+- **App open:** `watch` first checks one read (`allTicketsOnce` / `participantTicketsOnce`, review B1), then every list of the shared `tickets` flow (lists with no full ticket are skipped), inside `repeatOnLifecycle(STARTED)`.
+- **App closed:** `TicketCheckWorker`, unique periodic `ticket-check`, 15 min, network constraint, input `uid`/`isOperator`; skips if another account is signed in; `retry()` on error. Scheduled when the session's tickets user is known (not while Loading, review S3), cancelled at Log out.
+- **Notification id:** `(ticketId + kind).hashCode()`, so app and worker replace each other's.
+- **FCM:** `onMessageReceived` reads notification title/body, else data `title`/`body`, and data `ticketId`; token `arrayUnion` into `users/{uid}.fcmTokens` at session start and in `onNewToken`.
+- **Tap:** extra `ticketId`; cold start reads it only when `savedInstanceState == null`; open app gets it in `onNewIntent`; `CityFixApp` navigates to `TicketDetailRoute` after the role redirect.
+- **Permission:** API 33+, once per session for CITIZEN/OPERATOR, after the start-up location answer; denied -> snackbar `notifications_denied`.
+- **Log out:** `onLoggedOut()` clears the tray (`cancelAll`, review S1).
+- **Test steps:**
+  - console "Send test message" with custom data `ticketId`, app in background and foreground;
+  - App Inspection > Background Task Inspector > `ticket-check` "run now" with the app swiped away;
+  - temporary `CLOSING_WARNING_MS = 2 min` on a RESOLVED ticket: warning, then Encerrado (revert);
+  - set `lastOperatorNearbyAt` in the console: one proximity notification.
+- **Known limits:** no real push without a server; closed-app alerts up to ~15 min late (Doze more); device clock skew can drop an event; review nits N1-N7 not done (unbounded message/nearby times, token kept after Log out, Recents replay, no rationale, system icon).
+
+### Handover (F-016)
+- **Diogo, `MainActivity.kt` (~60 lines):** `openTicketId` + `onNewIntent`; `NotificationsViewModel` above the `logOut` lambda (calls `onLoggedOut`); `locationAnswered` set in the location callback (one line in his code); the notification permission request and snackbar; the `onUserChanged` / `watch` effects; the tap effect after the role redirect. Manifest: `singleTop`.
+- **D-014 contract confirmed** with the Q8 change: trigger is `lastOperatorNearbyAt > lastCheckedAt` and less than 1 h old (decision 0022 line added).
+- **Any new message writer** must set `lastMessageAt` and `lastMessageAuthorId` in the same batch (use `lastMessageFields` in `FirestoreMapping`), or the message is not notified.
+- **Rules (whoever deploys):** the draft would refuse `fcmTokens`, `lastMessageAt`, `lastMessageAuthorId`; not edited.
+
 ## Roles
 Anonymous citizen (public, active issues only, no personal data), registered citizen, municipal operator. Since D-009 the app has one `AccessRole` per home screen ([decision 0015](../decisions/0015-session-role-navigation-mfa.md); `homeFor` and `menuItemsFor` in `ui/navigation/RoleAccess.kt`):
 
@@ -1223,6 +1254,8 @@ How the guard works: (1) entry points are hidden (add button, menu entries); (2)
 **Since D-013 ([decision 0021](../decisions/0021-operator-panel-and-lifecycle.md))**, the operator's home `OperatorPanelRoute` is the real operations panel (every ticket, PUBLIC and PRIVATE, with status / category filters and sort). Opening a ticket gives the operator its own detail (exact map, full history with "By <name>", all media, the author's and followers' contacts, the thread) with the actions D-008 allows: Request information, Start work, Resolve with proof. Citizens and anonymous users never get the contacts, the names or the actions; as for D-012, this is enforced by the app only.
 
 **Since D-014 ([decision 0022](../decisions/0022-operator-proximity-alert.md))**, an `OPERATOR` with precise location and the app in the foreground is watched against the 20 m circle of every IN_PROGRESS ticket; an entry records only a time on the ticket (`lastOperatorNearbyAt`). Other roles are never watched. Citizens will be notified by F-016; anonymous users never receive the field.
+
+**Since F-016 ([decision 0024](../decisions/0024-notifications.md))**, `CITIZEN` and `OPERATOR` get local notifications (app open and a 15 min worker); a citizen for tickets they take part in, an operator for participant citizens' actions. Anonymous, pending and setup users get none.
 
 ## References
 Brief: `docs/brief/AMov.ProjetoKotlin_PT.pdf`. Notes for the technical report: `docs/report/notes.md`.
