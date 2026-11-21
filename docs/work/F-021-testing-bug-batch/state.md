@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-21 | review.md: 0 blocking, 2 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | overview (viewer, force dark, pending photo), report notes F-021 section |
 | Pushed | done | 2026-11-21 | origin/dev/Francisco (`a7dc894`) |
-| Merged | pending | | |
+| Merged | done | 2026-11-21 | into main (`1ce0e2f`), local; main not pushed yet |
 
 ## Log
 Append-only.
@@ -25,3 +25,4 @@ Append-only.
 - 2026-11-21: Review (reviewer agent) of 619fee6, fbf7d25, 90d04c3, 2159a04 and the d300eb9 resolution; findings in review.md: 0 blocking, 2 should-fix (AttachmentViewer comment states the wrong cause; Files table / Code row out of date after the deviations), 3 nits. Confirmed nothing of 7cc2eb8 is left in MainActivity.kt. No code edited.
 - 2026-11-21: Review fixes (`ef97e5f`): should-fix 1 (AttachmentViewer comment now gives the edge-to-edge reason), should-fix 2 (01-coding-plan Files table and Code row updated), nit 1 (`isNullOrBlank()`; a failed load still leaves the grey box, said in the comment), nit 3 (ShowScreen comment names state hoisting). Nit 2 (preview of the photo branch) skipped: previews have no network image. Build and lint pass.
 - 2026-11-21: Docs: `docs/architecture/overview.md` (AttachmentViewer bullet: state in ShowScreen and edge to edge; new bullets on force dark and the pending list photo), `docs/report/notes.md` (F-021 section). No decision record: no architecture choice beyond D-020's, already recorded by Diogo.
+- 2026-11-21: Merged dev/Francisco into main (`1ce0e2f`, the person asked); `origin/main` had nothing new. Build and lint pass on main. dev/Francisco fast-forwarded to main. main not pushed by the agent (CLAUDE.md: only when the person asks).
