@@ -10,7 +10,7 @@ Remote: origin/dev/Francisco
 | Code | done | 2026-11-21 | bug 2 `619fee6` + `fbf7d25`, bug 6 `90d04c3`, bug 7 `2159a04`; bug 4 `7cc2eb8` superseded by D-020 at merge `d300eb9`; review fixes `ef97e5f` |
 | Review | done | 2026-11-21 | review.md: 0 blocking, 2 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | overview (viewer, force dark, pending photo), report notes F-021 section |
-| Pushed | done | 2026-11-21 | origin/dev/Francisco (`d300eb9`) |
+| Pushed | done | 2026-11-21 | origin/dev/Francisco (`a7dc894`) |
 | Merged | pending | | |
 
 ## Log
