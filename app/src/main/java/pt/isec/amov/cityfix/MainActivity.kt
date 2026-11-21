@@ -453,13 +453,13 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     } else {
         0.dp
     }
-    // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
-    // stack saved and restored when the user comes back to it.
+    // A tab tap always opens the tab's own page, above the home (F-021). Saved per-tab stacks
+    // were dropped: they brought back an old ticket's details while the island kept the
+    // previous tab highlighted (a detail screen belongs to no tab).
     val openTab = { tab: BottomTab ->
         navController.navigate(tab.route) {
-            popUpTo(homeFor(role)) { saveState = true }
+            popUpTo(homeFor(role))
             launchSingleTop = true
-            restoreState = true
         }
     }
 
