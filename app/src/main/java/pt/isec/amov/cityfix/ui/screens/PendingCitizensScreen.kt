@@ -23,10 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.ui.components.CityCard
@@ -94,18 +97,30 @@ private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.lg),
         ) {
-            // Decorative leading icon, like the ticket cards' thumbnail (D-016).
+            // Decorative leading thumbnail, like the ticket cards' (D-016): the profile photo
+            // (a download URL, as in CitizenApprovalScreen), or a person icon without one (F-021).
             Box(
                 modifier = Modifier
                     .size(Dimens.thumbnail)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small),
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                val photo = citizen.photo
+                if (photo != null) {
+                    AsyncImage(
+                        model = photo,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Column {
                 Text(text = citizen.name, style = MaterialTheme.typography.titleMedium)
