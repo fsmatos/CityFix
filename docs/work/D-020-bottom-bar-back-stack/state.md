@@ -1,6 +1,6 @@
 # D-020: Bottom bar keeps the wrong tab and cannot leave a detail
 Branch: dev/Diogo · Base: 48b8397
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -11,7 +11,7 @@ Remote: not pushed
 | Review | done | 2026-11-21 | review.md: 1 blocking (B1, pre-existing since D-016), 2 should-fix, 4 nits |
 | Review fixes | done | 2026-11-21 | B1 (a910361), S1+S2+N1+N3 (42f55e8); N2, N4 skipped; device checks pending |
 | Docs | done | 2026-11-21 | overview.md App shell bullet; report notes D-020 (B1 as privacy point); no decision record; I.3.E not marked fixed (device checks pending) |
-| Pushed | | | |
+| Pushed | done | 2026-11-21 | 0529480..85a3cc2 |
 | Merged | | | |
 
 ## Log
@@ -27,3 +27,4 @@ Remote: not pushed
 - 2026-11-21: docs (docs-writer, not committed). `docs/architecture/overview.md`, "App shell (D-006)": new bullet "Bottom bar and per-tab back stacks" after the `launchSingleTop` bullet (highlight rule, reselect rule with the home root, scroll-to-top flow, user-keyed ViewModels from B1, pending device checks). `docs/report/notes.md`: new section D-020 (root cause, technical solutions, B1 as a privacy point for the defence, options chosen/rejected, verification, improvements). Deviations from 03-docs-plan.md: the overview describes the shipped R1 fallback (`lastTab` kept, set in `openTab`), not the planned `currentBackStack` derivation, and adds the B1/S1/S2 changes that came after the plan; scroll-to-top is documented as done, not as an improvement. Manual test checklist: no checklist file in the repo, and the review says not to mark I.3.E fixed before the device checks, so it was not touched. No decision record (as planned). No code touched.
 - Device checks still pending: (1) citizen A: Profile -> Dashboard -> log out -> citizen B logs in -> Profile shows B; same with a half-filled report and with an operator on a ticket detail / pending citizen, then a second operator; (2) the same user: Profile -> Dashboard -> Profile keeps its state; (3) pending citizen taps Dashboard on Registration pending: nothing moves; (4) scroll-to-top on Dashboard, Active, Profile, Panel, Approvals, Categories; leave to a detail and come back: position kept; (5) the original D-020 repro (operator Panel -> detail -> Profile -> Panel -> Panel) and one rotation on a restored detail.
 - 2026-11-21: manual device checks passed (Diogo, emulator + phone): all acceptance checks of this task.
+- 2026-11-21: pushed dev/Diogo (0529480..85a3cc2) after verify (build + lint green).
