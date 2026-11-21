@@ -1,6 +1,6 @@
 # D-018: Information requests: right operator button and answered state
 Branch: dev/Diogo · Base: d5d9ea1
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-21 | Slice 1; build and lint green |
 | Review | skipped | 2026-11-21 | Small UI fix, deadline; manual check on the phone instead |
 | Docs | done | 2026-11-21 | overview.md, note in decision 0021 |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-21 | 7527f97..fc70993 |
 | Merged | pending | | |
 
 ## Log
@@ -18,3 +18,4 @@ Remote: not pushed
 - 2026-11-21: Gate 1 approved by Diogo (option A).
 - 2026-11-21: slice 1 coded as planned: `model/InfoRequest.kt` (pendingInfoRequest, isAnswered), `ui/components/InfoRequestCard.kt` with two previews, card first in the slot of OperatorTicketContent and TicketDetailContent, `resumesWork` on ActionsRow and OperatorTextDialog. Deviation: none. Manual checks on the phone still to do.
 - 2026-11-21: docs: overview.md components list, amendment note in decision 0021.
+- 2026-11-21: pushed dev/Diogo (7527f97..fc70993) after verify (build + lint green).
