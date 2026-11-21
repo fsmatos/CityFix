@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.CityFix" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- F-021: forceDarkAllowed false so the system (e.g. Xiaomi's app dark mode) never recolours
+         the app; CityFixTheme already has its own dark colours. Without it the dark-mode snackbar
+         showed white text on its light background. Ignored below API 29. -->
+    <style name="Theme.CityFix" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+    </style>
 </resources>
