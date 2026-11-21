@@ -118,14 +118,25 @@ class AccountSetupViewModel(
                 // Firebase verified the phone without a code and it is linked: stays busy, the
                 // session changes and the redirect leaves this screen (as after confirmCode).
                 CodeSendResult.Linked -> Unit
-                is CodeSendResult.Failure -> _uiState.update {
-                    when (result.error) {
-                        // Shown on the field, like the local format check.
-                        AuthError.INVALID_PHONE_NUMBER -> it.copy(isBusy = false, phoneError = result.error.messageRes())
-                        // Only after a code-less link: another account has this phone (as in confirmCode).
-                        AuthError.PHONE_IN_USE -> it.copy(isBusy = false, phoneError = R.string.setup_error_phone_in_use)
-                        else -> it.copy(isBusy = false, error = result.error.messageRes())
+                is CodeSendResult.Failure -> when (result.error) {
+                    // Shown on the field, like the local format check.
+                    AuthError.INVALID_PHONE_NUMBER -> _uiState.update {
+                        it.copy(isBusy = false, phoneError = result.error.messageRes())
                     }
+                    // Only after a code-less link: another account has this phone. As in
+                    // confirmCode, back to the phone step (Resend can be tapped on the code step).
+                    AuthError.PHONE_IN_USE -> {
+                        setVerificationId(null)
+                        _uiState.update {
+                            it.copy(
+                                isBusy = false,
+                                step = SetupStep.PHONE,
+                                code = "",
+                                phoneError = R.string.setup_error_phone_in_use,
+                            )
+                        }
+                    }
+                    else -> _uiState.update { it.copy(isBusy = false, error = result.error.messageRes()) }
                 }
             }
         }

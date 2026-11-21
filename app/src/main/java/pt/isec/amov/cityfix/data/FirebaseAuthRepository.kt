@@ -129,7 +129,8 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             )
         ) {
             is SmsOutcome.Done -> outcome.result
-            // Not reached: with requireSmsValidation(true) Firebase never auto-verifies.
+            // Not reached: with requireSmsValidation(true) Firebase never auto-verifies. A
+            // Failure (not a crash) keeps the screen usable: the user can tap Resend.
             is SmsOutcome.Verified -> CodeSendResult.Failure(AuthError.CODE_NOT_SENT)
         }
 
@@ -288,11 +289,13 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
                         }
                     }
                 }
-                builder
-                    .setTimeout(SEND_TIMEOUT_MS / 1_000, TimeUnit.SECONDS)
-                    .setCallbacks(callbacks)
-                if (mfa) builder.requireSmsValidation(true)
-                PhoneAuthProvider.verifyPhoneNumber(builder.build())
+                PhoneAuthProvider.verifyPhoneNumber(
+                    builder
+                        .setTimeout(SEND_TIMEOUT_MS / 1_000, TimeUnit.SECONDS)
+                        .setCallbacks(callbacks)
+                        .apply { if (mfa) requireSmsValidation(true) }
+                        .build(),
+                )
             }
         } ?: SmsOutcome.Done(CodeSendResult.Failure(AuthError.CODE_NOT_SENT))
 
