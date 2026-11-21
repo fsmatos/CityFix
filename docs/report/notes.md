@@ -1482,3 +1482,36 @@ Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (
 - Message preview in the notification.
 - Exact 24 h alarm (`AlarmManager` or a one-time work per ticket).
 - Remove the FCM token at Log out; rationale before the permission request.
+
+## D-019: Coordinates and attachment authors in the operator detail (bug fix)
+Decision: amendment to [0007](../decisions/0007-ticket-detail-by-audience.md) (no new record). Code: `ui/screens/ShowScreen.kt`, `ui/screens/OperatorTicketScreen.kt`, strings EN/PT (commit `20a82b0`). Overview: "Operations panel and lifecycle (D-013)", bullet "Coordinates and attachment authors (D-019)".
+
+Brief: I.3.E, the operator sees the ticket "com coordenadas, contactos do autor e histórico completo com fotos e vídeos" and who added them. Found in Diogo's manual test of I.3.E (2026-11-21): the exact location was only a map, and the photo/video tiles never said who attached them. Not a regression; never implemented.
+
+### Technical solutions
+- **Exact location as map plus text.** Under the exact map, the operator view prints "Coordinates: 40.21000, -8.41900"; (0, 0) keeps "Map not available" and no line.
+- **Who added each photo/video, no new data stored.** `Attachment.uploadedById` was already written to Firestore (report media = creator, joiner media = follower, proof = resolving operator). D-019 adds those ids to the profiles the operator detail already watches (D-013's `watchPeople`) and passes the same id -> name map to the tiles, which show "Added by <name>".
+- **Formatting:** `Locale.ROOT` and 5 decimals (about 1 m), so the PT decimal comma does not clash with the comma between latitude and longitude; TalkBack gets "Latitude x, longitude y" instead of the raw string.
+- **Accessibility and layout:** the uploader line is merged into the tile's TalkBack item; `maxLines = 2` + ellipsis keeps the 120dp tile bounded; both orientations pass the names (landscape preview added).
+
+### Privacy by audience
+- Coordinates text and names appear only in the OPERATOR view (`showCoordinates = audience == OPERATOR`; only `OperatorTicketScreen` passes the names map). Registered citizens and anonymous users see exactly what they saw before.
+- Defence in depth: the anonymous projection already blanks `uploadedById` and rounds the location upstream (`TicketPrivacy.kt`), so even a wrong audience could not show them. A map miss shows nothing, never an id.
+
+### Options chosen and rejected (Gate 1, 2026-11-21)
+- Reuse `responsibleNames` (KDoc widened) instead of a second `uploaderNames` parameter with the same data (Q1).
+- Registered citizen unchanged (Q2): the brief asks coordinates only for the operator.
+- Dot decimal in both languages (Q3); new string "Added by" / "Adicionado por" instead of reusing "By" (Q4).
+
+### Limits to state at the defence
+- A profile with a blank name renders "Added by " (same as "By " in the history); a one-line fix where the map is built.
+- One map has two names in `ShowScreen.kt` (`responsibleNames` publicly, `uploaderNames` in `MediaSection`), accepted at Gate 1.
+- Manual acceptance checks (TalkBack in PT, rotation, the three audiences) were still open at review.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass, 0 errors (18 existing warnings, none in touched files). Review: 0 blocking. Device checks listed in `docs/work/D-019-operator-detail-coordinates/00-plan.md`.
+
+### Improvement opportunities
+- Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent).
+- Uploader name and upload date in the full-screen attachment viewer.
+- Rename `responsibleNames` to `peopleNames` in a coordinated refactor with Francisco.
