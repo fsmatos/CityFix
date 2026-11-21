@@ -50,10 +50,13 @@ import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
+import pt.isec.amov.cityfix.model.isAnswered
+import pt.isec.amov.cityfix.model.pendingInfoRequest
 import pt.isec.amov.cityfix.ui.components.AttachmentGallery
 import pt.isec.amov.cityfix.ui.components.MessageThread
 import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
+import pt.isec.amov.cityfix.ui.components.InfoRequestCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.viewmodel.MAX_PROOF_ATTACHMENTS
@@ -216,6 +219,9 @@ fun OperatorTicketContent(
 ) {
     val moves = ticket?.allowedTransitions(operator, now).orEmpty()
     val canSend = ticket != null && !ticket.isLocked(now)
+    // D-018: the open information request, and "Resume work" when it paused work in progress.
+    val infoRequest = ticket?.pendingInfoRequest()
+    val resumesWork = infoRequest?.statusBefore == TicketStatus.IN_PROGRESS
     // "By <name>" in the history (D-013 Q3): only the people whose profile could be read.
     val responsibleNames = state.people.mapNotNull { (id, contact) -> contact?.let { id to it.name } }.toMap()
 
@@ -232,6 +238,9 @@ fun OperatorTicketContent(
         // it during this operator's own save, when the cached ticket is already RESOLVED. The
         // hidden draft is kept (not deleted here); onCleared removes it when the screen leaves.
         val showResolve = state.resolving && (TicketStatus.RESOLVED in moves || state.isResolving)
+        if (infoRequest != null) {
+            InfoRequestCard(request = infoRequest, answered = infoRequest.isAnswered(state.messages))
+        }
         if (showResolve) {
             ResolveSection(
                 state = state,
@@ -245,6 +254,7 @@ fun OperatorTicketContent(
         } else if (moves.isNotEmpty()) {
             ActionsRow(
                 moves = moves,
+                resumesWork = resumesWork,
                 onRequestInfoClick = onRequestInfoClick,
                 onStartWorkClick = onStartWorkClick,
                 onResolveClick = onResolveClick,
@@ -270,6 +280,7 @@ fun OperatorTicketContent(
     if (state.openDialog != null && state.openDialog.target in moves) {
         OperatorTextDialog(
             dialog = state.openDialog,
+            resumesWork = resumesWork,
             text = state.dialogText,
             errorRes = state.dialogError,
             onTextChange = onDialogTextChange,
@@ -283,6 +294,7 @@ fun OperatorTicketContent(
 @Composable
 private fun ActionsRow(
     moves: Set<TicketStatus>,
+    resumesWork: Boolean,
     onRequestInfoClick: () -> Unit,
     onStartWorkClick: () -> Unit,
     onResolveClick: () -> Unit,
@@ -293,7 +305,11 @@ private fun ActionsRow(
     ) {
         if (TicketStatus.IN_PROGRESS in moves) {
             PrimaryButton(onClick = onStartWorkClick) {
-                Text(stringResource(R.string.operator_action_start_work))
+                Text(
+                    stringResource(
+                        if (resumesWork) R.string.operator_action_resume_work else R.string.operator_action_start_work,
+                    ),
+                )
             }
         }
         if (TicketStatus.RESOLVED in moves) {
@@ -401,6 +417,7 @@ private fun ResolveSection(
 @Composable
 private fun OperatorTextDialog(
     dialog: OperatorDialog,
+    resumesWork: Boolean,
     text: String,
     errorRes: Int?,
     onTextChange: (String) -> Unit,
@@ -418,7 +435,13 @@ private fun OperatorTextDialog(
             labelRes = R.string.operator_request_info_label
             confirmRes = R.string.operator_request_info_confirm
         }
-        OperatorDialog.START_WORK -> {
+        // D-018: same move (INFO_REQUESTED -> IN_PROGRESS), worded as resuming when work had started.
+        OperatorDialog.START_WORK -> if (resumesWork) {
+            titleRes = R.string.operator_resume_work_title
+            messageRes = R.string.operator_resume_work_text
+            labelRes = R.string.operator_start_work_label
+            confirmRes = R.string.operator_action_resume_work
+        } else {
             titleRes = R.string.operator_start_work_title
             messageRes = R.string.operator_start_work_text
             labelRes = R.string.operator_start_work_label

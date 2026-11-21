@@ -1,0 +1,20 @@
+# D-018: Information requests: right operator button and answered state
+Branch: dev/Diogo · Base: d5d9ea1
+Remote: not pushed
+
+| Phase | Status | Date | Notes |
+| --- | --- | --- | --- |
+| Start | done | 2026-11-21 | Bug 7 from Francisco's tests; option A chosen |
+| Plan | done | 2026-11-21 | |
+| Gate 1: plan approved | done | 2026-11-21 | Diogo approved (option A) |
+| Code | done | 2026-11-21 | Slice 1; build and lint green |
+| Review | skipped | 2026-11-21 | Small UI fix, deadline; manual check on the phone instead |
+| Docs | done | 2026-11-21 | overview.md, note in decision 0021 |
+| Pushed | pending | | |
+| Merged | pending | | |
+
+## Log
+- 2026-11-21: plan written. Root cause: ActionsRow always labels IN_PROGRESS "Start work"; nothing compares the request with later messages.
+- 2026-11-21: Gate 1 approved by Diogo (option A).
+- 2026-11-21: slice 1 coded as planned: `model/InfoRequest.kt` (pendingInfoRequest, isAnswered), `ui/components/InfoRequestCard.kt` with two previews, card first in the slot of OperatorTicketContent and TicketDetailContent, `resumesWork` on ActionsRow and OperatorTextDialog. Deviation: none. Manual checks on the phone still to do.
+- 2026-11-21: docs: overview.md components list, amendment note in decision 0021.

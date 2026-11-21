@@ -380,6 +380,14 @@
     <!-- D-013 operator actions -->
     <string name="operator_action_request_info">Request information</string>
     <string name="operator_action_start_work">Start work</string>
+    <string name="operator_action_resume_work">Resume work</string>
+    <string name="operator_resume_work_title">Resume work?</string>
+    <string name="operator_resume_work_text">The ticket goes back to In progress and the citizens see the change.</string>
+    <string name="info_request_title">Information request</string>
+    <string name="info_request_by_municipality">Asked by the municipality</string>
+    <string name="info_request_by_citizen">Asked by the citizen</string>
+    <string name="info_request_waiting">Waiting for a reply</string>
+    <string name="info_request_answered">Answered</string>
     <string name="operator_request_info_title">Request information</string>
     <string name="operator_request_info_text">The citizen sees this message and the ticket waits for their answer.</string>
     <string name="operator_request_info_label">What do you need?</string>
