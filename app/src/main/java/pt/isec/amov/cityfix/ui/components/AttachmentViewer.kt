@@ -59,7 +59,9 @@ fun AttachmentViewer(
 ) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        // decorFitsSystemWindows = false: edge to edge in both orientations (F-021). With the
+        // default the dialog window was inset by the system bars after a rotation.
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(
             modifier = Modifier
