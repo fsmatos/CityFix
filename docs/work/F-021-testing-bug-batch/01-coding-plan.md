@@ -1,11 +1,12 @@
 ## Files
 | Path | Change | Why |
 | --- | --- | --- |
-| `ui/components/AttachmentViewer.kt` | `decorFitsSystemWindows = false` | Bug 2 |
-| `MainActivity.kt` (`openTab`) | drop `saveState`/`restoreState` | Bug 4 |
+| `ui/components/AttachmentViewer.kt` | `decorFitsSystemWindows = false` | Bug 2 (edge to edge) |
+| `ui/screens/ShowScreen.kt` | open attachment state hoisted from `MediaSection` | Bug 2 (real cause, added after re-test) |
+| `MainActivity.kt` (`openTab`) | drop `saveState`/`restoreState` | Bug 4; superseded by D-020 at the merge |
 | `ui/screens/PendingCitizensScreen.kt` | `AsyncImage` thumbnail, icon fallback | Bug 6 |
-| `MainActivity.kt` (SnackbarHost) or `ui/theme/Theme.kt` | snackbar colours/position | Bug 7, after the dark-mode check |
-| `data/FirebaseAuthRepository.kt`, `viewmodel/LoginViewModel.kt` | one-time unenrol | Bug 1, only if Q1 = unenrol |
+| `res/values/themes.xml`, `res/values-night/themes.xml` | `forceDarkAllowed=false` | Bug 7 (replaces the snackbar colour idea) |
+| ~~`data/FirebaseAuthRepository.kt`, `viewmodel/LoginViewModel.kt`~~ | ~~one-time unenrol~~ | Bug 1: dropped, Q1 = recreate the account |
 
 ## Steps
 One slice per bug (see 00-plan Slices). Each: change, `assembleDebug` + `lint`, check on the emulator, commit.

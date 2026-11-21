@@ -1621,3 +1621,19 @@ Brief: I.3.D, the operator validates a registration showing "nome, NIF e georref
 ### Improvement opportunities
 - `ui/components/CoordinatesText(location)` used by both operator screens (removes the duplicated block, review N2).
 - Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent), in both operator screens.
+
+## F-021: Bugs from manual testing (fixes)
+Overview: "Dark mode and system force dark (F-021)", "Pending citizens list photo (F-021)", `AttachmentViewer` bullet. Work item: `docs/work/F-021-testing-bug-batch/`.
+
+### Technical solutions
+- **Photo viewer and rotation.** Saved state (`rememberSaveable`) is tied to its place in the composition. The detail screen uses a `Column` in portrait and a `Row` in landscape, so state kept inside the photo section did not match after rotating and the viewer closed. The open photo id now lives in `ShowScreen`, the same place in both layouts.
+- **Dark mode text.** The app has its own dark theme, so it opts out of system force dark (`android:forceDarkAllowed=false`); a Xiaomi phone was recolouring the snackbar text.
+- **Pending list thumbnail.** The operator's queue now shows each citizen's profile photo.
+- **Tab highlight.** Same bug as Diogo's D-020; D-020's fix (per-tab back stacks kept, highlight follows the stack) was kept at the merge instead of F-021's simpler "tab tap opens its root".
+
+### Not bugs (explained)
+- SMS at login for an account created before F-018 (decision 0026: its phone is still an MFA factor).
+- Anonymous users not seeing an "In progress" ticket that was PRIVATE (decision 0006).
+
+### Lessons
+- A first fix guessed the cause (dialog insets); reproducing on the emulator showed the viewer was closing, not shrinking. Reproduce before fixing.
