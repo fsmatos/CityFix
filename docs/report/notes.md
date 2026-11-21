@@ -1593,3 +1593,31 @@ Found in Diogo's manual test of I.3.E (2026-11-21): operator Panel -> ticket det
 - Nested navigation graphs per tab, so every route belongs to exactly one tab and the highlight comes from the graph, not from `lastTab`.
 - Clear the saved tab stacks at logout as well, so the previous user's ViewModels are freed at once (defence in depth on top of the keys).
 - A single "user scope" (for example a ViewModelStore per signed-in user) instead of a key on each call.
+
+## D-021: Coordinates in the pending citizen detail (improvement)
+Decision: none (operator-only coordinates already follow [0007](../decisions/0007-ticket-detail-by-audience.md) as amended by D-019). Code: `utils/CoordinatesFormat.kt` (new), `ui/screens/CitizenApprovalScreen.kt`, `ui/screens/ShowScreen.kt` (import only) (commit `e94551d`); `RegisterScreen.kt`, `ReportScreen.kt`, `ProfileScreen.kt`, strings EN/PT (`ccdb518`). Overview: "Approvals and categories (D-012)", bullet "Detail"; "Shared components", bullet "Coordinates".
+
+Brief: I.3.D, the operator validates a registration showing "nome, NIF e georreferenciação". Raised by Diogo during the manual test checklist (2026-11-21), after D-019 added the coordinates text to the operator ticket detail: the pending citizen detail had the georeferencing only as a map.
+
+### Technical solutions
+- **Georeferencing as exact map plus text,** consistent with the operator ticket detail (I.3.E): under the map, "Coordinates: 40.21000, -8.41900"; TalkBack reads "Latitude x, longitude y". (0, 0) keeps "Location not available" and no line. No new strings: `ticket_coordinates` and `cd_ticket_coordinates` are reused.
+- **One formatter for every coordinate text.** D-019's private `formatCoordinate` moved unchanged to `utils/CoordinatesFormat.kt`: `Locale.ROOT`, 5 decimals (about 1 m), so the PT decimal comma never clashes with the comma between latitude and longitude.
+- **Own location aligned too (slice 2, added at Gate 1).** Register, Report and Profile printed the user's own fix through `report_location_value` with `%1$.5f`, which follows the device locale (a comma in PT). The placeholders became `%1$s`/`%2$s` and the three callers pass `formatCoordinate(...)`, so every coordinate in the app uses a dot. No string resource formats a float any more.
+
+### Privacy
+- Only operators see someone else's coordinates as text: `PendingCitizenRoute` is inside `RequireAccess(OPERATOR)`. Slice 2 only changes the format of texts that show the user's own location, which existed before. No model, repository, Firestore or rules change.
+
+### Options chosen and rejected (plan and Gate 1, 2026-11-21)
+- A `formatCoordinates(Coordinates)` returning "lat, lng": rejected, because the strings take latitude and longitude as separate arguments (and TalkBack needs them separately).
+- A shared coordinates composable: not done now, because it would rewrite Francisco's block in `ShowScreen.kt` the day before the deadline (review N2: the `Text` block is duplicated in `ShowScreen.ExactLocationSection` and `CitizenApprovalScreen.CitizenLocation`).
+- Align Register, Report and Profile: listed as an improvement in the plan, chosen by Diogo at Gate 1 (slice 2).
+
+### Defence note (review N3)
+- `report_location_value` (visible text, own location) and `cd_ticket_coordinates` (TalkBack, operator screens) now have the same text, "Latitude %1$s, longitude %2$s". Two keys on purpose: different contexts and owners, so either can change without the other.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass after both slices, 0 errors, 17 warnings (none in changed files). Review: 0 blocking, 0 should-fix, 3 nits. Device checks (pending citizen detail portrait/landscape, EN/PT, TalkBack, (0, 0); operator ticket detail unchanged; Register/Report/Profile in PT show dots) listed in `docs/work/D-021-citizen-approval-coordinates/state.md`, still pending at the docs phase.
+
+### Improvement opportunities
+- `ui/components/CoordinatesText(location)` used by both operator screens (removes the duplicated block, review N2).
+- Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent), in both operator screens.
