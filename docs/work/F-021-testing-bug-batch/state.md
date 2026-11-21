@@ -1,6 +1,6 @@
 # F-021: Bugs found in manual testing
 Branch: dev/Francisco · Base: dc93629
-Remote: not pushed
+Remote: origin/dev/Francisco
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-21 | bugs 2, 4, 6 coded (`619fee6`, `7cc2eb8`, `90d04c3`); bug 7 `forceDarkAllowed=false` |
 | Review | pending | | |
 | Docs | pending | | |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-21 | origin/dev/Francisco (`d300eb9`) |
 | Merged | pending | | |
 
 ## Log
@@ -21,3 +21,4 @@ Append-only.
 - 2026-11-21: Bug 7: the person saw white text on a white snackbar. On the emulator in dark mode (impact snackbar triggered with a fake accelerometer bump) the snackbar is light grey with dark text, so the app colours are right; likely cause: the phone's system force dark (Xiaomi app dark mode) recolouring the text. Fix: `android:forceDarkAllowed=false` in both themes (API 29+). Build and lint pass. To confirm on the Mi 9T Pro. Emulator-5554 got the new build; night mode set back to off.
 - 2026-11-21: Bug 2 re-opened by the person: 619fee6 did not fix it. Reproduced on emulator-5556: after rotating, the viewer closed (not inset). Real cause: `openedId` was `rememberSaveable` inside `MediaSection`, which is at a different place in ShowScreen's portrait Column and landscape Row, so its saved state did not match after rotation. Fix: `openedId` and the `AttachmentViewer` moved up to `ShowScreen` (same place in both layouts); `MediaSection` gets an `onOpen` callback. Checked on emulator-5556: photo stays open and full screen portrait -> landscape -> portrait. 619fee6 (`decorFitsSystemWindows = false`) kept: the viewer is edge to edge in landscape. Build and lint pass.
 - 2026-11-21: Merged `origin/main` (D-019, D-020, D-021) into dev/Francisco. Conflicts: `MainActivity.kt` `openTab` (F-021 bug 4 vs D-020, same bug): person's choice, D-020's version kept (per-tab saved stacks, highlight follows the tab holding the screen, reselect pops to root/scrolls up); F-021's 7cc2eb8 change is superseded. `ShowScreen.kt`: combined, F-021's hoisted `openedId`/`onOpenAttachment`/`onOpen` plus D-019's `responsibleNames`/`uploaderNames`. `PendingCitizensScreen.kt` auto-merged (F-021 photo + D-020 list state). Build and lint pass (0 errors). Checked on emulator-5556 (operator): photo viewer stays open and full screen portrait -> landscape -> portrait; Panel -> detail -> Profile -> Panel shows the detail with Panel highlighted, tapping Panel again shows the panel.
+- 2026-11-21: Pushed dev/Francisco to origin (`dc93629..d300eb9`). Not merged into main. Review and docs phases not run yet.
