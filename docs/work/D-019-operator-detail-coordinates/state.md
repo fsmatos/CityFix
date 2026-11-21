@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-21 | review.md: 0 blocking, 2 should-fix (manual checks, tell Francisco), 2 nits |
 | Docs | done | 2026-11-21 | overview (D-013 operator detail, map note, handover), 0007 amendment, report notes D-019; checklist item not found in repo; not committed |
 | Pushed | done | 2026-11-21 | 0529480..85a3cc2 |
-| Merged | | | |
+| Merged | done | 2026-11-21 | merge 06f7eda into main (not pushed) |
 
 ## Log
 - 2026-11-21: merged origin/main into dev/Diogo first (e6b34f4, no file changes; Diogo chose to merge).
@@ -23,3 +23,4 @@ Remote: origin/dev/Diogo
 - 2026-11-21: manual device checks passed (Diogo, emulator + phone): all acceptance checks of this task.
 - 2026-11-21: pushed dev/Diogo (0529480..85a3cc2) after verify (build + lint green).
 - 2026-11-21: merged origin/main into dev/Diogo (044a959): conflicts in ShowScreen.kt (kept D-019 showCoordinates and F-018 onMapTouchChange; both KDoc notes on MediaTile) and docs/report/notes.md (F-019/F-018/F-020 sections then D-019/D-020; dropped the FCM-token line removed by F-019). Build and lint green. Not pushed.
+- 2026-11-21: merged dev/Diogo into main (06f7eda), no conflicts, build and lint green. main not pushed yet.

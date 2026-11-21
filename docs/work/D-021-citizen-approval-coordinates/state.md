@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-21 | review.md: 0 blocking, 0 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | overview (D-012 detail, map privacy note, Shared components "Coordinates", D-013 handover); manual checklist I.3.D; report notes D-021; no decision record; not committed |
 | Pushed | done | 2026-11-21 | cdc216b..b142632 |
-| Merged | | | |
+| Merged | done | 2026-11-21 | merge 06f7eda into main (not pushed) |
 
 ## Log
 - 2026-11-21: merged origin/main into dev/Diogo first (044a959, Diogo chose to merge; conflicts resolved and approved).
@@ -24,3 +24,4 @@ Remote: origin/dev/Diogo
 - 2026-11-21: Docs per 03-docs-plan. `docs/architecture/overview.md`: D-012 "Detail (`PendingCitizenRoute`)" bullet now names the coordinates line (D-021, same strings and formatter as D-019, (0, 0) unchanged, operator only); map privacy bullet's D-019 parenthesis extended to the pending citizen detail and the shared formatter; new "Coordinates" bullet under "Shared components" (next to the dates helpers) for `utils/CoordinatesFormat.kt` incl. slice 2 (`report_location_value` now `%1$s`/`%2$s`); D-013 handover note for Francisco (`ShowScreen.kt` import only, `ReportScreen.kt` one call in slice 2). `docs/testing/manual-test-checklist.md` I.3.D: coordinates line added to the expectation (not ticked; device checks pending). `docs/report/notes.md`: D-021 section appended after D-020 (solutions, privacy, options, N3 as defence note, verification, improvements incl. N2's shared composable and geo: intent). No decision record (plan: covered by 0007 as amended by D-019). Deviation: slice 2 was in the plan's improvement list, so it is documented as done rather than as an improvement. Review N1 already resolved (Code row has `ccdb518`). Not committed.
 - 2026-11-21: manual device checks passed (Diogo): pending citizen coordinates (EN/PT, rotation, TalkBack, (0,0)), own location dot decimal in Register/Report/Profile, D-019 line unchanged; quick check of F-018 map zoom and sign-up SMS after the merge.
 - 2026-11-21: pushed dev/Diogo (cdc216b..b142632) after verify (build + lint green); includes the merge of origin/main (044a959).
+- 2026-11-21: merged dev/Diogo into main (06f7eda), no conflicts, build and lint green. main not pushed yet.
