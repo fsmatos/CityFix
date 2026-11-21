@@ -435,10 +435,10 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
 
     // D-016: bottom bar with the role's tabs (RoleAccess.kt). Hidden on the login flow, on Edit
     // profile and its credential screens (Gate 1), and while the gate covers the app.
-    // A screen outside every tab (detail, report) keeps the last tab selected. D-020: lastTab is
-    // also set when a tab is tapped (openTab), so a restored detail highlights the tab it was
-    // restored into, not the tab shown before. (Reading the whole back stack would be cleaner,
-    // but NavController.currentBackStack is a restricted API for apps: lint RestrictedApi.)
+    // D-020: the selected tab is the tab last shown or tapped (lastTab); a screen outside every
+    // tab (detail, report) keeps it. Setting it on a tap (openTab) makes a restored detail
+    // highlight the tab it was restored into. Not derived from NavController.currentBackStack,
+    // which is a restricted API for apps (lint RestrictedApi).
     val tabs = bottomTabsFor(role)
     val currentTab = tabs.firstOrNull { screen in it.screens }
     var lastTab by rememberSaveable { mutableStateOf<BottomTab?>(null) }
@@ -465,15 +465,19 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     // counter: a LaunchedEffect keyed on a counter would also scroll when the screen comes back.
     val tabReselects = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
-    // stack saved and restored when the user comes back to it. D-020: tapping the selected tab
-    // goes back to its own screen. popBackStack returns false when there is nothing to pop
-    // (already on the root, or the route is not on the stack), and then the usual navigate runs.
-    // Tapped again on the tab's own screen: that screen scrolls back to the top (tabReselects).
+    // stack saved and restored when the user comes back to it. D-020, tapping the selected tab:
+    // - on its root: only scrolls that screen to the top (tabReselects), no navigation;
+    // - deeper (a detail): pops back to its root.
+    // The first tab's root is the role's home (a pending citizen's is Registration pending, not
+    // the Dashboard route). popBackStack returns false when the root is not on the stack, and
+    // then the usual navigate runs.
     val openTab = { tab: BottomTab ->
-        val backToRoot = tab == selectedTab && navController.popBackStack(tab.route, inclusive = false)
-        if (!backToRoot && tab == currentTab) tabReselects.tryEmit(Unit)
-        if (!backToRoot) {
-            navController.navigate(tab.route) {
+        val root = if (tab == tabs.first()) homeFor(role) else tab.route
+        val onRoot = navController.currentDestination?.hasRoute(root::class) == true
+        when {
+            tab == selectedTab && onRoot -> tabReselects.tryEmit(Unit)
+            tab == selectedTab && navController.popBackStack(root, inclusive = false) -> Unit
+            else -> navController.navigate(tab.route) {
                 popUpTo(homeFor(role)) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
@@ -998,11 +1002,15 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
 
 /**
  * D-020: runs [scrollToTop] each time the selected tab is tapped again on its own screen. Placed
- * in a tab's root destination; it collects only while that destination is composed.
+ * in a tab's root destination; it collects only while that entry is resumed, so the screen that
+ * fades out during a tab change does not scroll too (review N1).
  */
 @Composable
 private fun ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend () -> Unit) {
-    LaunchedEffect(reselects) { reselects.collect { scrollToTop() } }
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(reselects, owner) {
+        owner.repeatOnLifecycle(Lifecycle.State.RESUMED) { reselects.collect { scrollToTop() } }
+    }
 }
 
 /** Maps the current destination to the bar's enum. Add new routes here: `else` will not warn. */
