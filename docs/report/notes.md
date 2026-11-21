@@ -1524,3 +1524,100 @@ Decision: [0026](../decisions/0026-phone-verified-at-signup.md) (amendment line)
 
 ### Lessons
 - F-018 changed one caller of a shared helper (`requestCode`) without rechecking the options the helper set for every caller; build and lint pass because `build()` checks the options only at run time.
+
+## D-019: Coordinates and attachment authors in the operator detail (bug fix)
+Decision: amendment to [0007](../decisions/0007-ticket-detail-by-audience.md) (no new record). Code: `ui/screens/ShowScreen.kt`, `ui/screens/OperatorTicketScreen.kt`, strings EN/PT (commit `20a82b0`). Overview: "Operations panel and lifecycle (D-013)", bullet "Coordinates and attachment authors (D-019)".
+
+Brief: I.3.E, the operator sees the ticket "com coordenadas, contactos do autor e histórico completo com fotos e vídeos" and who added them. Found in Diogo's manual test of I.3.E (2026-11-21): the exact location was only a map, and the photo/video tiles never said who attached them. Not a regression; never implemented.
+
+### Technical solutions
+- **Exact location as map plus text.** Under the exact map, the operator view prints "Coordinates: 40.21000, -8.41900"; (0, 0) keeps "Map not available" and no line.
+- **Who added each photo/video, no new data stored.** `Attachment.uploadedById` was already written to Firestore (report media = creator, joiner media = follower, proof = resolving operator). D-019 adds those ids to the profiles the operator detail already watches (D-013's `watchPeople`) and passes the same id -> name map to the tiles, which show "Added by <name>".
+- **Formatting:** `Locale.ROOT` and 5 decimals (about 1 m), so the PT decimal comma does not clash with the comma between latitude and longitude; TalkBack gets "Latitude x, longitude y" instead of the raw string.
+- **Accessibility and layout:** the uploader line is merged into the tile's TalkBack item; `maxLines = 2` + ellipsis keeps the 120dp tile bounded; both orientations pass the names (landscape preview added).
+
+### Privacy by audience
+- Coordinates text and names appear only in the OPERATOR view (`showCoordinates = audience == OPERATOR`; only `OperatorTicketScreen` passes the names map). Registered citizens and anonymous users see exactly what they saw before.
+- Defence in depth: the anonymous projection already blanks `uploadedById` and rounds the location upstream (`TicketPrivacy.kt`), so even a wrong audience could not show them. A map miss shows nothing, never an id.
+
+### Options chosen and rejected (Gate 1, 2026-11-21)
+- Reuse `responsibleNames` (KDoc widened) instead of a second `uploaderNames` parameter with the same data (Q1).
+- Registered citizen unchanged (Q2): the brief asks coordinates only for the operator.
+- Dot decimal in both languages (Q3); new string "Added by" / "Adicionado por" instead of reusing "By" (Q4).
+
+### Limits to state at the defence
+- A profile with a blank name renders "Added by " (same as "By " in the history); a one-line fix where the map is built.
+- One map has two names in `ShowScreen.kt` (`responsibleNames` publicly, `uploaderNames` in `MediaSection`), accepted at Gate 1.
+- Manual acceptance checks (TalkBack in PT, rotation, the three audiences) were still open at review.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass, 0 errors (18 existing warnings, none in touched files). Review: 0 blocking. Device checks listed in `docs/work/D-019-operator-detail-coordinates/00-plan.md`.
+
+### Improvement opportunities
+- Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent).
+- Uploader name and upload date in the full-screen attachment viewer.
+- Rename `responsibleNames` to `peopleNames` in a coordinated refactor with Francisco.
+
+## D-020: Bottom bar keeps the wrong tab and cannot leave a detail (bug fix)
+Decision: none (local navigation fix inside D-016's bottom bar). Code: `MainActivity.kt` (commits `31d5123`, `a910361`, `42f55e8`) and the tab root screens (`e83bf81`: Dashboard, Active tickets, Profile, Operator panel, Pending citizens, Categories get a scroll-state parameter). Overview: "App shell (D-006)", bullet "Bottom bar and per-tab back stacks".
+
+Found in Diogo's manual test of I.3.E (2026-11-21): operator Panel -> ticket detail -> Profile -> Panel showed the detail with Profile highlighted, and tapping Panel again could not leave the detail.
+
+### Root cause
+- The highlight fell back to the last tab *screen shown*; a restored detail is in no tab's set, so the bar kept Profile.
+- Re-selecting the current tab ran the same `popUpTo(home) { saveState = true }` + `restoreState = true`: it popped the detail, saved it and restored it in the same call.
+
+### Technical solutions
+- **Per-tab back stacks with two extra rules.** The standard save/restore pattern is kept; on top of it: (1) the highlighted tab is the tab last shown *or tapped* (`lastTab`, set in `openTab` too), so a restored stack highlights its tab; (2) tapping the selected tab is handled explicitly: on its root it only scrolls to the top, deeper it pops to the root with `popBackStack(root, inclusive = false)`.
+- **The first tab's root is the role's home** (`homeFor(role)`), so a pending citizen tapping Dashboard on Registration pending stays there (review S1).
+- **Scroll to top on reselect** (Gate 1 Q1): a `MutableSharedFlow<Unit>` with no replay and a 1-slot buffer; each tab root hoists its scroll state into the NavHost destination and collects only while its entry is `RESUMED`, so the screen fading out does not react. Scroll positions are saved per back-stack entry.
+- **Survives rotation and process death:** `lastTab` is `rememberSaveable` and the NavController saves its own back stack and the per-entry scroll states.
+
+### Privacy point for the defence (review B1)
+- Found by the review, present since D-016: logging out cleared only the visible stack. The tab stacks saved by the bottom bar, and the ViewModels attached to them, survived. Citizen A opens Profile, taps Dashboard, logs out; citizen B logs in and taps Profile: Navigation restores A's entry and `viewModel(factory = ...)` returns A's existing `ProfileViewModel` (the factory is only used when no ViewModel exists). B would have seen A's name, NIF, e-mail and phone; the same applied to a half-filled report (submitted under A's id) and to operator detail/approval screens (actions attributed to the previous operator).
+- Fix: every user-scoped `viewModel(...)` call has a `key` with the signed-in user's id (`profile-<uid>`, `report-<citizenId>`, `ticket-detail-<uid>`, `operator-ticket-<uid>`, `approval-<operatorId>`, `credential-<uid>`). Another user's restored entry builds a new ViewModel for the current user; the same user keeps theirs.
+- Why a key and not clearing the saved stacks at logout: one argument per call, independent of how Navigation stores saved stacks (clearing the home's stack would pop the home itself), and it also covers role changes and guard redirects.
+- Honest limit: the old ViewModel stays in memory in that entry's store, never shown, until the entry is popped. `rememberSaveable` in the screens holds only camera temp paths, and a restored detail recomputes its audience for the new user, so the anonymous rules still hold.
+
+### Options chosen and rejected
+- Derive the tab from `navController.currentBackStack`: planned, rejected by lint (`RestrictedApi`); the planned fallback (keep `lastTab`, set it on tap) shipped.
+- `getBackStackEntry(tab.route)` per tab (public API): rejected in review; it fixes no case that happens today and would loop in the hypothetical case of the home key restoring another tab's stack.
+- Drop `restoreState`/`saveState`: fixes "cannot leave" but loses each tab's stack (rejected at plan).
+- A counter key for scroll-to-top: `LaunchedEffect(counter)` would fire again on recomposition after coming back; a flow without replay does not.
+- Kept (Gate 1 Q2): the list opened from the Dashboard highlights Active.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass, 0 errors, 17 warnings (unchanged, none in touched files). Review: 1 blocking (B1, pre-existing, fixed), 2 should-fix (fixed), N1/N3 fixed, N2/N4 skipped. Device checks (two users on one device, pending citizen, scroll-to-top per tab, the original repro, rotation) listed in `docs/work/D-020-bottom-bar-back-stack/state.md`, still pending at the docs phase.
+
+### Improvement opportunities
+- Nested navigation graphs per tab, so every route belongs to exactly one tab and the highlight comes from the graph, not from `lastTab`.
+- Clear the saved tab stacks at logout as well, so the previous user's ViewModels are freed at once (defence in depth on top of the keys).
+- A single "user scope" (for example a ViewModelStore per signed-in user) instead of a key on each call.
+
+## D-021: Coordinates in the pending citizen detail (improvement)
+Decision: none (operator-only coordinates already follow [0007](../decisions/0007-ticket-detail-by-audience.md) as amended by D-019). Code: `utils/CoordinatesFormat.kt` (new), `ui/screens/CitizenApprovalScreen.kt`, `ui/screens/ShowScreen.kt` (import only) (commit `e94551d`); `RegisterScreen.kt`, `ReportScreen.kt`, `ProfileScreen.kt`, strings EN/PT (`ccdb518`). Overview: "Approvals and categories (D-012)", bullet "Detail"; "Shared components", bullet "Coordinates".
+
+Brief: I.3.D, the operator validates a registration showing "nome, NIF e georreferenciação". Raised by Diogo during the manual test checklist (2026-11-21), after D-019 added the coordinates text to the operator ticket detail: the pending citizen detail had the georeferencing only as a map.
+
+### Technical solutions
+- **Georeferencing as exact map plus text,** consistent with the operator ticket detail (I.3.E): under the map, "Coordinates: 40.21000, -8.41900"; TalkBack reads "Latitude x, longitude y". (0, 0) keeps "Location not available" and no line. No new strings: `ticket_coordinates` and `cd_ticket_coordinates` are reused.
+- **One formatter for every coordinate text.** D-019's private `formatCoordinate` moved unchanged to `utils/CoordinatesFormat.kt`: `Locale.ROOT`, 5 decimals (about 1 m), so the PT decimal comma never clashes with the comma between latitude and longitude.
+- **Own location aligned too (slice 2, added at Gate 1).** Register, Report and Profile printed the user's own fix through `report_location_value` with `%1$.5f`, which follows the device locale (a comma in PT). The placeholders became `%1$s`/`%2$s` and the three callers pass `formatCoordinate(...)`, so every coordinate in the app uses a dot. No string resource formats a float any more.
+
+### Privacy
+- Only operators see someone else's coordinates as text: `PendingCitizenRoute` is inside `RequireAccess(OPERATOR)`. Slice 2 only changes the format of texts that show the user's own location, which existed before. No model, repository, Firestore or rules change.
+
+### Options chosen and rejected (plan and Gate 1, 2026-11-21)
+- A `formatCoordinates(Coordinates)` returning "lat, lng": rejected, because the strings take latitude and longitude as separate arguments (and TalkBack needs them separately).
+- A shared coordinates composable: not done now, because it would rewrite Francisco's block in `ShowScreen.kt` the day before the deadline (review N2: the `Text` block is duplicated in `ShowScreen.ExactLocationSection` and `CitizenApprovalScreen.CitizenLocation`).
+- Align Register, Report and Profile: listed as an improvement in the plan, chosen by Diogo at Gate 1 (slice 2).
+
+### Defence note (review N3)
+- `report_location_value` (visible text, own location) and `cd_ticket_coordinates` (TalkBack, operator screens) now have the same text, "Latitude %1$s, longitude %2$s". Two keys on purpose: different contexts and owners, so either can change without the other.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass after both slices, 0 errors, 17 warnings (none in changed files). Review: 0 blocking, 0 should-fix, 3 nits. Device checks (pending citizen detail portrait/landscape, EN/PT, TalkBack, (0, 0); operator ticket detail unchanged; Register/Report/Profile in PT show dots) listed in `docs/work/D-021-citizen-approval-coordinates/state.md`, still pending at the docs phase.
+
+### Improvement opportunities
+- `ui/components/CoordinatesText(location)` used by both operator screens (removes the duplicated block, review N2).
+- Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent), in both operator screens.

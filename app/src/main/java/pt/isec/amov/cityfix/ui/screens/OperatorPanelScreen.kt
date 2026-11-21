@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -72,6 +74,8 @@ fun OperatorPanelScreen(
     viewModel: OperatorPanelViewModel,
     onTicketClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    // D-020: hoisted so MainActivity can scroll it to the top when the tab is tapped again.
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Read once per composition: the badges and the status filter use the same instant.
@@ -85,6 +89,7 @@ fun OperatorPanelScreen(
         onToggleSort = viewModel::onToggleSort,
         onTicketClick = onTicketClick,
         modifier = modifier,
+        listState = listState,
     )
 }
 
@@ -103,6 +108,7 @@ fun OperatorPanelContent(
     onToggleSort: () -> Unit,
     onTicketClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val shown = tickets.filteredFor(state.filter, now)
 
@@ -111,6 +117,7 @@ fun OperatorPanelContent(
             modifier = Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxSize(),
+            state = listState,
             // The last item scrolls above the floating island (D-016).
             contentPadding = PaddingValues(
                 start = 16.dp,

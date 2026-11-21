@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,7 +61,11 @@ import pt.isec.amov.cityfix.viewmodel.MAX_CATEGORY_NAME_LENGTH
 
 /** Categories (brief I.3.E), the stateful half: collects the ViewModel state and wires the events. */
 @Composable
-fun CategoriesScreen(viewModel: CategoriesViewModel) {
+fun CategoriesScreen(
+    viewModel: CategoriesViewModel,
+    // D-020: hoisted so MainActivity can scroll it to the top when the tab is tapped again.
+    listState: LazyListState = rememberLazyListState(),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     CategoriesContent(
         state = state,
@@ -69,6 +75,7 @@ fun CategoriesScreen(viewModel: CategoriesViewModel) {
         onEditorNameChange = viewModel::onEditorNameChange,
         onEditorSave = viewModel::onEditorSave,
         onEditorDismiss = viewModel::onEditorDismiss,
+        listState = listState,
     )
 }
 
@@ -87,6 +94,7 @@ fun CategoriesContent(
     onEditorSave: () -> Unit,
     onEditorDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when {
@@ -98,6 +106,7 @@ fun CategoriesContent(
                         .align(Alignment.TopCenter)
                         .fillMaxSize()
                         .widthIn(max = 600.dp),
+                    state = listState,
                     // Bottom padding so the last row clears the FAB and the floating island.
                     contentPadding = PaddingValues(
                         start = 16.dp,

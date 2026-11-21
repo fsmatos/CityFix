@@ -53,6 +53,7 @@ import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.utils.hasLocationPermission
 import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.RegisterUiState
@@ -395,7 +396,11 @@ private fun CitizenLocation(
             text = when {
                 state.isLocating -> stringResource(R.string.report_location_locating)
                 state.location != null ->
-                    stringResource(R.string.report_location_value, state.location.latitude, state.location.longitude)
+                    stringResource(
+                        R.string.report_location_value,
+                        formatCoordinate(state.location.latitude),
+                        formatCoordinate(state.location.longitude),
+                    )
                 else -> stringResource(R.string.register_location_not_set)
             },
             style = MaterialTheme.typography.bodyMedium,

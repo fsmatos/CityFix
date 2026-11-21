@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
@@ -70,6 +72,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Citizen
@@ -430,8 +434,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val showReportFab = session.canReport && !showGate && screen == TopBarScreen.DASHBOARD
 
     // D-016: bottom bar with the role's tabs (RoleAccess.kt). Hidden on the login flow, on Edit
-    // profile and its credential screens (Gate 1), and while the gate covers the app. A screen
-    // outside every tab (detail, report) keeps the last tab selected.
+    // profile and its credential screens (Gate 1), and while the gate covers the app.
+    // D-020: the selected tab is the tab last shown or tapped (lastTab); a screen outside every
+    // tab (detail, report) keeps it. Setting it on a tap (openTab) makes a restored detail
+    // highlight the tab it was restored into. Not derived from NavController.currentBackStack,
+    // which is a restricted API for apps (lint RestrictedApi).
     val tabs = bottomTabsFor(role)
     val currentTab = tabs.firstOrNull { screen in it.screens }
     var lastTab by rememberSaveable { mutableStateOf<BottomTab?>(null) }
@@ -453,14 +460,30 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     } else {
         0.dp
     }
+    // D-020: one event per tap on the selected tab while on its own screen. Only the screen on
+    // display collects it (ScrollToTopOnReselect), so it is the one that scrolls. A flow, not a
+    // counter: a LaunchedEffect keyed on a counter would also scroll when the screen comes back.
+    val tabReselects = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
-    // stack saved and restored when the user comes back to it.
+    // stack saved and restored when the user comes back to it. D-020, tapping the selected tab:
+    // - on its root: only scrolls that screen to the top (tabReselects), no navigation;
+    // - deeper (a detail): pops back to its root.
+    // The first tab's root is the role's home (a pending citizen's is Registration pending, not
+    // the Dashboard route). popBackStack returns false when the root is not on the stack, and
+    // then the usual navigate runs.
     val openTab = { tab: BottomTab ->
-        navController.navigate(tab.route) {
-            popUpTo(homeFor(role)) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+        val root = if (tab == tabs.first()) homeFor(role) else tab.route
+        val onRoot = navController.currentDestination?.hasRoute(root::class) == true
+        when {
+            tab == selectedTab && onRoot -> tabReselects.tryEmit(Unit)
+            tab == selectedTab && navController.popBackStack(root, inclusive = false) -> Unit
+            else -> navController.navigate(tab.route) {
+                popUpTo(homeFor(role)) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
+        lastTab = tab
     }
 
     // The gate is drawn over the app instead of replacing it, so the NavHost (and its graph)
@@ -566,15 +589,20 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     .consumeWindowInsets(contentPadding),
             ) {
                 composable<DashboardRoute> {
+                    val scrollState = rememberScrollState()
+                    ScrollToTopOnReselect(tabReselects) { scrollState.animateScrollTo(0) }
                     DashboardScreen(
                         stats = stats,
                         onSeeTicketsClick = {
                             navController.navigate(TicketListRoute) { launchSingleTop = true }
                         },
+                        scrollState = scrollState,
                     )
                 }
                 composable<ActiveTicketsRoute> {
                     // The first active tickets of the same list; "See more" opens the full list.
+                    val listState = rememberLazyListState()
+                    ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                     ActiveTicketsScreen(
                         tickets = tickets.filter { it.isActive },
                         onTicketClick = { id ->
@@ -583,6 +611,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         onSeeMoreClick = {
                             navController.navigate(TicketListRoute) { launchSingleTop = true }
                         },
+                        listState = listState,
                     )
                 }
                 composable<TicketListRoute> {
@@ -608,7 +637,10 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // D-013 Q1: the operator's own view of the same route (contacts, actions).
                         // Inside the branch: scoped to this entry, so the messages and profile
                         // listeners end with it, and never created for a citizen.
+                        // Review B1: keyed on the user, so an entry restored from a saved tab
+                        // stack after a logout never hands this user the previous one's ViewModel.
                         val operatorViewModel: OperatorTicketViewModel = viewModel(
+                            key = "operator-ticket-${user.id}",
                             factory = OperatorTicketViewModelFactory(
                                 app.ticketsRepository,
                                 app.usersRepository,
@@ -621,8 +653,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     } else {
                         // Inside the destination: scoped to this entry, so leaving the ticket
                         // removes its messages listener.
-                        val detailViewModel: TicketDetailViewModel =
-                            viewModel(factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user))
+                        // Review B1: keyed on the user, as the operator's view above.
+                        val detailViewModel: TicketDetailViewModel = viewModel(
+                            key = "ticket-detail-${user.id}",
+                            factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user),
+                        )
                         TicketDetailScreen(ticket = ticket, user = user, viewModel = detailViewModel)
                     }
                 }
@@ -663,8 +698,10 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // The guard lets only an active citizen in, so the session holds their profile.
                         val citizenId = session.ticketsUser?.id ?: return@RequireAccess
                         // Inside the destination: scoped to this entry, so a finished form is cleared.
+                        // Review B1: keyed on the citizen, so a restored form is never another user's draft.
                         val reportViewModel: ReportViewModel =
                             viewModel(
+                                key = "report-$citizenId",
                                 factory = ReportViewModelFactory(
                                     app.ticketsRepository,
                                     app.attachmentStorage,
@@ -727,8 +764,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         onDenied = goHome,
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
-                        // The overview only reads the ViewModel's state (D-016).
+                        // The overview only reads the ViewModel's state (D-016). Review B1: keyed on
+                        // the user, so a Profile restored from a saved tab stack after a logout
+                        // builds a new ViewModel instead of showing the previous user's data.
                         val profileViewModel: ProfileViewModel = viewModel(
+                            key = "profile-${user.id}",
                             factory = ProfileViewModelFactory(
                                 user.id,
                                 app.usersRepository,
@@ -744,6 +784,8 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             AccessRole.PENDING_CITIZEN -> emptyList()
                             else -> null
                         }
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         ProfileOverviewScreen(
                             viewModel = profileViewModel,
                             myTickets = myTickets,
@@ -754,6 +796,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             onTicketClick = { id ->
                                 navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -766,6 +809,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // The guard lets only a signed-in user in, so the session holds their profile.
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val profileViewModel: ProfileViewModel = viewModel(
+                            key = "profile-${user.id}",
                             factory = ProfileViewModelFactory(
                                 user.id,
                                 app.usersRepository,
@@ -793,6 +837,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            key = "credential-${user.id}",
                             factory = CredentialChangeViewModelFactory(
                                 CredentialChange.PASSWORD,
                                 user is Operator,
@@ -814,6 +859,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            key = "credential-${user.id}",
                             factory = CredentialChangeViewModelFactory(
                                 CredentialChange.EMAIL,
                                 user is Operator,
@@ -832,6 +878,8 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: scoped to this entry, so the categories listener ends with it.
                         val panelViewModel: OperatorPanelViewModel =
                             viewModel(factory = OperatorPanelViewModelFactory(app.categoriesRepository))
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         // The shared list is allTickets() for an operator (TicketsViewModel.setUser).
                         OperatorPanelScreen(
                             tickets = tickets,
@@ -839,6 +887,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             onTicketClick = { id ->
                                 navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -847,11 +896,14 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: scoped to this entry, so the users listener ends with it.
                         val approvalsViewModel: PendingCitizensViewModel =
                             viewModel(factory = PendingCitizensViewModelFactory(app.usersRepository))
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         PendingCitizensScreen(
                             viewModel = approvalsViewModel,
                             onCitizenClick = { id ->
                                 navController.navigate(PendingCitizenRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -861,7 +913,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         val operatorId = session.ticketsUser?.id ?: return@RequireAccess
                         val citizenId = entry.toRoute<PendingCitizenRoute>().citizenId
                         // Inside the guard: scoped to this entry, so the citizen listener ends with it.
+                        // Review B1: keyed on the operator, so the approval is never the previous one's.
                         val approvalViewModel: CitizenApprovalViewModel = viewModel(
+                            key = "approval-$operatorId",
                             factory = CitizenApprovalViewModelFactory(citizenId, operatorId, app.usersRepository),
                         )
                         CitizenApprovalScreen(
@@ -881,7 +935,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: the only category writes come from this ViewModel.
                         val categoriesViewModel: CategoriesViewModel =
                             viewModel(factory = CategoriesViewModelFactory(app.categoriesRepository))
-                        CategoriesScreen(viewModel = categoriesViewModel)
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
+                        CategoriesScreen(viewModel = categoriesViewModel, listState = listState)
                     }
                 }
             }
@@ -941,6 +997,19 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                 )
             }
         }
+    }
+}
+
+/**
+ * D-020: runs [scrollToTop] each time the selected tab is tapped again on its own screen. Placed
+ * in a tab's root destination; it collects only while that entry is resumed, so the screen that
+ * fades out during a tab change does not scroll too (review N1).
+ */
+@Composable
+private fun ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend () -> Unit) {
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(reselects, owner) {
+        owner.repeatOnLifecycle(Lifecycle.State.RESUMED) { reselects.collect { scrollToTop() } }
     }
 }
 

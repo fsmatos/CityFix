@@ -70,7 +70,7 @@ Tested on: `dev/Francisco` @ `04c7b48` (includes `origin/main` @ `4ee55bb`; F-01
 - [ ] A. Register operator: e-mail outside the council domain refused; operator NIF unique; account active at once (after e-mail + SMS).
 - [ ] B. Login, forgot password, session cache (as citizen).
 - [ ] C. Profile: name and NIF read-only; others editable.
-- [ ] D. Pending citizens list; detail shows name, NIF and location on the map; Activate (with confirm).
+- [ ] D. Pending citizens list; detail shows name, NIF and location on the map plus the coordinates line ("Coordinates: 40.21000, -8.41900", dot decimal also in PT; none for (0, 0); D-021); Activate (with confirm).
 - [ ] E. Categories: create, edit name, activate, deactivate; duplicate/blank/over 40 chars refused.
 - [ ] E. Deactivated category disappears from the citizen's report form.
 - [ ] E. Panel: all tickets (public and private), filters by status/category, order.

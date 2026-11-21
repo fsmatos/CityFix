@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
@@ -67,6 +68,7 @@ import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.utils.formatDateTime
 import java.util.Locale
 
@@ -103,12 +105,14 @@ fun detailAudience(user: User?, ticket: Ticket?): DetailAudience = when (user) {
  * PUBLIC gets the approximate location only (brief I.1.C).
  * REGISTERED and OPERATOR (F-014) also get "Reported on", the description, the exact map and the
  * full status history with justifications and "Closed automatically", then [participantContent]
- * (the message thread and actions, see TicketDetailScreen). Never shows author, follower,
- * responsible or uploader ids; the anonymous projection happens upstream (decision 0006).
+ * (the message thread and actions, see TicketDetailScreen). OPERATOR also gets the coordinates as
+ * text under the exact map (brief I.3.E, D-019). Never shows author, follower, responsible or
+ * uploader ids; the anonymous projection happens upstream (decision 0006).
  * [participantContent] is a composable parameter (a "slot", beyond class): the caller decides what
  * goes under the history, so this screen stays free of ViewModels.
- * [responsibleNames] (D-013): responsibleId -> name, given only by the operator's detail; a history
- * entry whose responsible is in it shows "By <name>". Empty (every other caller): no names shown.
+ * [responsibleNames] (D-013, D-019): id -> name of the people on the ticket, given only by the
+ * operator's detail; a history entry whose responsible is in it shows "By <name>", and a photo/video
+ * tile whose uploader is in it shows "Added by <name>". Empty (every other caller): no names shown.
  * Portrait: one scrolling column. Landscape: two panes side by side, each scrolling on its own.
  */
 @Composable
@@ -154,6 +158,7 @@ fun ShowScreen(
                     .fillMaxHeight()
                     .verticalScroll(detailsScroll)
                     .padding(bottom = LocalBottomBarPadding.current),
+                responsibleNames = responsibleNames,
             )
             LocationPane(
                 ticket = ticket,
@@ -179,7 +184,7 @@ fun ShowScreen(
                 .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(Dimens.md),
         ) {
-            DetailsPane(ticket, audience, now, locale)
+            DetailsPane(ticket, audience, now, locale, responsibleNames = responsibleNames)
             LocationPane(
                 ticket,
                 audience,
@@ -200,6 +205,7 @@ private fun DetailsPane(
     now: Long,
     locale: Locale,
     modifier: Modifier = Modifier,
+    responsibleNames: Map<String, String> = emptyMap(),
 ) {
     Column(
         modifier = modifier,
@@ -214,7 +220,7 @@ private fun DetailsPane(
             }
         }
         // D-016: each section is a card.
-        SectionCard { MediaSection(ticket.attachments) }
+        SectionCard { MediaSection(ticket.attachments, uploaderNames = responsibleNames) }
     }
 }
 
@@ -241,7 +247,13 @@ private fun LocationPane(
             DetailAudience.PUBLIC -> SectionCard { CoarseLocationMap(ticket.location) }
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
                 // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
-                SectionCard { ExactLocationSection(ticket.location, onMapTouchChange = onMapTouchChange) }
+                SectionCard {
+                    ExactLocationSection(
+                        ticket.location,
+                        showCoordinates = audience == DetailAudience.OPERATOR,
+                        onMapTouchChange = onMapTouchChange,
+                    )
+                }
                 SectionCard {
                     StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
                 }
@@ -251,10 +263,14 @@ private fun LocationPane(
     }
 }
 
-/** "Location": the exact map with a marker (participants and operators), never coordinate text. */
+/**
+ * "Location": the exact map with a marker (participants and operators). Coordinate text only when
+ * [showCoordinates], i.e. for operators (brief I.3.E, D-019).
+ */
 @Composable
 private fun ExactLocationSection(
     location: Coordinates,
+    showCoordinates: Boolean,
     modifier: Modifier = Modifier,
     onMapTouchChange: (Boolean) -> Unit = {},
 ) {
@@ -285,6 +301,16 @@ private fun ExactLocationSection(
                     .semantics { contentDescription = mapDescription },
                 onTouchChange = onMapTouchChange,
             )
+            if (showCoordinates) {
+                val lat = formatCoordinate(location.latitude)
+                val lng = formatCoordinate(location.longitude)
+                val coordinatesDescription = stringResource(R.string.cd_ticket_coordinates, lat, lng)
+                Text(
+                    text = stringResource(R.string.ticket_coordinates, lat, lng),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.semantics { contentDescription = coordinatesDescription },
+                )
+            }
         }
     }
 }
@@ -440,6 +466,7 @@ private fun HistoryRow(
 private fun MediaSection(
     attachments: List<Attachment>,
     modifier: Modifier = Modifier,
+    uploaderNames: Map<String, String> = emptyMap(),
 ) {
     var openedId by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -468,6 +495,7 @@ private fun MediaSection(
                         attachment = attachment,
                         position = index + 1,
                         onClick = { openedId = attachment.id },
+                        uploaderName = uploaderNames[attachment.uploadedById],
                     )
                 }
             }
@@ -489,6 +517,7 @@ private fun MediaSection(
  * operator's proof of the finished work is labelled "Resolution proof" for every audience (D-013).
  * A tile with a file is clickable ([onClick] opens it full screen, F-018); TalkBack reads
  * "Open photo" or "Play video" as the action.
+ * "Added by <name>" when [uploaderName] is given (operator view only, D-019); never the id.
  */
 @Composable
 private fun MediaTile(
@@ -496,6 +525,7 @@ private fun MediaTile(
     position: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    uploaderName: String? = null,
 ) {
     val labelRes = when (attachment.type) {
         AttachmentType.IMAGE -> R.string.ticket_media_photo
@@ -550,6 +580,16 @@ private fun MediaTile(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
+            )
+        }
+        if (uploaderName != null) {
+            Text(
+                text = stringResource(R.string.ticket_media_added_by, uploaderName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         if (attachment.file.isBlank()) {
@@ -635,8 +675,12 @@ private fun ShowScreenFullPreview() {
     }
 }
 
-/** D-013: the operator view with names in the history ("By <name>"). */
+/**
+ * D-013: the operator view with names in the history ("By <name>"). D-019: coordinates under the
+ * map and "Added by <name>" on the tiles, including a resolution proof by the operator.
+ */
 @Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Preview(showBackground = true, locale = "pt")
 @Composable
 private fun ShowScreenOperatorPreview() {
@@ -646,8 +690,13 @@ private fun ShowScreenOperatorPreview() {
             StatusHistory(TicketStatus.INFO_REQUESTED, PREVIEW_CREATED + DAY_MILLIS, "Which lamp posts?", "op-1"),
             StatusHistory(TicketStatus.IN_PROGRESS, PREVIEW_CREATED + 2 * DAY_MILLIS, null, "op-1"),
         )
+        val attachments = listOf(
+            Attachment(id = "preview-a1", type = AttachmentType.IMAGE, uploadedById = "c-1"),
+            Attachment(id = "preview-a2", type = AttachmentType.VIDEO, uploadedById = "c-1"),
+            Attachment(id = "preview-op-proof", phase = AttachmentPhase.RESOLUTION, uploadedById = "op-1"),
+        )
         ShowScreen(
-            previewTicket.copy(statusHistory = history),
+            previewTicket.copy(statusHistory = history, attachments = attachments),
             audience = DetailAudience.OPERATOR,
             now = PREVIEW_NOW,
             responsibleNames = mapOf("c-1" to "Citizen One", "op-1" to "Operator One"),
