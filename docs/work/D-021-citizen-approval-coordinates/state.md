@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-21 | review.md: 0 blocking, 0 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | overview (D-012 detail, map privacy note, Shared components "Coordinates", D-013 handover); manual checklist I.3.D; report notes D-021; no decision record; not committed |
 | Pushed | done | 2026-11-21 | cdc216b..b142632 |
-| Merged | done | 2026-11-21 | merge 06f7eda into main (not pushed) |
+| Merged | done | 2026-11-21 | merge 06f7eda into main (pushed) |
 
 ## Log
 - 2026-11-21: merged origin/main into dev/Diogo first (044a959, Diogo chose to merge; conflicts resolved and approved).
@@ -25,3 +25,4 @@ Remote: origin/dev/Diogo
 - 2026-11-21: manual device checks passed (Diogo): pending citizen coordinates (EN/PT, rotation, TalkBack, (0,0)), own location dot decimal in Register/Report/Profile, D-019 line unchanged; quick check of F-018 map zoom and sign-up SMS after the merge.
 - 2026-11-21: pushed dev/Diogo (cdc216b..b142632) after verify (build + lint green); includes the merge of origin/main (044a959).
 - 2026-11-21: merged dev/Diogo into main (06f7eda), no conflicts, build and lint green. main not pushed yet.
+- 2026-11-21: main pushed by Diogo (origin/main = 06f7eda).

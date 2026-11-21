@@ -12,7 +12,7 @@ Remote: origin/dev/Diogo
 | Review fixes | done | 2026-11-21 | B1 (a910361), S1+S2+N1+N3 (42f55e8); N2, N4 skipped; device checks pending |
 | Docs | done | 2026-11-21 | overview.md App shell bullet; report notes D-020 (B1 as privacy point); no decision record; I.3.E not marked fixed (device checks pending) |
 | Pushed | done | 2026-11-21 | 0529480..85a3cc2 |
-| Merged | done | 2026-11-21 | merge 06f7eda into main (not pushed) |
+| Merged | done | 2026-11-21 | merge 06f7eda into main (pushed) |
 
 ## Log
 - 2026-11-21: started after D-019 code; origin/main already merged for D-019 (e6b34f4).
@@ -30,3 +30,4 @@ Remote: origin/dev/Diogo
 - 2026-11-21: pushed dev/Diogo (0529480..85a3cc2) after verify (build + lint green).
 - 2026-11-21: merged origin/main into dev/Diogo (044a959): conflicts in ShowScreen.kt (kept D-019 showCoordinates and F-018 onMapTouchChange; both KDoc notes on MediaTile) and docs/report/notes.md (F-019/F-018/F-020 sections then D-019/D-020; dropped the FCM-token line removed by F-019). Build and lint green. Not pushed.
 - 2026-11-21: merged dev/Diogo into main (06f7eda), no conflicts, build and lint green. main not pushed yet.
+- 2026-11-21: main pushed by Diogo (origin/main = 06f7eda).
