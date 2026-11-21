@@ -11,7 +11,7 @@ Trabalho Prático Android/Kotlin
 **Autores**
 
 - Diogo Abrantes, nº 2018013532
-- Francisco [apelido], nº 2018044613
+- Francisco Matos, nº 2018044613
 
 **Data:** 2026-11-22
 
@@ -238,101 +238,97 @@ Os ficheiros `firestore.rules` e `storage.rules` contêm regras completas, revis
 
 **Bloqueio de 10 km.** No arranque a aplicação pede a localização (precisa e aproximada). Um utilizador não autenticado só acede se estiver a menos de 10 km da Praça da República; caso contrário vê um ecrã de bloqueio com "Tentar novamente" e "Iniciar sessão". Sem permissão, a mensagem inclui "Abrir definições" (único caminho após "não perguntar novamente"). O bloqueio é desenhado por cima da aplicação, que continua composta, para que "Iniciar sessão" funcione.
 
-> **[Captura: Bloqueio de 10 km (fora da área), retrato, PT]**
+![Bloqueio de 10 km (fora da área)](capturas/01-bloqueio-10km.png)
 
 **Painel.** Três indicadores: tempo médio de reparação (dias e horas, com plurais), número total de ocorrências e percentagem de ocorrências ativas. Os valores vêm do documento `stats/summary` e incluem tickets privados, porque o enunciado fala em "nº total de ocorrências". Em paisagem os três cartões ficam lado a lado.
 
-> **[Captura: Painel (anónimo), retrato, EN]**
+![Painel (anónimo), em inglês](capturas/02-painel-anonimo-en.png)
 
-> **[Captura: Painel (anónimo), paisagem, PT]**
+![Painel (anónimo), em paisagem](capturas/03-painel-anonimo-paisagem.png)
 
 **Ocorrências ativas e lista.** O separador "Ocorrências ativas" mostra as cinco mais recentes e "Ver mais" abre a lista completa. Cada cartão mostra categoria, situação, estado e miniatura (enunciado I.1.B). Só aparecem tickets públicos e ativos (Aberto, Pedido de Informações, Em Resolução).
 
-> **[Captura: Ocorrências ativas, retrato, PT]**
+![Ocorrências ativas](capturas/04-ocorrencias-ativas.png)
 
-> **[Captura: Lista completa de ocorrências, paisagem, EN]**
+![Lista completa de ocorrências, em paisagem e inglês](capturas/05-lista-completa.png)
 
 **Detalhe público.** Categoria, situação, estado, miniaturas das fotografias e vídeos, e um mapa com zoom afastado: círculo de 750 m, sem marcador, sem gestos, centrado na localização arredondada. Não mostra autor, descrição, histórico nem coordenadas.
 
-> **[Captura: Detalhe público (anónimo), retrato, PT]**
+![Detalhe público (anónimo)](capturas/06-detalhe-publico.png)
 
 ### 4.2 Munícipe registado
 
 **Registo.** Nome, e-mail, telefone, NIF, palavra-passe com confirmação, georreferenciação (botão "Usar a minha localização"), foto opcional (galeria ou câmara) e o interruptor de deteção de impactos. A validação é feita em tempo real, campo a campo; o NIF é verificado pelo dígito de controlo e pela unicidade. O registo fica pendente até um operador o validar.
 
-> **[Captura: Criar conta (munícipe), retrato, PT]**
+![Criar conta (munícipe)](capturas/07-criar-conta.png)
 
-> **[Captura: Criar conta com erros de validação, paisagem, EN]**
+![Criar conta com erros de validação](capturas/08-criar-conta-erros.png)
 
 **Configuração da conta e sessão.** Após o registo, o ecrã "Configurar conta" pede a verificação do e-mail (ligação enviada) e depois a verificação do telemóvel por SMS. O início de sessão é por e-mail e palavra-passe; "Recuperar palavra-passe" envia o e-mail de reposição. A sessão mantém-se em cache após o primeiro início de sessão.
 
-> **[Captura: Configurar conta (código SMS), retrato, PT]**
+![Configurar conta (código SMS)](capturas/09-codigo-sms.png)
 
-> **[Captura: Iniciar sessão, retrato, EN]**
+![Iniciar sessão](capturas/10-login.png)
 
-> **[Captura: Recuperar palavra-passe, retrato, PT]**
+![Recuperar palavra-passe](capturas/11-recuperar-password.png)
 
 **Registo pendente.** Enquanto aguarda validação, o munícipe vê um ecrã de espera e tem acesso às funcionalidades anónimas. Quando o operador ativa o registo, a aplicação muda em direto para o perfil completo, sem reiniciar, porque a sessão escuta o documento do utilizador.
 
-> **[Captura: Registo pendente, retrato, PT]**
+![Registo pendente](capturas/12-registo-pendente.png)
 
 **Perfil.** O separador Perfil mostra foto, nome, papel, estado do registo, e-mail, telefone, NIF e, para o munícipe, a lista das suas ocorrências com o estado de cada uma. "Alterar detalhes" permite mudar o telefone, a foto e a deteção de impactos; nome, NIF e georreferenciação são apenas de leitura. O e-mail e a palavra-passe têm ecrãs próprios, com reautenticação.
 
-> **[Captura: Perfil com as minhas ocorrências, retrato, PT]**
+![Perfil com as minhas ocorrências](capturas/13-perfil.png)
 
-> **[Captura: Alterar detalhes do perfil, retrato, EN]**
+![Alterar detalhes do perfil](capturas/14-editar-perfil.png)
 
 **Abrir uma ocorrência.** O botão flutuante "Reportar ocorrência" abre o formulário: categoria (só as ativas), situação (Dano, Avaria, Destruição, Roubo), descrição, 1 a 3 fotografias ou vídeos (galeria ou câmara) e alcance público/privado. Todos os campos são obrigatórios e nada vem pré-selecionado. A localização exata é obtida por GPS (exige localização precisa). Ao submeter, a aplicação procura um ticket ativo da mesma categoria e situação a menos de 10 m; se existir, o munícipe passa a acompanhá-lo ("Esta ocorrência já tinha sido reportada perto daqui. Passou a acompanhá-la.").
 
-> **[Captura: Reportar ocorrência (formulário preenchido), retrato, PT]**
+![Reportar ocorrência (formulário preenchido)](capturas/15-reportar.png)
 
-> **[Captura: Reportar ocorrência em dois painéis, paisagem, EN]**
+![Reportar ocorrência em dois painéis (paisagem, inglês)](capturas/16-reportar-paisagem.png)
 
 **Detalhe do participante.** Para o criador e os seguidores: mapa exato, descrição, histórico completo com datas e justificações, anexos com indicação "Envio pendente" ou "Falha no envio", e a conversa com o município. Pode pedir esclarecimentos e, até 5 dias após a resolução, reabrir com justificação. Tocar num anexo abre o visualizador em ecrã inteiro.
 
-> **[Captura: Detalhe do participante com mensagens, retrato, PT]**
+![Detalhe do participante com mensagens](capturas/17-detalhe-participante.png)
 
-> **[Captura: Visualizador de fotografia em ecrã inteiro, paisagem, PT]**
+![Visualizador de fotografia em ecrã inteiro](capturas/18-visualizador.png)
 
 **Deteção de impactos.** Com a opção ativa, um solavanco forte mostra uma *snackbar* "Possível buraco detetado. Reportar?"; tocar abre o formulário com Dano e Pavimento já escolhidos e a localização atual.
 
-> **[Captura: Sugestão de reporte após impacto, retrato, PT]**
+![Sugestão de reporte após impacto](capturas/19-impacto.png)
 
 **Notificações.** O munícipe recebe notificações de mudança de estado, mensagens do município, aproximação da equipa (20 m), aviso de 24 horas antes do encerramento e encerramento. Tocar abre o ticket.
-
-> **[Captura: Notificação de mudança de estado, retrato, PT]**
 
 ### 4.3 Operador municipal
 
 **Registo.** Igual ao do munícipe sem georreferenciação; o e-mail tem de pertencer ao domínio do município (lido de `municipality/main`). A conta fica ativa logo após a verificação do e-mail e do telemóvel.
 
-> **[Captura: Criar conta (operador), retrato, EN]**
+![Criar conta (operador)](capturas/21-criar-conta-operador.png)
 
 **Painel de gestão.** Todas as ocorrências, públicas e privadas (estas com a etiqueta "Privada"), com filtros por estado e por categoria e ordenação por data. O filtro usa o estado efetivo, pelo que um ticket resolvido há mais de 5 dias aparece em Encerrado.
 
-> **[Captura: Painel de gestão do operador, retrato, PT]**
+![Painel de gestão do operador](capturas/22-painel-operador.png)
 
-> **[Captura: Painel de gestão do operador, paisagem, EN]**
+![Painel de gestão do operador, em paisagem e inglês](capturas/23-painel-operador-paisagem.png)
 
 **Detalhe do operador.** Mapa exato e coordenadas em texto ("Coordenadas: 40.21000, -8.41900"), contactos do autor e dos seguidores, histórico completo com o nome de quem fez cada transição, todos os anexos com "Adicionado por <nome>" e a etiqueta "Prova da resolução", e a conversa. As ações disponíveis dependem do estado: "Pedir informações" (mensagem obrigatória), "Iniciar trabalhos"/"Retomar trabalhos" (com confirmação e nota opcional), "Resolver" (1 a 3 fotografias ou vídeos de prova e nota opcional). Um ticket encerrado não tem ações nem campo de mensagem.
 
-> **[Captura: Detalhe do operador (contactos e coordenadas), retrato, PT]**
+![Detalhe do operador (contactos e coordenadas)](capturas/24-detalhe-operador.png)
 
-> **[Captura: Resolver com prova, retrato, PT]**
+![Resolver com prova](capturas/25-resolver.png)
 
 **Validação de registos.** Lista dos munícipes pendentes (mais antigos primeiro) e detalhe com nome, NIF, mapa e coordenadas da georreferenciação, e-mail, telefone e foto. "Ativar" pede confirmação.
 
-> **[Captura: Aprovações (lista de pendentes), retrato, PT]**
+![Aprovações (lista de pendentes)](capturas/26-aprovacoes.png)
 
-> **[Captura: Detalhe de munícipe pendente, paisagem, PT]**
+![Detalhe de munícipe pendente](capturas/27-detalhe-pendente.png)
 
 **Categorias.** Criar, renomear, ativar e desativar categorias (nome obrigatório, até 40 caracteres, único sem distinguir maiúsculas). Uma categoria desativada desaparece em direto do formulário dos munícipes.
 
-> **[Captura: Categorias com diálogo de edição, retrato, EN]**
+![Categorias com diálogo de edição](capturas/28-categorias.png)
 
 **Alerta de proximidade.** Com a aplicação aberta e localização precisa, quando o operador entra no raio de 20 m de um ticket Em Resolução, os autores desse ticket recebem a notificação "Um operador municipal está perto desta ocorrência." (canal "Município por perto").
-
-> **[Captura: Notificação de proximidade no telemóvel do munícipe, retrato, PT]**
 
 <div class="page-break"></div>
 
