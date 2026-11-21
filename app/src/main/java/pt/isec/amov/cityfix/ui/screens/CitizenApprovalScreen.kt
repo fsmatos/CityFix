@@ -46,6 +46,7 @@ import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.TicketMap
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalUiState
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
 
@@ -230,7 +231,10 @@ private fun LabelledValue(label: String, value: String) {
     }
 }
 
-/** The registered location on the exact map (F-012), or "Location not available" for (0, 0). */
+/**
+ * The registered location on the exact map (F-012) with its coordinates as text (D-021), or
+ * "Location not available" for (0, 0).
+ */
 @Composable
 private fun CitizenLocation(
     location: Coordinates,
@@ -263,6 +267,14 @@ private fun CitizenLocation(
                     .clip(MaterialTheme.shapes.medium)
                     .semantics { contentDescription = mapDescription },
                 onTouchChange = onMapTouchChange,
+            )
+            val lat = formatCoordinate(location.latitude)
+            val lng = formatCoordinate(location.longitude)
+            val coordinatesDescription = stringResource(R.string.cd_ticket_coordinates, lat, lng)
+            Text(
+                text = stringResource(R.string.ticket_coordinates, lat, lng),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics { contentDescription = coordinatesDescription },
             )
         }
     }

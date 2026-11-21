@@ -41,6 +41,7 @@ import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.FileUtils
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.viewmodel.ProfileUiState
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 import java.io.File
@@ -206,8 +207,8 @@ fun ProfileContent(
             ReadOnlyField(
                 value = stringResource(
                     R.string.report_location_value,
-                    profile.georeferencing.latitude,
-                    profile.georeferencing.longitude,
+                    formatCoordinate(profile.georeferencing.latitude),
+                    formatCoordinate(profile.georeferencing.longitude),
                 ),
                 labelRes = R.string.register_location_label,
             )

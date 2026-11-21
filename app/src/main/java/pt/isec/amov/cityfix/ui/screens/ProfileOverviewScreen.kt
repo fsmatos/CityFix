@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -65,6 +67,8 @@ fun ProfileOverviewScreen(
     onEditDetails: () -> Unit,
     onTicketClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    // D-020: hoisted so MainActivity can scroll it to the top when the tab is tapped again.
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ProfileOverviewContent(
@@ -77,6 +81,7 @@ fun ProfileOverviewScreen(
         onEditDetails = onEditDetails,
         onTicketClick = onTicketClick,
         modifier = modifier,
+        listState = listState,
     )
 }
 
@@ -96,6 +101,7 @@ fun ProfileOverviewContent(
     onEditDetails: () -> Unit,
     onTicketClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     if (profile == null) {
         if (unavailable) {
@@ -112,6 +118,7 @@ fun ProfileOverviewContent(
         .fillMaxWidth()
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = listState,
         // The last item scrolls above the floating island (D-016).
         contentPadding = PaddingValues(
             start = 16.dp,

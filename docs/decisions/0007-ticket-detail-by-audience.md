@@ -4,6 +4,8 @@ Status: accepted (F-005, Gate 1 on 2026-11-01; Q2 revised at review on 2026-11-0
 
 Amended by F-014 (2026-11-15, see [decision 0018](0018-citizen-tickets-messages-reopen.md)): `detailAudience(session.ticketsUser, ticket)` picks the audience; REGISTERED gets the exact map, every history entry with justifications and "Closed automatically", and the thread through a content slot; OPERATOR is prepared for D-013; `ShowScreen` takes `now`. S4 and the list/detail consistency were done by D-007 (see the amended 0006).
 
+Amended by D-019 (2026-11-21, Gate 1 the same day; no new decision file): OPERATOR additionally sees the ticket's latitude and longitude as text under the exact map (`Locale.ROOT`, 5 decimals, dot decimal in both languages; TalkBack "Latitude x, longitude y") and "Added by <name>" on each photo/video tile, resolved from `Attachment.uploadedById` with the same live profile lookup as the history names (D-013). This closes brief I.3.E's "com coordenadas ... fotos e vídeos" and who added them, and replaces "No coordinates as text for anyone in phase 1" below for the operator only. PUBLIC and REGISTERED are unchanged (no coordinate text, no uploader names). Rejected: coordinates for the registered citizen (I.3.E asks only for the operator); locale decimals (PT "40,21000, -8,41900" is ambiguous); a second `uploaderNames` parameter on `ShowScreen` (same data as `responsibleNames`).
+
 ## Context
 The brief defines three different ticket details, not one detail with optional extras:
 - **I.1.C, anonymous citizen:** "Detalhe de uma ocorrência pública: ocultando dados pessoais do autor e georreferenciação, apenas com imagem(ns) e/ou vídeo(s) e mapa com zoom afastado."
