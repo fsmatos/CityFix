@@ -30,9 +30,12 @@ import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.model.isLocked
+import pt.isec.amov.cityfix.model.isAnswered
+import pt.isec.amov.cityfix.model.pendingInfoRequest
 import pt.isec.amov.cityfix.ui.components.MessageThread
 import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.SectionCard
+import pt.isec.amov.cityfix.ui.components.InfoRequestCard
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.DetailDialog
 import pt.isec.amov.cityfix.viewmodel.TicketDetailUiState
@@ -112,6 +115,11 @@ fun TicketDetailContent(
         now = now,
         modifier = modifier.imePadding(),
     ) {
+        // D-018: the open information request, for either side's question.
+        val infoRequest = ticket?.pendingInfoRequest()
+        if (infoRequest != null) {
+            InfoRequestCard(request = infoRequest, answered = infoRequest.isAnswered(state.messages))
+        }
         if (canReopen || canAskClarification) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (canReopen) {

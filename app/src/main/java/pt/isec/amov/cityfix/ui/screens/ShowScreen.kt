@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -56,9 +57,9 @@ import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
+import pt.isec.amov.cityfix.ui.components.AttachmentViewer
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.EmptyState
-import pt.isec.amov.cityfix.ui.components.MediaViewer
 import pt.isec.amov.cityfix.ui.components.SectionCard
 import pt.isec.amov.cityfix.ui.components.StatusBadge
 import pt.isec.amov.cityfix.ui.components.TicketMap
@@ -432,19 +433,15 @@ private fun HistoryRow(
 
 /**
  * Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". Tapping a tile
- * with a file opens it full screen (F-018, [MediaViewer]); the open attachment's id is saveable, so
- * the viewer stays open after a rotation.
+ * with a file opens it full screen ([AttachmentViewer], D-017; it replaced F-018's MediaViewer at the
+ * merge); the open attachment's id is saveable, so the viewer stays open after a rotation.
  */
 @Composable
 private fun MediaSection(
     attachments: List<Attachment>,
     modifier: Modifier = Modifier,
 ) {
-    var openAttachmentId by rememberSaveable { mutableStateOf<String?>(null) }
-    val openAttachment = attachments.firstOrNull { it.id == openAttachmentId }
-    if (openAttachment != null) {
-        MediaViewer(attachment = openAttachment, onDismiss = { openAttachmentId = null })
-    }
+    var openedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier,
@@ -466,11 +463,22 @@ private fun MediaSection(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                attachments.forEach { attachment ->
-                    MediaTile(attachment, onClick = { openAttachmentId = attachment.id })
+                attachments.forEachIndexed { index, attachment ->
+                    MediaTile(
+                        attachment = attachment,
+                        position = index + 1,
+                        onClick = { openedId = attachment.id },
+                    )
                 }
             }
         }
+    }
+
+    // D-017: the opened attachment by id, so the viewer survives rotation; it closes by itself
+    // when that attachment leaves the live ticket.
+    val opened = attachments.firstOrNull { it.id == openedId && it.file.isNotBlank() }
+    if (opened != null) {
+        AttachmentViewer(attachment = opened, onDismiss = { openedId = null })
     }
 }
 
@@ -485,6 +493,7 @@ private fun MediaSection(
 @Composable
 private fun MediaTile(
     attachment: Attachment,
+    position: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -497,21 +506,23 @@ private fun MediaTile(
         UploadState.FAILED -> R.string.ticket_media_upload_failed
         UploadState.UPLOADED -> null
     }
+    // D-017: a tile with a file opens the viewer; sample tiles (no file) stay plain.
+    val canOpen = attachment.file.isNotBlank()
     val openLabel = stringResource(
-        when (attachment.type) {
-            AttachmentType.IMAGE -> R.string.media_open_photo
-            AttachmentType.VIDEO -> R.string.media_play_video
-        },
+        if (attachment.type == AttachmentType.VIDEO) R.string.cd_open_video else R.string.cd_open_photo,
+        position,
     )
+    val clickModifier = if (canOpen) {
+        Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
+    } else {
+        Modifier
+    }
 
     Column(
         modifier = modifier
             .width(120.dp)
-            .clickable(
-                enabled = attachment.file.isNotBlank(),
-                onClickLabel = openLabel,
-                onClick = onClick,
-            )
+            .clip(MaterialTheme.shapes.small)
+            .then(clickModifier)
             .semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
