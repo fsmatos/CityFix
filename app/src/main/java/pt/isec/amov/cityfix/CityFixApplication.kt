@@ -8,8 +8,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.firestoreSettings
 import com.google.firebase.firestore.persistentCacheSettings
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.messaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import pt.isec.amov.cityfix.data.AttachmentStorage
@@ -22,7 +20,6 @@ import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
-import pt.isec.amov.cityfix.data.PushTokens
 import pt.isec.amov.cityfix.data.TicketNotifier
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
@@ -71,11 +68,6 @@ class CityFixApplication : Application() {
     }
 
     val storage: FirebaseStorage by lazy { Firebase.storage }
-
-    val messaging: FirebaseMessaging by lazy { Firebase.messaging }
-
-    /** This installation's FCM token in `users/{uid}.fcmTokens` (F-016). */
-    val pushTokens: PushTokens by lazy { PushTokens(messaging, firestore) }
 
     /** Ticket changes -> local notifications, for the in-app watch and the worker (F-016). */
     val ticketNotifier: TicketNotifier by lazy { TicketNotifier(this) }

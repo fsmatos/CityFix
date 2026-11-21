@@ -26,10 +26,14 @@ import kotlin.coroutines.resume
  * whole process: the AuthStateListener registered in `init` is never removed, and there is no
  * screen or activity it could leak.
  *
- * [resolveSecondFactor] finishes both a sign-in and a re-authentication (D-011): the resolver
- * comes from [signIn] or [reauthenticate].
+ * Phone at sign-up (F-018, decision 0026): [sendPhoneCode] and [linkPhone] verify the phone once
+ * and link it to the account (a phone provider), not as an MFA factor, so later logins need only
+ * e-mail and password. Accounts created before F-018 still have the phone enrolled as a factor:
+ * Firebase then throws the multi-factor exception at sign-in, and [resolveSecondFactor] finishes
+ * both that sign-in and a re-authentication (D-011): the resolver comes from [signIn] or
+ * [reauthenticate].
  *
- * The listener fires on sign-in and sign-out only. `reload()` and enrolment change the same
+ * The listener fires on sign-in and sign-out only. `reload()` and linking change the same
  * FirebaseUser without firing it, so those calls update [account] themselves.
  *
  * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException: `await()`
@@ -52,7 +56,7 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             auth.signInWithEmailAndPassword(email, password).await()
             SignInResult.Success
         } catch (e: FirebaseAuthMultiFactorException) {
-            // Right password, enrolled account: Firebase asks for the second factor.
+            // Right password, account enrolled before F-018: Firebase asks for the second factor.
             challengeOf(e)
         } catch (e: CancellationException) {
             throw e
@@ -114,12 +118,21 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     override suspend fun sendSecondFactorCode(
         activity: Activity,
         challenge: SecondFactorChallenge,
-    ): CodeSendResult = requestCode(
-        PhoneAuthOptions.newBuilder(auth)
-            .setMultiFactorHint(challenge.hint)
-            .setMultiFactorSession(challenge.resolver.session)
-            .setActivity(activity),
-    )
+    ): CodeSendResult =
+        when (
+            val outcome = requestCode(
+                PhoneAuthOptions.newBuilder(auth)
+                    .setMultiFactorHint(challenge.hint)
+                    .setMultiFactorSession(challenge.resolver.session)
+                    .setActivity(activity),
+                mfa = true,
+            )
+        ) {
+            is SmsOutcome.Done -> outcome.result
+            // Not reached: with requireSmsValidation(true) Firebase never auto-verifies. A
+            // Failure (not a crash) keeps the screen usable: the user can tap Resend.
+            is SmsOutcome.Verified -> CodeSendResult.Failure(AuthError.CODE_NOT_SENT)
+        }
 
     override suspend fun resolveSecondFactor(
         challenge: SecondFactorChallenge,
@@ -175,38 +188,44 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         }
     }
 
-    override suspend fun sendEnrolmentCode(activity: Activity, phoneE164: String): CodeSendResult {
-        val user = auth.currentUser ?: return CodeSendResult.Failure(AuthError.UNKNOWN)
-        val session = try {
-            user.multiFactor.session.await()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            return CodeSendResult.Failure(e.toAuthError())
-        }
-        return requestCode(
+    override suspend fun sendPhoneCode(activity: Activity, phoneE164: String): CodeSendResult {
+        if (auth.currentUser == null) return CodeSendResult.Failure(AuthError.UNKNOWN)
+        // A plain phone verification (no multi-factor session): the code is only used by linkPhone.
+        val outcome = requestCode(
             PhoneAuthOptions.newBuilder(auth)
                 .setPhoneNumber(phoneE164)
-                .setMultiFactorSession(session)
                 .setActivity(activity),
+            mfa = false,
         )
+        return when (outcome) {
+            is SmsOutcome.Done -> outcome.result
+            // Firebase verified the phone by itself (instant verification or auto-retrieval
+            // before onCodeSent): link it now instead of waiting for a typed code (F-020).
+            is SmsOutcome.Verified -> when (val error = linkCredential(outcome.credential)) {
+                null -> CodeSendResult.Linked
+                else -> CodeSendResult.Failure(error)
+            }
+        }
     }
 
-    override suspend fun enrolSecondFactor(verificationId: String, code: String): AuthError? {
+    override suspend fun linkPhone(verificationId: String, code: String): AuthError? =
+        linkCredential(PhoneAuthProvider.getCredential(verificationId, code))
+
+    /** Links the phone [credential] to the signed-in account and re-emits [account]. Null on success. */
+    private suspend fun linkCredential(credential: PhoneAuthCredential): AuthError? {
         val user = auth.currentUser ?: return AuthError.UNKNOWN
         return try {
-            val credential = PhoneAuthProvider.getCredential(verificationId, code)
-            user.multiFactor.enroll(PhoneMultiFactorGenerator.getAssertion(credential), FACTOR_NAME).await()
-            // The AuthStateListener does not fire for an enrolment: reload and re-emit by hand.
-            // The factor is already enrolled on the server, so a failed reload (a network blip)
-            // must not report the enrolment as failed: the reload is best effort.
+            // Adds the phone to the same account; the e-mail/password login is unchanged.
+            user.linkWithCredential(credential).await()
+            // The AuthStateListener does not fire for a link: reload and re-emit by hand. The
+            // phone is already linked on the server, so a failed reload (a network blip) must not
+            // report the link as failed: the reload is best effort.
             try {
                 user.reload().await()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Nothing to report. enroll() is expected to update the local user's factors
-                // too; if it does not, the factor shows after the next login (device check).
+                // Nothing to report: linkWithCredential already updated the local user.
             }
             _account.value = auth.currentUser?.toAccount()
             null
@@ -221,14 +240,27 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         auth.signOut()
     }
 
+    /** What [requestCode] got back: a send result, or a phone Firebase verified by itself. */
+    private sealed interface SmsOutcome {
+        data class Done(val result: CodeSendResult) : SmsOutcome
+        data class Verified(val credential: PhoneAuthCredential) : SmsOutcome
+    }
+
     /**
      * Sends an SMS code with [builder] (phone or hint, session and activity already set) and
-     * waits for Firebase's callbacks. With requireSmsValidation(true) the code is always typed:
-     * an auto-retrieval (onVerificationCompleted) is ignored. The callbacks are bound to the
-     * activity, so a rotation during the send can lose onCodeSent: after [SEND_TIMEOUT_MS] the
-     * result is CODE_NOT_SENT and the screen offers Resend.
+     * waits for Firebase's callbacks.
+     *
+     * [mfa] is true for the second-factor code (sign-in and re-authentication): it adds
+     * requireSmsValidation(true), so the code is always typed and onVerificationCompleted never
+     * comes. Firebase accepts that option only with a multi-factor session, so the sign-up
+     * phone ([mfa] false) must not set it (F-020); there an onVerificationCompleted before
+     * onCodeSent returns [SmsOutcome.Verified]. One that comes after onCodeSent is ignored:
+     * the user types the code as usual.
+     *
+     * The callbacks are bound to the activity, so a rotation during the send can lose
+     * onCodeSent: after [SEND_TIMEOUT_MS] the result is CODE_NOT_SENT and the screen offers Resend.
      */
-    private suspend fun requestCode(builder: PhoneAuthOptions.Builder): CodeSendResult =
+    private suspend fun requestCode(builder: PhoneAuthOptions.Builder, mfa: Boolean): SmsOutcome =
         withTimeoutOrNull(SEND_TIMEOUT_MS) {
             suspendCancellableCoroutine { continuation ->
                 val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
@@ -236,10 +268,14 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
                         verificationId: String,
                         token: PhoneAuthProvider.ForceResendingToken,
                     ) {
-                        if (continuation.isActive) continuation.resume(CodeSendResult.Sent(verificationId))
+                        if (continuation.isActive) {
+                            continuation.resume(SmsOutcome.Done(CodeSendResult.Sent(verificationId)))
+                        }
                     }
 
-                    override fun onVerificationCompleted(credential: PhoneAuthCredential) = Unit
+                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                        if (continuation.isActive) continuation.resume(SmsOutcome.Verified(credential))
+                    }
 
                     override fun onVerificationFailed(e: FirebaseException) {
                         val error = when (val mapped = e.toAuthError()) {
@@ -248,30 +284,29 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
                             AuthError.INVALID_PHONE_NUMBER -> mapped
                             else -> AuthError.CODE_NOT_SENT
                         }
-                        if (continuation.isActive) continuation.resume(CodeSendResult.Failure(error))
+                        if (continuation.isActive) {
+                            continuation.resume(SmsOutcome.Done(CodeSendResult.Failure(error)))
+                        }
                     }
                 }
                 PhoneAuthProvider.verifyPhoneNumber(
                     builder
                         .setTimeout(SEND_TIMEOUT_MS / 1_000, TimeUnit.SECONDS)
-                        .requireSmsValidation(true)
                         .setCallbacks(callbacks)
+                        .apply { if (mfa) requireSmsValidation(true) }
                         .build(),
                 )
             }
-        } ?: CodeSendResult.Failure(AuthError.CODE_NOT_SENT)
+        } ?: SmsOutcome.Done(CodeSendResult.Failure(AuthError.CODE_NOT_SENT))
 
     private fun FirebaseUser.toAccount() = AuthAccount(
         uid = uid,
         email = email.orEmpty(),
         isEmailVerified = isEmailVerified,
-        hasSecondFactor = multiFactor.enrolledFactors.isNotEmpty(),
+        hasVerifiedPhone = !phoneNumber.isNullOrBlank() || multiFactor.enrolledFactors.isNotEmpty(),
     )
 
     private companion object {
         const val SEND_TIMEOUT_MS = 60_000L
-
-        /** The factor's name in the Firebase console; never shown in the app. */
-        const val FACTOR_NAME = "Phone"
     }
 }

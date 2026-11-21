@@ -41,7 +41,7 @@ fun nationalPhoneDigits(phone: String): String {
     }
 }
 
-/** A Portuguese mobile number: 9 digits starting with 9 (the SMS second factor needs a mobile). */
+/** A Portuguese mobile number: 9 digits starting with 9 (the sign-up SMS needs a mobile). */
 fun isPortugueseMobile(digits: String): Boolean = PORTUGUESE_MOBILE.matches(digits)
 
 /**

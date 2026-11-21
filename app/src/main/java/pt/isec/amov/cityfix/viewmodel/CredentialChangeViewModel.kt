@@ -201,6 +201,8 @@ class CredentialChangeViewModel(
                     verificationId = result.verificationId
                     _uiState.update { it.copy(isBusy = false, notice = R.string.mfa_code_sent) }
                 }
+                // Sign-up only: never returned for a second-factor code.
+                CodeSendResult.Linked -> _uiState.update { it.copy(isBusy = false) }
                 is CodeSendResult.Failure -> _uiState.update {
                     it.copy(isBusy = false, error = result.error.messageRes())
                 }

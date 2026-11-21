@@ -38,10 +38,10 @@ class SessionViewModel(
         .flatMapLatest { account ->
             when {
                 account == null -> flowOf(Session.Anonymous)
-                // MFA is mandatory for both roles (Gate Q1), and Firebase needs a verified
-                // e-mail before a factor can be enrolled: both steps come before the profile.
+                // Both roles verify the e-mail and then the phone (by SMS, once, F-018) before
+                // the profile is read.
                 !account.isEmailVerified -> flowOf(Session.NeedsEmailVerification(account.email))
-                !account.hasSecondFactor -> flowOf(Session.NeedsSecondFactor(account.email))
+                !account.hasVerifiedPhone -> flowOf(Session.NeedsPhoneVerification(account.email))
                 // E-mail sync (D-011): after a verified change through the link, the Auth e-mail
                 // differs from users/{uid}.email, so it is copied. It is checked once per account
                 // value (a sign-in or a reload, both with a fresh token), on the first profile

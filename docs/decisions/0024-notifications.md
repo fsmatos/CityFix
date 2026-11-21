@@ -2,6 +2,8 @@
 
 Status: accepted (F-016, Gate 1 on 2026-11-20: Q1, Q3-Q10 as planned; Q2 changed: the worker also covers operators). Review fixes B1, S1-S3 applied. Device checks run on 2026-11-20 (`docs/work/F-016-notifications/state.md`); the 24 h warning and the FCM console test are still to run. Amends [0010](0010-firestore-schema.md) (two ticket fields) and confirms the F-016 contract of [0022](0022-operator-proximity-alert.md) (Q8 change). Code detail: `docs/architecture/overview.md`, "Notifications (F-016)".
 
+FCM part superseded by [0027](0027-local-notifications-only.md) (F-019, 2026-11-20): FCM was removed; notifications are local only and the FCM console test no longer applies.
+
 ## Context
 - Brief III: notify status changes, info requests and replies, the 20 m proximity alert and 24 h before the close; brief V: notification permission; II.2-II.4 say who.
 - [Decision 0012](0012-firebase-plan-notifications-close-maps.md) point 2: no server, no Cloud Functions.

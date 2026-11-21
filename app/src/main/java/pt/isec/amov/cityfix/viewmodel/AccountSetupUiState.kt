@@ -12,8 +12,8 @@ const val PHONE_DIGITS = 9
 const val SMS_CODE_DIGITS = 6
 
 /**
- * Account setup on the first login (D-009 Q1, Q8): verify the e-mail, then enrol a phone as the
- * second factor. Errors and notices are string resource ids.
+ * Account setup on the first login (D-009 Q1, Q8): verify the e-mail, then verify the phone by SMS
+ * once (F-018: linked to the account, not asked again at login). Errors and notices are string resource ids.
  */
 data class AccountSetupUiState(
     val step: SetupStep = SetupStep.VERIFY_EMAIL,

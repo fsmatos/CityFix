@@ -1,6 +1,6 @@
 # CityFix
 
-CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: citizens report, geolocate and follow urban issues; municipal operators manage the ticket lifecycle. It has three roles (anonymous citizen within 10 km of Pr. Republica, registered citizen, municipal operator) and runs on Firebase (Auth with MFA, Firestore offline, Storage, FCM) with WorkManager uploads, a 20 m geofence and vertical-impact detection. It is a university assignment (ISEC, Arquiteturas Moveis 2026/27); the requirements are in `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
+CityFix is an Android app (Kotlin, Jetpack Compose) for civic participation: citizens report, geolocate and follow urban issues; municipal operators manage the ticket lifecycle. It has three roles (anonymous citizen within 10 km of Pr. Republica, registered citizen, municipal operator) and runs on Firebase (Auth with MFA, Firestore offline, Storage; local notifications only, no FCM since F-019) with WorkManager uploads, a 20 m geofence and vertical-impact detection. It is a university assignment (ISEC, Arquiteturas Moveis 2026/27); the requirements are in `docs/brief/AMov.ProjetoKotlin_PT.pdf`.
 
 **Deadline: 2026-11-22 23:59** (-5% per hour late). Defence 23-27 Nov; both authors must be able to explain every file.
 
