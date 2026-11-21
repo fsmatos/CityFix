@@ -20,3 +20,4 @@ Remote: origin/dev/Diogo
 - 2026-11-21: docs: `AttachmentViewer` added to the components list in `docs/architecture/overview.md`. Report note in 03-docs-plan.
 - 2026-11-21: pushed dev/Diogo (7527f97..fc70993) after verify (build + lint green).
 - 2026-11-21: merged origin/main into dev/Diogo (4313dd9, no file changes), then dev/Diogo into main (2accd94), no conflicts, build and lint green. main not pushed yet.
+- 2026-11-21: manual device checks passed (Diogo, emulator + phone): all acceptance checks of this task.
