@@ -36,6 +36,10 @@
     <string name="ticket_history_system">Fechada automaticamente</string>
     <string name="ticket_history_by">Por %1$s</string>
     <string name="ticket_media_proof">Prova da resolução</string>
+    <string name="ticket_media_open_failed">Não foi possível abrir o ficheiro. Se acabou de ser adicionado, espera pelo envio e tenta de novo.</string>
+    <string name="cd_open_photo">Abrir fotografia %1$d</string>
+    <string name="cd_open_video">Reproduzir vídeo %1$d</string>
+    <string name="cd_close_viewer">Fechar</string>
 
     <!-- Message thread -->
     <string name="messages_title">Mensagens</string>
@@ -376,6 +380,14 @@
     <!-- D-013 ações do operador -->
     <string name="operator_action_request_info">Pedir informações</string>
     <string name="operator_action_start_work">Iniciar trabalhos</string>
+    <string name="operator_action_resume_work">Retomar trabalhos</string>
+    <string name="operator_resume_work_title">Retomar trabalhos?</string>
+    <string name="operator_resume_work_text">A ocorrência volta a Em resolução e os munícipes veem a alteração.</string>
+    <string name="info_request_title">Pedido de informações</string>
+    <string name="info_request_by_municipality">Pedido pelo município</string>
+    <string name="info_request_by_citizen">Pedido pelo munícipe</string>
+    <string name="info_request_waiting">À espera de resposta</string>
+    <string name="info_request_answered">Respondido</string>
     <string name="operator_request_info_title">Pedir informações</string>
     <string name="operator_request_info_text">O munícipe vê esta mensagem e a ocorrência fica a aguardar a resposta.</string>
     <string name="operator_request_info_label">O que precisa de saber?</string>

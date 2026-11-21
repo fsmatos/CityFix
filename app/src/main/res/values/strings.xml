@@ -38,6 +38,10 @@
     <string name="ticket_history_system">Closed automatically</string>
     <string name="ticket_history_by">By %1$s</string>
     <string name="ticket_media_proof">Resolution proof</string>
+    <string name="ticket_media_open_failed">Could not open this file. If it was just added, wait for the upload and try again.</string>
+    <string name="cd_open_photo">Open photo %1$d</string>
+    <string name="cd_open_video">Play video %1$d</string>
+    <string name="cd_close_viewer">Close</string>
 
     <!-- Message thread -->
     <string name="messages_title">Messages</string>
@@ -376,6 +380,14 @@
     <!-- D-013 operator actions -->
     <string name="operator_action_request_info">Request information</string>
     <string name="operator_action_start_work">Start work</string>
+    <string name="operator_action_resume_work">Resume work</string>
+    <string name="operator_resume_work_title">Resume work?</string>
+    <string name="operator_resume_work_text">The ticket goes back to In progress and the citizens see the change.</string>
+    <string name="info_request_title">Information request</string>
+    <string name="info_request_by_municipality">Asked by the municipality</string>
+    <string name="info_request_by_citizen">Asked by the citizen</string>
+    <string name="info_request_waiting">Waiting for a reply</string>
+    <string name="info_request_answered">Answered</string>
     <string name="operator_request_info_title">Request information</string>
     <string name="operator_request_info_text">The citizen sees this message and the ticket waits for their answer.</string>
     <string name="operator_request_info_label">What do you need?</string>

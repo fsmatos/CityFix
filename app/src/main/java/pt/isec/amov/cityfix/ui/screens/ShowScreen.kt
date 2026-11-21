@@ -2,6 +2,7 @@ package pt.isec.amov.cityfix.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,12 +21,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +56,7 @@ import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.model.effectiveStatus
 import pt.isec.amov.cityfix.model.isParticipant
 import pt.isec.amov.cityfix.ui.components.AttachmentImage
+import pt.isec.amov.cityfix.ui.components.AttachmentViewer
 import pt.isec.amov.cityfix.ui.components.CoarseLocationMap
 import pt.isec.amov.cityfix.ui.components.EmptyState
 import pt.isec.amov.cityfix.ui.components.SectionCard
@@ -420,6 +427,8 @@ private fun MediaSection(
     attachments: List<Attachment>,
     modifier: Modifier = Modifier,
 ) {
+    var openedId by rememberSaveable { mutableStateOf<String?>(null) }
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -440,9 +449,22 @@ private fun MediaSection(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                attachments.forEach { attachment -> MediaTile(attachment) }
+                attachments.forEachIndexed { index, attachment ->
+                    MediaTile(
+                        attachment = attachment,
+                        position = index + 1,
+                        onClick = { openedId = attachment.id },
+                    )
+                }
             }
         }
+    }
+
+    // D-017: the opened attachment by id, so the viewer survives rotation; it closes by itself
+    // when that attachment leaves the live ticket.
+    val opened = attachments.firstOrNull { it.id == openedId && it.file.isNotBlank() }
+    if (opened != null) {
+        AttachmentViewer(attachment = opened, onDismiss = { openedId = null })
     }
 }
 
@@ -455,6 +477,8 @@ private fun MediaSection(
 @Composable
 private fun MediaTile(
     attachment: Attachment,
+    position: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val labelRes = when (attachment.type) {
@@ -467,9 +491,23 @@ private fun MediaTile(
         UploadState.UPLOADED -> null
     }
 
+    // D-017: a tile with a file opens the viewer; sample tiles (no file) stay plain.
+    val canOpen = attachment.file.isNotBlank()
+    val openLabel = stringResource(
+        if (attachment.type == AttachmentType.VIDEO) R.string.cd_open_video else R.string.cd_open_photo,
+        position,
+    )
+    val clickModifier = if (canOpen) {
+        Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Column(
         modifier = modifier
             .width(120.dp)
+            .clip(MaterialTheme.shapes.small)
+            .then(clickModifier)
             .semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
