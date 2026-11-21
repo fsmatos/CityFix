@@ -59,7 +59,10 @@ fun AttachmentViewer(
 ) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        // decorFitsSystemWindows = false: the black viewer draws under the system bars, edge to
+        // edge in both orientations (F-021); the close button keeps clear of them with
+        // safeDrawingPadding.
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Box(
             modifier = Modifier

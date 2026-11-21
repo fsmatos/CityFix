@@ -127,6 +127,11 @@ fun ShowScreen(
     val configuration = LocalConfiguration.current
     val locale = configuration.locales[0]
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // F-021: the open attachment lives here, not in MediaSection. Portrait and landscape put the
+    // tiles at different places in the layout, and saveable state is tied to that place, so a
+    // rotation used to close the viewer. MediaSection is now stateless: it only reports the tap
+    // (state hoisting).
+    var openedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     if (ticket == null) {
         EmptyState(messageRes = R.string.ticket_not_found, modifier = modifier)
@@ -153,6 +158,7 @@ fun ShowScreen(
                 audience = audience,
                 now = now,
                 locale = locale,
+                onOpenAttachment = { openedId = it },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -184,7 +190,14 @@ fun ShowScreen(
                 .padding(bottom = LocalBottomBarPadding.current),
             verticalArrangement = Arrangement.spacedBy(Dimens.md),
         ) {
-            DetailsPane(ticket, audience, now, locale, responsibleNames = responsibleNames)
+            DetailsPane(
+                ticket,
+                audience,
+                now,
+                locale,
+                onOpenAttachment = { openedId = it },
+                responsibleNames = responsibleNames,
+            )
             LocationPane(
                 ticket,
                 audience,
@@ -195,6 +208,13 @@ fun ShowScreen(
             )
         }
     }
+
+    // D-017: the opened attachment by id; it closes by itself when that attachment leaves the
+    // live ticket.
+    val opened = ticket.attachments.firstOrNull { it.id == openedId && it.file.isNotBlank() }
+    if (opened != null) {
+        AttachmentViewer(attachment = opened, onDismiss = { openedId = null })
+    }
 }
 
 /** Header, then "Reported on" and description (not for PUBLIC), then the photo/video tiles. */
@@ -204,6 +224,7 @@ private fun DetailsPane(
     audience: DetailAudience,
     now: Long,
     locale: Locale,
+    onOpenAttachment: (String) -> Unit,
     modifier: Modifier = Modifier,
     responsibleNames: Map<String, String> = emptyMap(),
 ) {
@@ -220,7 +241,7 @@ private fun DetailsPane(
             }
         }
         // D-016: each section is a card.
-        SectionCard { MediaSection(ticket.attachments, uploaderNames = responsibleNames) }
+        SectionCard { MediaSection(ticket.attachments, onOpenAttachment, uploaderNames = responsibleNames) }
     }
 }
 
@@ -459,17 +480,16 @@ private fun HistoryRow(
 
 /**
  * Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". Tapping a tile
- * with a file opens it full screen ([AttachmentViewer], D-017; it replaced F-018's MediaViewer at the
- * merge); the open attachment's id is saveable, so the viewer stays open after a rotation.
+ * with a file calls [onOpen] with its id; ShowScreen then opens it full screen ([AttachmentViewer],
+ * D-017; it replaced F-018's MediaViewer at the merge) and keeps it open after a rotation (F-021).
  */
 @Composable
 private fun MediaSection(
     attachments: List<Attachment>,
+    onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
     uploaderNames: Map<String, String> = emptyMap(),
 ) {
-    var openedId by rememberSaveable { mutableStateOf<String?>(null) }
-
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -494,19 +514,12 @@ private fun MediaSection(
                     MediaTile(
                         attachment = attachment,
                         position = index + 1,
-                        onClick = { openedId = attachment.id },
+                        onClick = { onOpen(attachment.id) },
                         uploaderName = uploaderNames[attachment.uploadedById],
                     )
                 }
             }
         }
-    }
-
-    // D-017: the opened attachment by id, so the viewer survives rotation; it closes by itself
-    // when that attachment leaves the live ticket.
-    val opened = attachments.firstOrNull { it.id == openedId && it.file.isNotBlank() }
-    if (opened != null) {
-        AttachmentViewer(attachment = opened, onDismiss = { openedId = null })
     }
 }
 
