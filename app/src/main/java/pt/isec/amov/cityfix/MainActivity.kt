@@ -633,7 +633,10 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // D-013 Q1: the operator's own view of the same route (contacts, actions).
                         // Inside the branch: scoped to this entry, so the messages and profile
                         // listeners end with it, and never created for a citizen.
+                        // Review B1: keyed on the user, so an entry restored from a saved tab
+                        // stack after a logout never hands this user the previous one's ViewModel.
                         val operatorViewModel: OperatorTicketViewModel = viewModel(
+                            key = "operator-ticket-${user.id}",
                             factory = OperatorTicketViewModelFactory(
                                 app.ticketsRepository,
                                 app.usersRepository,
@@ -646,8 +649,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     } else {
                         // Inside the destination: scoped to this entry, so leaving the ticket
                         // removes its messages listener.
-                        val detailViewModel: TicketDetailViewModel =
-                            viewModel(factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user))
+                        // Review B1: keyed on the user, as the operator's view above.
+                        val detailViewModel: TicketDetailViewModel = viewModel(
+                            key = "ticket-detail-${user.id}",
+                            factory = TicketDetailViewModelFactory(app.ticketsRepository, id, user),
+                        )
                         TicketDetailScreen(ticket = ticket, user = user, viewModel = detailViewModel)
                     }
                 }
@@ -688,8 +694,10 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // The guard lets only an active citizen in, so the session holds their profile.
                         val citizenId = session.ticketsUser?.id ?: return@RequireAccess
                         // Inside the destination: scoped to this entry, so a finished form is cleared.
+                        // Review B1: keyed on the citizen, so a restored form is never another user's draft.
                         val reportViewModel: ReportViewModel =
                             viewModel(
+                                key = "report-$citizenId",
                                 factory = ReportViewModelFactory(
                                     app.ticketsRepository,
                                     app.attachmentStorage,
@@ -752,8 +760,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         onDenied = goHome,
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
-                        // The overview only reads the ViewModel's state (D-016).
+                        // The overview only reads the ViewModel's state (D-016). Review B1: keyed on
+                        // the user, so a Profile restored from a saved tab stack after a logout
+                        // builds a new ViewModel instead of showing the previous user's data.
                         val profileViewModel: ProfileViewModel = viewModel(
+                            key = "profile-${user.id}",
                             factory = ProfileViewModelFactory(
                                 user.id,
                                 app.usersRepository,
@@ -794,6 +805,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // The guard lets only a signed-in user in, so the session holds their profile.
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val profileViewModel: ProfileViewModel = viewModel(
+                            key = "profile-${user.id}",
                             factory = ProfileViewModelFactory(
                                 user.id,
                                 app.usersRepository,
@@ -821,6 +833,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            key = "credential-${user.id}",
                             factory = CredentialChangeViewModelFactory(
                                 CredentialChange.PASSWORD,
                                 user is Operator,
@@ -842,6 +855,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     ) {
                         val user = (session as? Session.SignedIn)?.user ?: return@RequireAccess
                         val credentialViewModel: CredentialChangeViewModel = viewModel(
+                            key = "credential-${user.id}",
                             factory = CredentialChangeViewModelFactory(
                                 CredentialChange.EMAIL,
                                 user is Operator,
@@ -895,7 +909,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         val operatorId = session.ticketsUser?.id ?: return@RequireAccess
                         val citizenId = entry.toRoute<PendingCitizenRoute>().citizenId
                         // Inside the guard: scoped to this entry, so the citizen listener ends with it.
+                        // Review B1: keyed on the operator, so the approval is never the previous one's.
                         val approvalViewModel: CitizenApprovalViewModel = viewModel(
+                            key = "approval-$operatorId",
                             factory = CitizenApprovalViewModelFactory(citizenId, operatorId, app.usersRepository),
                         )
                         CitizenApprovalScreen(
