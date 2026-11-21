@@ -1515,3 +1515,39 @@ Brief: I.3.E, the operator sees the ticket "com coordenadas, contactos do autor 
 - Copy the coordinates to the clipboard, or open them in an external maps app (`geo:` intent).
 - Uploader name and upload date in the full-screen attachment viewer.
 - Rename `responsibleNames` to `peopleNames` in a coordinated refactor with Francisco.
+
+## D-020: Bottom bar keeps the wrong tab and cannot leave a detail (bug fix)
+Decision: none (local navigation fix inside D-016's bottom bar). Code: `MainActivity.kt` (commits `31d5123`, `a910361`, `42f55e8`) and the tab root screens (`e83bf81`: Dashboard, Active tickets, Profile, Operator panel, Pending citizens, Categories get a scroll-state parameter). Overview: "App shell (D-006)", bullet "Bottom bar and per-tab back stacks".
+
+Found in Diogo's manual test of I.3.E (2026-11-21): operator Panel -> ticket detail -> Profile -> Panel showed the detail with Profile highlighted, and tapping Panel again could not leave the detail.
+
+### Root cause
+- The highlight fell back to the last tab *screen shown*; a restored detail is in no tab's set, so the bar kept Profile.
+- Re-selecting the current tab ran the same `popUpTo(home) { saveState = true }` + `restoreState = true`: it popped the detail, saved it and restored it in the same call.
+
+### Technical solutions
+- **Per-tab back stacks with two extra rules.** The standard save/restore pattern is kept; on top of it: (1) the highlighted tab is the tab last shown *or tapped* (`lastTab`, set in `openTab` too), so a restored stack highlights its tab; (2) tapping the selected tab is handled explicitly: on its root it only scrolls to the top, deeper it pops to the root with `popBackStack(root, inclusive = false)`.
+- **The first tab's root is the role's home** (`homeFor(role)`), so a pending citizen tapping Dashboard on Registration pending stays there (review S1).
+- **Scroll to top on reselect** (Gate 1 Q1): a `MutableSharedFlow<Unit>` with no replay and a 1-slot buffer; each tab root hoists its scroll state into the NavHost destination and collects only while its entry is `RESUMED`, so the screen fading out does not react. Scroll positions are saved per back-stack entry.
+- **Survives rotation and process death:** `lastTab` is `rememberSaveable` and the NavController saves its own back stack and the per-entry scroll states.
+
+### Privacy point for the defence (review B1)
+- Found by the review, present since D-016: logging out cleared only the visible stack. The tab stacks saved by the bottom bar, and the ViewModels attached to them, survived. Citizen A opens Profile, taps Dashboard, logs out; citizen B logs in and taps Profile: Navigation restores A's entry and `viewModel(factory = ...)` returns A's existing `ProfileViewModel` (the factory is only used when no ViewModel exists). B would have seen A's name, NIF, e-mail and phone; the same applied to a half-filled report (submitted under A's id) and to operator detail/approval screens (actions attributed to the previous operator).
+- Fix: every user-scoped `viewModel(...)` call has a `key` with the signed-in user's id (`profile-<uid>`, `report-<citizenId>`, `ticket-detail-<uid>`, `operator-ticket-<uid>`, `approval-<operatorId>`, `credential-<uid>`). Another user's restored entry builds a new ViewModel for the current user; the same user keeps theirs.
+- Why a key and not clearing the saved stacks at logout: one argument per call, independent of how Navigation stores saved stacks (clearing the home's stack would pop the home itself), and it also covers role changes and guard redirects.
+- Honest limit: the old ViewModel stays in memory in that entry's store, never shown, until the entry is popped. `rememberSaveable` in the screens holds only camera temp paths, and a restored detail recomputes its audience for the new user, so the anonymous rules still hold.
+
+### Options chosen and rejected
+- Derive the tab from `navController.currentBackStack`: planned, rejected by lint (`RestrictedApi`); the planned fallback (keep `lastTab`, set it on tap) shipped.
+- `getBackStackEntry(tab.route)` per tab (public API): rejected in review; it fixes no case that happens today and would loop in the hypothetical case of the home key restoring another tab's stack.
+- Drop `restoreState`/`saveState`: fixes "cannot leave" but loses each tab's stack (rejected at plan).
+- A counter key for scroll-to-top: `LaunchedEffect(counter)` would fire again on recomposition after coming back; a flow without replay does not.
+- Kept (Gate 1 Q2): the list opened from the Dashboard highlights Active.
+
+### Verification
+- `./gradlew assembleDebug` and `./gradlew lint`: pass, 0 errors, 17 warnings (unchanged, none in touched files). Review: 1 blocking (B1, pre-existing, fixed), 2 should-fix (fixed), N1/N3 fixed, N2/N4 skipped. Device checks (two users on one device, pending citizen, scroll-to-top per tab, the original repro, rotation) listed in `docs/work/D-020-bottom-bar-back-stack/state.md`, still pending at the docs phase.
+
+### Improvement opportunities
+- Nested navigation graphs per tab, so every route belongs to exactly one tab and the highlight comes from the graph, not from `lastTab`.
+- Clear the saved tab stacks at logout as well, so the previous user's ViewModels are freed at once (defence in depth on top of the keys).
+- A single "user scope" (for example a ViewModelStore per signed-in user) instead of a key on each call.
