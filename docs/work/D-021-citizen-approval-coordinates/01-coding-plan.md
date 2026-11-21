@@ -50,3 +50,21 @@ coordinates as text (D-021), or "Location not available" for (0, 0)."
   F-018's `onMapTouchChange`).
 - `strings.xml` (EN/PT), `TicketMap`, ViewModels, repositories, Firestore/Storage rules.
 - `RegisterScreen`, `ReportScreen`, `ProfileScreen` coordinate texts.
+
+## Slice 2 (added at Gate 1): own location with a dot decimal
+Grep for float placeholders in `res/` found one string, `report_location_value`
+(`Latitude %1$.5f, longitude %2$.5f`, same in EN and PT), formatted with the device locale (PT shows a
+decimal comma). Callers: `RegisterScreen.kt` (~line 398), `ReportScreen.kt` (~line 620),
+`ProfileScreen.kt` (~line 208).
+
+| Path | Change |
+| --- | --- |
+| `app/src/main/res/values/strings.xml`, `app/src/main/res/values-pt/strings.xml` | `report_location_value`: `%1$.5f` / `%2$.5f` become `%1$s` / `%2$s` (text otherwise unchanged) |
+| `RegisterScreen.kt`, `ReportScreen.kt`, `ProfileScreen.kt` | Pass `formatCoordinate(latitude)`, `formatCoordinate(longitude)` instead of the doubles; add the `utils.formatCoordinate` import |
+
+Result: same text, 5 decimals, always a dot. No other behaviour change.
+This slice lifts the slice 1 "Do not touch" entries for `strings.xml` (only `report_location_value`)
+and the Register/Report/Profile coordinate texts.
+Commit: `fix(D-021): format own location with a dot decimal`
+Verify: `./gradlew assembleDebug`, `./gradlew lint`; on a device in PT: Register, Report and Profile
+show "Latitude 40.21000, longitude -8.41900".

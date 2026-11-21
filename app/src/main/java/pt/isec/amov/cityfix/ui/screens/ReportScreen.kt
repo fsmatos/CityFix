@@ -77,6 +77,7 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.FileUtils
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
 import pt.isec.amov.cityfix.utils.openAppSettings
 import pt.isec.amov.cityfix.viewmodel.MAX_REPORT_ATTACHMENTS
@@ -618,8 +619,8 @@ private fun LocationSection(
                 Text(
                     text = stringResource(
                         R.string.report_location_value,
-                        state.location.latitude,
-                        state.location.longitude,
+                        formatCoordinate(state.location.latitude),
+                        formatCoordinate(state.location.longitude),
                     ),
                     style = MaterialTheme.typography.bodyLarge,
                 )
