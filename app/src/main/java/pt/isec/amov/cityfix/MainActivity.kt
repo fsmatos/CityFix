@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
@@ -70,6 +72,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
 import pt.isec.amov.cityfix.model.Citizen
@@ -456,12 +460,18 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     } else {
         0.dp
     }
+    // D-020: one event per tap on the selected tab while on its own screen. Only the screen on
+    // display collects it (ScrollToTopOnReselect), so it is the one that scrolls. A flow, not a
+    // counter: a LaunchedEffect keyed on a counter would also scroll when the screen comes back.
+    val tabReselects = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
     // stack saved and restored when the user comes back to it. D-020: tapping the selected tab
     // goes back to its own screen. popBackStack returns false when there is nothing to pop
     // (already on the root, or the route is not on the stack), and then the usual navigate runs.
+    // Tapped again on the tab's own screen: that screen scrolls back to the top (tabReselects).
     val openTab = { tab: BottomTab ->
         val backToRoot = tab == selectedTab && navController.popBackStack(tab.route, inclusive = false)
+        if (!backToRoot && tab == currentTab) tabReselects.tryEmit(Unit)
         if (!backToRoot) {
             navController.navigate(tab.route) {
                 popUpTo(homeFor(role)) { saveState = true }
@@ -575,15 +585,20 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                     .consumeWindowInsets(contentPadding),
             ) {
                 composable<DashboardRoute> {
+                    val scrollState = rememberScrollState()
+                    ScrollToTopOnReselect(tabReselects) { scrollState.animateScrollTo(0) }
                     DashboardScreen(
                         stats = stats,
                         onSeeTicketsClick = {
                             navController.navigate(TicketListRoute) { launchSingleTop = true }
                         },
+                        scrollState = scrollState,
                     )
                 }
                 composable<ActiveTicketsRoute> {
                     // The first active tickets of the same list; "See more" opens the full list.
+                    val listState = rememberLazyListState()
+                    ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                     ActiveTicketsScreen(
                         tickets = tickets.filter { it.isActive },
                         onTicketClick = { id ->
@@ -592,6 +607,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         onSeeMoreClick = {
                             navController.navigate(TicketListRoute) { launchSingleTop = true }
                         },
+                        listState = listState,
                     )
                 }
                 composable<TicketListRoute> {
@@ -753,6 +769,8 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             AccessRole.PENDING_CITIZEN -> emptyList()
                             else -> null
                         }
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         ProfileOverviewScreen(
                             viewModel = profileViewModel,
                             myTickets = myTickets,
@@ -763,6 +781,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             onTicketClick = { id ->
                                 navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -841,6 +860,8 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: scoped to this entry, so the categories listener ends with it.
                         val panelViewModel: OperatorPanelViewModel =
                             viewModel(factory = OperatorPanelViewModelFactory(app.categoriesRepository))
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         // The shared list is allTickets() for an operator (TicketsViewModel.setUser).
                         OperatorPanelScreen(
                             tickets = tickets,
@@ -848,6 +869,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                             onTicketClick = { id ->
                                 navController.navigate(TicketDetailRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -856,11 +878,14 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: scoped to this entry, so the users listener ends with it.
                         val approvalsViewModel: PendingCitizensViewModel =
                             viewModel(factory = PendingCitizensViewModelFactory(app.usersRepository))
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
                         PendingCitizensScreen(
                             viewModel = approvalsViewModel,
                             onCitizenClick = { id ->
                                 navController.navigate(PendingCitizenRoute(id)) { launchSingleTop = true }
                             },
+                            listState = listState,
                         )
                     }
                 }
@@ -890,7 +915,9 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                         // Inside the guard: the only category writes come from this ViewModel.
                         val categoriesViewModel: CategoriesViewModel =
                             viewModel(factory = CategoriesViewModelFactory(app.categoriesRepository))
-                        CategoriesScreen(viewModel = categoriesViewModel)
+                        val listState = rememberLazyListState()
+                        ScrollToTopOnReselect(tabReselects) { listState.animateScrollToItem(0) }
+                        CategoriesScreen(viewModel = categoriesViewModel, listState = listState)
                     }
                 }
             }
@@ -951,6 +978,15 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
             }
         }
     }
+}
+
+/**
+ * D-020: runs [scrollToTop] each time the selected tab is tapped again on its own screen. Placed
+ * in a tab's root destination; it collects only while that destination is composed.
+ */
+@Composable
+private fun ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend () -> Unit) {
+    LaunchedEffect(reselects) { reselects.collect { scrollToTop() } }
 }
 
 /** Maps the current destination to the bar's enum. Add new routes here: `else` will not warn. */

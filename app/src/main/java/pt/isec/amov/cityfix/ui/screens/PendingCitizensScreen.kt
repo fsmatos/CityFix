@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Card
@@ -43,9 +45,11 @@ import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
 fun PendingCitizensScreen(
     viewModel: PendingCitizensViewModel,
     onCitizenClick: (String) -> Unit,
+    // D-020: hoisted so MainActivity can scroll it to the top when the tab is tapped again.
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    PendingCitizensContent(state = state, onCitizenClick = onCitizenClick)
+    PendingCitizensContent(state = state, onCitizenClick = onCitizenClick, listState = listState)
 }
 
 /**
@@ -57,6 +61,7 @@ fun PendingCitizensContent(
     state: PendingCitizensUiState,
     onCitizenClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     when {
         state.isLoading -> LoadingState(descriptionRes = R.string.cd_approvals_loading, modifier = modifier)
@@ -67,6 +72,7 @@ fun PendingCitizensContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .widthIn(max = 600.dp),
+                    state = listState,
                     // The last item scrolls above the floating island (D-016).
                     contentPadding = PaddingValues(
                         start = 16.dp,

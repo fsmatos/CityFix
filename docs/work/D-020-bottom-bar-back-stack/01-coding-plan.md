@@ -68,3 +68,38 @@ Notes:
 - `ui/navigation/MainBottomBar.kt` (`BottomTab.screens`), `RoleAccess.kt`, `Destinations.kt`,
   the NavHost destinations, `goHome`, the redirect and notification effects.
 - `google-services.json`, Firestore/Storage rules.
+
+## Slice 2 (added at Gate 1, Q1 = yes)
+`fix(D-020): scroll the tab root to the top on reselect`
+
+Tapping the selected tab while already on its root screen scrolls that screen back to the top.
+
+Design:
+- `MainActivity.kt`: `val tabReselects = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }`.
+  In `openTab`, when `tab == selectedTab`, nothing was popped and `currentTab == tab` (the user is
+  on the tab's own screen), `tabReselects.tryEmit(Unit)`; the usual `navigate` still runs (a
+  no-op there, as before).
+- A small private composable in `MainActivity.kt`:
+  `ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend () -> Unit)` =
+  `LaunchedEffect(reselects) { reselects.collect { scrollToTop() } }`.
+  A flow event, not a counter key: `LaunchedEffect(counter)` also runs when the screen first
+  composes, so coming back to a tab after one reselect would jump to the top. Only the composed
+  (visible) destination collects, so the event reaches the screen on screen.
+- The scroll state is hoisted to the NavHost destination (created there with
+  `rememberLazyListState()` / `rememberScrollState()`, still saved per back-stack entry) and passed
+  down as a parameter with the same default, so stateless Content stays previewable:
+  - `DashboardScreen(scrollState: ScrollState = rememberScrollState())` (Column + verticalScroll)
+  - `ActiveTicketsScreen(listState: LazyListState = rememberLazyListState())`
+  - `ProfileOverviewScreen` / `ProfileOverviewContent(listState)`
+  - `OperatorPanelScreen` / `OperatorPanelContent(listState)`
+  - `PendingCitizensScreen` / `PendingCitizensContent(listState)`
+  - `CategoriesScreen` / `CategoriesContent(listState)` (also an operator tab root with a list)
+- Not included: `PendingValidationScreen` (no scrolling list), `ListScreen` (not a tab root:
+  tapping Active on it pops back to Active).
+
+Files: `MainActivity.kt`, `ui/screens/DashboardScreen.kt`, `ActiveTicketsScreen.kt`,
+`ProfileOverviewScreen.kt`, `OperatorPanelScreen.kt`, `PendingCitizensScreen.kt`,
+`CategoriesScreen.kt`. `ShowScreen.kt` and `OperatorTicketScreen.kt` not touched.
+
+Verify: build + lint; on a device, scroll each tab root down and tap its tab: it scrolls to the
+top; leave to a detail and come back: the scroll position is kept (no jump).
