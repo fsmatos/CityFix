@@ -1514,3 +1514,13 @@ Decision: [0027](../decisions/0027-local-notifications-only.md). Overview: "FCM 
 ### Improvement opportunities
 - Optional MFA the user can turn on in Profile (enrol the linked phone as a factor).
 - Media3/ExoPlayer for streaming and better controls; swipe between attachments in the viewer.
+
+## F-020: Sign-up "Send Code" crash (fix)
+Decision: [0026](../decisions/0026-phone-verified-at-signup.md) (amendment line). Overview: "Sign-up phone code (F-018, fixed by F-020)".
+
+### Technical solutions
+- `requireSmsValidation(true)` is valid only with a multi-factor session: kept for the MFA code (sign-in and re-auth, the code is always typed), dropped for the sign-up send.
+- Sign-up accepts `onVerificationCompleted` (instant verification / auto-retrieval) and links the phone at once, instead of waiting 60 s for an `onCodeSent` that never comes.
+
+### Lessons
+- F-018 changed one caller of a shared helper (`requestCode`) without rechecking the options the helper set for every caller; build and lint pass because `build()` checks the options only at run time.

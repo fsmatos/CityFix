@@ -13,6 +13,7 @@ Status: accepted (F-018, chosen by the person on 2026-11-20). Changes the MFA pa
 - `AuthAccount.hasVerifiedPhone` = a linked phone **or** an enrolled factor; `Session.NeedsPhoneVerification` replaces `NeedsSecondFactor`.
 - Accounts created before F-018 keep their enrolled factor and the existing SMS step at login (`resolveSecondFactor`, `MfaScreen`), so they still work.
 - New `AuthError.PHONE_IN_USE`: a phone can be linked to one account only.
+- **Amended by F-020 (2026-11-21):** `requireSmsValidation(true)` is set only for the second-factor code (Firebase allows it only with a multi-factor session; F-018 had left it on the sign-up send, which crashed). On sign-up, a phone Firebase verifies by itself (`onVerificationCompleted`) is linked at once, without a typed code.
 
 ### Rejected
 - Keep MFA on every login: matches the brief but was the complaint.
