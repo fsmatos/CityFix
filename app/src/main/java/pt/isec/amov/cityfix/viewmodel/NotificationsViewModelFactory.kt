@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.CityFixApplication
 
-/** Builds [NotificationsViewModel] with the app container (Context, PushTokens, TicketNotifier). */
+/** Builds [NotificationsViewModel] with the app container (Context, TicketNotifier). */
 class NotificationsViewModelFactory(
     private val app: CityFixApplication,
 ) : ViewModelProvider.Factory {

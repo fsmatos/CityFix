@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -134,6 +135,10 @@ fun ShowScreen(
     // Hoisted so both orientations share the same call sites and the position survives rotation
     val detailsScroll = rememberScrollState()
     val locationScroll = rememberScrollState()
+    // F-018: while a finger is on the exact map the column holding it stops scrolling, so a pinch
+    // or a vertical pan goes to the map (TicketMap's onTouchChange)
+    var mapTouched by remember { mutableStateOf(false) }
+    val onMapTouchChange: (Boolean) -> Unit = { mapTouched = it }
 
     if (isLandscape) {
         Row(
@@ -160,10 +165,11 @@ fun ShowScreen(
                 locale = locale,
                 responsibleNames = responsibleNames,
                 participantContent = participantContent,
+                onMapTouchChange = onMapTouchChange,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .verticalScroll(locationScroll)
+                    .verticalScroll(locationScroll, enabled = !mapTouched)
                     .padding(bottom = LocalBottomBarPadding.current),
             )
         }
@@ -171,7 +177,7 @@ fun ShowScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .verticalScroll(detailsScroll)
+                .verticalScroll(detailsScroll, enabled = !mapTouched)
                 .padding(16.dp)
                 // Room to scroll above the floating island (D-016).
                 .padding(bottom = LocalBottomBarPadding.current),
@@ -184,6 +190,7 @@ fun ShowScreen(
                 locale,
                 responsibleNames = responsibleNames,
                 participantContent = participantContent,
+                onMapTouchChange = onMapTouchChange,
             )
         }
     }
@@ -228,6 +235,7 @@ private fun LocationPane(
     modifier: Modifier = Modifier,
     responsibleNames: Map<String, String> = emptyMap(),
     participantContent: @Composable ColumnScope.() -> Unit = {},
+    onMapTouchChange: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier = modifier,
@@ -239,7 +247,11 @@ private fun LocationPane(
             DetailAudience.REGISTERED, DetailAudience.OPERATOR -> {
                 // Brief I.1.C hides the exact location only from anonymous users (F-014 Q8)
                 SectionCard {
-                    ExactLocationSection(ticket.location, showCoordinates = audience == DetailAudience.OPERATOR)
+                    ExactLocationSection(
+                        ticket.location,
+                        showCoordinates = audience == DetailAudience.OPERATOR,
+                        onMapTouchChange = onMapTouchChange,
+                    )
                 }
                 SectionCard {
                     StatusHistorySection(ticket.statusHistory, locale, responsibleNames = responsibleNames)
@@ -259,6 +271,7 @@ private fun ExactLocationSection(
     location: Coordinates,
     showCoordinates: Boolean,
     modifier: Modifier = Modifier,
+    onMapTouchChange: (Boolean) -> Unit = {},
 ) {
     val mapDescription = stringResource(R.string.cd_ticket_map_exact)
     Column(
@@ -285,6 +298,7 @@ private fun ExactLocationSection(
                     .height(200.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .semantics { contentDescription = mapDescription },
+                onTouchChange = onMapTouchChange,
             )
             if (showCoordinates) {
                 val lat = formatCoordinate(location.latitude)
@@ -445,7 +459,11 @@ private fun HistoryRow(
     }
 }
 
-/** Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". */
+/**
+ * Photo and video tiles in a horizontally scrolling row, or "No photos or videos.". Tapping a tile
+ * with a file opens it full screen ([AttachmentViewer], D-017; it replaced F-018's MediaViewer at the
+ * merge); the open attachment's id is saveable, so the viewer stays open after a rotation.
+ */
 @Composable
 private fun MediaSection(
     attachments: List<Attachment>,
@@ -499,6 +517,8 @@ private fun MediaSection(
  * the placeholder and "Not available yet" instead of drawing a fake photo. With a file, a line says
  * when its upload is still pending or has failed (F-013); uploaded media show no line. The
  * operator's proof of the finished work is labelled "Resolution proof" for every audience (D-013).
+ * A tile with a file is clickable ([onClick] opens it full screen, F-018); TalkBack reads
+ * "Open photo" or "Play video" as the action.
  * "Added by <name>" when [uploaderName] is given (operator view only, D-019); never the id.
  */
 @Composable
@@ -518,7 +538,6 @@ private fun MediaTile(
         UploadState.FAILED -> R.string.ticket_media_upload_failed
         UploadState.UPLOADED -> null
     }
-
     // D-017: a tile with a file opens the viewer; sample tiles (no file) stay plain.
     val canOpen = attachment.file.isNotBlank()
     val openLabel = stringResource(

@@ -24,7 +24,9 @@ internal fun Exception.toAuthError(): AuthError = when (this) {
         "ERROR_INVALID_PHONE_NUMBER" -> AuthError.INVALID_PHONE_NUMBER
         else -> AuthError.INVALID_CREDENTIALS
     }
-    is FirebaseAuthUserCollisionException -> AuthError.EMAIL_IN_USE
+    // F-018: linking a phone that another account already has
+    is FirebaseAuthUserCollisionException ->
+        if (errorCode == "ERROR_CREDENTIAL_ALREADY_IN_USE") AuthError.PHONE_IN_USE else AuthError.EMAIL_IN_USE
     is FirebaseAuthInvalidUserException ->
         if (errorCode == "ERROR_USER_NOT_FOUND") AuthError.INVALID_CREDENTIALS else AuthError.USER_DISABLED
     is FirebaseAuthRecentLoginRequiredException -> AuthError.RECENT_LOGIN_REQUIRED

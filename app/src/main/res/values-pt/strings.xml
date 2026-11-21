@@ -236,9 +236,10 @@
     <string name="setup_verification_sent">E-mail de confirmação enviado.</string>
     <string name="setup_not_verified">Ainda não confirmado. Abra primeiro a ligação do e-mail.</string>
     <string name="setup_phone_title">Adicione o seu telemóvel</string>
-    <string name="setup_phone_intro">A sua conta precisa de um segundo fator. Sempre que iniciar sessão, enviaremos um código por SMS para este número.</string>
+    <string name="setup_phone_intro">Para concluir o registo, confirme o seu número de telemóvel. Enviaremos um código por SMS uma única vez; não será necessário para iniciar sessão.</string>
     <string name="setup_phone_label">Número de telemóvel</string>
     <string name="setup_error_phone">Indique um número de telemóvel português: 9 dígitos começados por 9.</string>
+    <string name="setup_error_phone_in_use">Este número já está associado a outra conta.</string>
     <string name="setup_send_code">Enviar código</string>
     <string name="setup_change_number">Alterar número</string>
     <string name="mfa_code_intro">Introduza o código de 6 dígitos enviado por SMS para %1$s.</string>
