@@ -7,8 +7,8 @@ Remote: not pushed
 | Start | done | 2026-11-21 | Raised by Diogo after D-019 |
 | Plan | done | 2026-11-21 | 1 slice; formatter to utils/CoordinatesFormat.kt; awaiting Gate 1 |
 | Gate 1: plan approved | done | 2026-11-21 | Diogo approved; also align Register, Report and Profile (slice 2) |
-| Code | done | 2026-11-21 | 2 slices: e94551d (citizen detail coordinates), slice 2 fix (own location dot decimal); build + lint pass |
-| Review | | | |
+| Code | done | 2026-11-21 | 2 slices: e94551d (citizen detail coordinates), slice 2 fix (ccdb518) (own location dot decimal); build + lint pass |
+| Review | done | 2026-11-21 | review.md: 0 blocking, 0 should-fix, 3 nits |
 | Docs | | | |
 | Pushed | | | |
 | Merged | | | |
@@ -20,3 +20,4 @@ Remote: not pushed
 - 2026-11-21: Code slice 1 (e94551d): `formatCoordinate` moved to `utils/CoordinatesFormat.kt` (body and KDoc unchanged), imported in `ShowScreen.kt` (only change there), coordinates line under the map in `CitizenApprovalScreen.CitizenLocation`. `assembleDebug` and `lint` pass (0 errors, 17 warnings, none in changed files).
 - 2026-11-21: Code slice 2 (added at Gate 1; section appended to 01-coding-plan.md before coding). Grep found a single float-placeholder string, `report_location_value` (EN/PT), used by Register, Report and Profile. Placeholders `%1$.5f`/`%2$.5f` became `%1$s`/`%2$s`; the three callers pass `formatCoordinate(...)`. Text otherwise unchanged. `assembleDebug` and `lint` pass (0 errors, 17 warnings, none in changed files).
 - 2026-11-21: Deviations: none beyond the Gate 1 addition (slice 2 lifts the plan's "Do not touch" entries for `report_location_value` and the Register/Report/Profile coordinate texts). Device checks pending: operator pending citizen detail (portrait/landscape, EN/PT, TalkBack, (0, 0) case), operator ticket detail unchanged, Register/Report/Profile in PT show dots.
+- 2026-11-21: Review of b8beaff..HEAD (e94551d, ccdb518) written to review.md: 0 blocking, 0 should-fix, 3 nits (N1 add ccdb518 to the Code row; N2 duplicated coordinates Text block, shared composable left as an improvement; N3 `report_location_value` and `cd_ticket_coordinates` now have the same text, which is acceptable). Verified all three `report_location_value` callers pass `formatCoordinate` strings and that no `%.Nf` placeholders are left in res/. The operator-only route guard is unchanged. Device checks still pending.
