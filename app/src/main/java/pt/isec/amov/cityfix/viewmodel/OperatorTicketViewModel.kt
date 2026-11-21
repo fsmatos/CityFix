@@ -70,8 +70,8 @@ class OperatorTicketViewModel(
 
     /**
      * Starts one live users/{uid} read per new id in [ids] (creator, followers, history
-     * responsibles). Blank ids and the automatic close's "system" are skipped. Called again
-     * when the ticket changes, so a new follower appears without reopening.
+     * responsibles, attachment uploaders). Blank ids and the automatic close's "system" are
+     * skipped. Called again when the ticket changes, so a new follower appears without reopening.
      */
     fun watchPeople(ids: Set<String>) {
         for (id in ids) {

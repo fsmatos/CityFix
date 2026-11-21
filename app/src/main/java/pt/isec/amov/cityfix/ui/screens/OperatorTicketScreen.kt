@@ -71,8 +71,8 @@ import java.io.File
  * to [OperatorTicketContent]. Only for an operator (the operator branch of the detail destination).
  *
  * Writes an expired RESOLVED ticket as CLOSED once (as F-014), and keeps one profile listener per
- * person on the ticket (creator, followers, history responsibles). Holds the gallery and camera
- * launchers for the resolution proof, as ReportScreen does.
+ * person on the ticket (creator, followers, history responsibles, attachment uploaders, D-019).
+ * Holds the gallery and camera launchers for the resolution proof, as ReportScreen does.
  */
 @Composable
 fun OperatorTicketScreen(
@@ -115,7 +115,8 @@ fun OperatorTicketScreen(
         if (dialogGone) viewModel.onDialogDismiss()
     }
     val ids = ticket?.let { t ->
-        setOf(t.creatorId) + t.followerIds + t.statusHistory.map { it.responsibleId }
+        setOf(t.creatorId) + t.followerIds + t.statusHistory.map { it.responsibleId } +
+            t.attachments.map { it.uploadedById }
     }.orEmpty()
     LaunchedEffect(ids) {
         viewModel.watchPeople(ids)
