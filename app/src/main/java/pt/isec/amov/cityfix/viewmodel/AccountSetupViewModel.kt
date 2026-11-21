@@ -115,12 +115,16 @@ class AccountSetupViewModel(
                         it.copy(isBusy = false, code = "", step = SetupStep.CODE, notice = R.string.mfa_code_sent)
                     }
                 }
+                // Firebase verified the phone without a code and it is linked: stays busy, the
+                // session changes and the redirect leaves this screen (as after confirmCode).
+                CodeSendResult.Linked -> Unit
                 is CodeSendResult.Failure -> _uiState.update {
-                    if (result.error == AuthError.INVALID_PHONE_NUMBER) {
+                    when (result.error) {
                         // Shown on the field, like the local format check.
-                        it.copy(isBusy = false, phoneError = result.error.messageRes())
-                    } else {
-                        it.copy(isBusy = false, error = result.error.messageRes())
+                        AuthError.INVALID_PHONE_NUMBER -> it.copy(isBusy = false, phoneError = result.error.messageRes())
+                        // Only after a code-less link: another account has this phone (as in confirmCode).
+                        AuthError.PHONE_IN_USE -> it.copy(isBusy = false, phoneError = R.string.setup_error_phone_in_use)
+                        else -> it.copy(isBusy = false, error = result.error.messageRes())
                     }
                 }
             }

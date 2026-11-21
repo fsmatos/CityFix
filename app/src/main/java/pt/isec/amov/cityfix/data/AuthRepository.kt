@@ -64,6 +64,9 @@ sealed interface SignInResult {
 sealed interface CodeSendResult {
     /** The SMS was sent; [verificationId] goes back with the typed code. */
     data class Sent(val verificationId: String) : CodeSendResult
+
+    /** Sign-up only (F-020): Firebase verified the phone without a typed code, and it is already linked. */
+    data object Linked : CodeSendResult
     data class Failure(val error: AuthError) : CodeSendResult
 }
 
