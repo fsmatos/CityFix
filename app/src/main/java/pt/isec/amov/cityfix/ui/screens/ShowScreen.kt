@@ -68,6 +68,7 @@ import pt.isec.amov.cityfix.ui.components.situationLabelRes
 import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
+import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.utils.formatDateTime
 import java.util.Locale
 
@@ -313,9 +314,6 @@ private fun ExactLocationSection(
         }
     }
 }
-
-/** D-019: 5 decimals (about 1 m) with a dot in every language, so "lat, lng" stays unambiguous. */
-private fun formatCoordinate(value: Double): String = String.format(Locale.ROOT, "%.5f", value)
 
 /** Category (the page heading), situation and status badge (an expired RESOLVED shows CLOSED). */
 @Composable
