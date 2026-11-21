@@ -7,7 +7,7 @@ Remote: origin/dev/Francisco
 | Start | done | 2026-11-21 | bug, task file `docs/tasks/phase-2/F-020-signup-phone-code-crash.md` |
 | Plan | done | 2026-11-21 | 00/01/03 plans, 2 slices |
 | Gate 1: plan approved | done | 2026-11-21 | approved as planned |
-| Code | done | 2026-11-21 | slice 1 `8e20138` + review fixes; build and lint pass; device check pending |
+| Code | done | 2026-11-21 | slice 1 `8e20138` + review fixes; build and lint pass; device check passed |
 | Review | done | 2026-11-21 | review.md: 0 blocking, 3 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | 0026 amendment, overview bullet, report notes |
 | Pushed | done | 2026-11-21 | origin/dev/Francisco (`391f5ca`) |
@@ -23,3 +23,4 @@ Append-only.
 - 2026-11-21: Docs (slice 2): amendment line in decision 0026, a "Sign-up phone code" bullet in the overview's auth section, an F-020 section in `docs/report/notes.md`.
 - 2026-11-21: Pushed dev/Francisco to origin (`04c7b48..391f5ca`). Not merged into main.
 - 2026-11-21: Device check (Mi 9T Pro, real number): no crash any more. "Could not send the code" came from Firebase error 17006 OPERATION_NOT_ALLOWED: the Phone sign-in provider is disabled in the console (Play Integrity token succeeded, so the SHA fingerprints are fine). Not a code issue; decision 0026 already says the provider must stay enabled. The person is to enable it, then retest.
+- 2026-11-21: After the person enabled the Phone sign-in provider in the console, sign-up Send Code worked on the Mi 9T Pro with a real number. The manual test checklist (`docs/testing/`, untracked until now) is committed with this; `.idea/` files stay untracked (person's choice).
