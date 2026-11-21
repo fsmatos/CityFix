@@ -129,7 +129,8 @@ fun ShowScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     // F-021: the open attachment lives here, not in MediaSection. Portrait and landscape put the
     // tiles at different places in the layout, and saveable state is tied to that place, so a
-    // rotation used to close the viewer.
+    // rotation used to close the viewer. MediaSection is now stateless: it only reports the tap
+    // (state hoisting).
     var openedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     if (ticket == null) {

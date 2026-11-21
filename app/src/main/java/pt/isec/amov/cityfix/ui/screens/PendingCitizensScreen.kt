@@ -105,6 +105,7 @@ private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
         ) {
             // Decorative leading thumbnail, like the ticket cards' (D-016): the profile photo
             // (a download URL, as in CitizenApprovalScreen), or a person icon without one (F-021).
+            // A photo that fails to load leaves the grey box.
             Box(
                 modifier = Modifier
                     .size(Dimens.thumbnail)
@@ -113,7 +114,7 @@ private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 val photo = citizen.photo
-                if (photo != null) {
+                if (!photo.isNullOrBlank()) {
                     AsyncImage(
                         model = photo,
                         contentDescription = null,
