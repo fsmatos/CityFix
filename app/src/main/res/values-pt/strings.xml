@@ -36,6 +36,10 @@
     <string name="ticket_history_system">Fechada automaticamente</string>
     <string name="ticket_history_by">Por %1$s</string>
     <string name="ticket_media_proof">Prova da resolução</string>
+    <string name="ticket_media_open_failed">Não foi possível abrir o ficheiro. Se acabou de ser adicionado, espera pelo envio e tenta de novo.</string>
+    <string name="cd_open_photo">Abrir fotografia %1$d</string>
+    <string name="cd_open_video">Reproduzir vídeo %1$d</string>
+    <string name="cd_close_viewer">Fechar</string>
 
     <!-- Message thread -->
     <string name="messages_title">Mensagens</string>

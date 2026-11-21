@@ -38,6 +38,10 @@
     <string name="ticket_history_system">Closed automatically</string>
     <string name="ticket_history_by">By %1$s</string>
     <string name="ticket_media_proof">Resolution proof</string>
+    <string name="ticket_media_open_failed">Could not open this file. If it was just added, wait for the upload and try again.</string>
+    <string name="cd_open_photo">Open photo %1$d</string>
+    <string name="cd_open_video">Play video %1$d</string>
+    <string name="cd_close_viewer">Close</string>
 
     <!-- Message thread -->
     <string name="messages_title">Messages</string>
