@@ -430,8 +430,11 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val showReportFab = session.canReport && !showGate && screen == TopBarScreen.DASHBOARD
 
     // D-016: bottom bar with the role's tabs (RoleAccess.kt). Hidden on the login flow, on Edit
-    // profile and its credential screens (Gate 1), and while the gate covers the app. A screen
-    // outside every tab (detail, report) keeps the last tab selected.
+    // profile and its credential screens (Gate 1), and while the gate covers the app.
+    // A screen outside every tab (detail, report) keeps the last tab selected. D-020: lastTab is
+    // also set when a tab is tapped (openTab), so a restored detail highlights the tab it was
+    // restored into, not the tab shown before. (Reading the whole back stack would be cleaner,
+    // but NavController.currentBackStack is a restricted API for apps: lint RestrictedApi.)
     val tabs = bottomTabsFor(role)
     val currentTab = tabs.firstOrNull { screen in it.screens }
     var lastTab by rememberSaveable { mutableStateOf<BottomTab?>(null) }
@@ -454,13 +457,19 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
         0.dp
     }
     // Usual bottom-navigation pattern: one entry per tab above the home, each tab's own back
-    // stack saved and restored when the user comes back to it.
+    // stack saved and restored when the user comes back to it. D-020: tapping the selected tab
+    // goes back to its own screen. popBackStack returns false when there is nothing to pop
+    // (already on the root, or the route is not on the stack), and then the usual navigate runs.
     val openTab = { tab: BottomTab ->
-        navController.navigate(tab.route) {
-            popUpTo(homeFor(role)) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+        val backToRoot = tab == selectedTab && navController.popBackStack(tab.route, inclusive = false)
+        if (!backToRoot) {
+            navController.navigate(tab.route) {
+                popUpTo(homeFor(role)) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
+        lastTab = tab
     }
 
     // The gate is drawn over the app instead of replacing it, so the NavHost (and its graph)
