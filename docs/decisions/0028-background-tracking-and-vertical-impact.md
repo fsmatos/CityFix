@@ -1,6 +1,6 @@
 # 0028: Background tracking and vertical impact
 
-Status: accepted (F-022, Gate 1 on 2026-11-22, Q1-Q6 with the proposed defaults). Amends [0022](0022-operator-proximity-alert.md) (foreground only -> foreground service) and [0023](0023-impact-detection.md) (total acceleration -> vertical; foreground only -> service). Code: `09b51ed`, `c28aed1`, `ae0676a`, `6b6d801`. **Not checked on a device.**
+Status: accepted; speed gate and threshold replaced by D-022, see the end (F-022, Gate 1 on 2026-11-22, Q1-Q6 with the proposed defaults). Amends [0022](0022-operator-proximity-alert.md) (foreground only -> foreground service) and [0023](0023-impact-detection.md) (total acceleration -> vertical; foreground only -> service). Code: `09b51ed`, `c28aed1`, `ae0676a`, `6b6d801`. **Not checked on a device.**
 
 ## Context
 - 0023 used total acceleration: a phone put down hard counted, against brief I.2.F "eixo vertical"; a dropped phone at rest counted too.
@@ -29,3 +29,11 @@ Status: accepted (F-022, Gate 1 on 2026-11-22, Q1-Q6 with the proposed defaults)
 - OEM battery savers can still kill the service.
 - The geofence's `inside` set starts empty on each service start; the stored 1 h throttle still prevents repeats.
 - **Diogo (D-014):** `OperatorProximityViewModel` (+Factory) replaced by `OperatorGeofence` in the service; still to be told.
+
+## Amendment (D-022, 2026-11-22)
+- **Why:** a test in a car gave no impact notification. The cause was not measured.
+- **Speed gate (Q2) removed:** no GPS speed is read for impacts.
+- **Threshold (Q1) replaced:** still the vertical axis, with the limits from before F-022: `GRAVITY_EARTH + a_v` outside `ImpactDetector.MIN..MAX` (6..14 m/s²), about +4.2 / -3.8 m/s² without gravity.
+- **Rejected:** total acceleration (also reacts sideways, against brief I.2.F); only removing the gate (still misses jolts between about 4 and 6 m/s²).
+- **Consequence:** handling or dropping a still phone can suggest a report. It is only a suggestion, at most one every 30 s.
+- **Unchanged:** foreground service and its need for precise location; snackbar in front, notification otherwise.

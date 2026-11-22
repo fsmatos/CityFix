@@ -29,3 +29,7 @@ Status: accepted (F-015, Gate 1 on 2026-11-19, Q1-Q9 answered with the defaults;
 - **Threshold:** fixed 6 m/s² (`ImpactDetector.THRESHOLD`), set in code; no user setting (the first F-022 slider was removed, `53a39e6`).
 - **Q3/Q5 replaced:** detection runs in `data/TrackingService` (foreground service, slides 08, P10 `ProximityService`); `ImpactDetectionEffect` deleted; app in front -> snackbar, otherwise a notification that opens the prefilled report.
 - **Limits fixed:** app closed, sideways jolts, dropped phone. **Limits now:** needs precise location; no restart after a reboot; rotation during the snackbar still loses it.
+
+## Amendment (D-022, 2026-11-22, [0028](0028-background-tracking-and-vertical-impact.md))
+- The F-022 speed gate and 6 m/s² threshold are replaced: vertical axis, with gravity, outside 6..14 m/s², no minimum speed.
+- A dropped phone at rest can trigger a suggestion again.
