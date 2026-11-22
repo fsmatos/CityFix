@@ -11,7 +11,7 @@ Remote: origin/dev/Diogo
 | Review | done | 2026-11-22 | main session, 0 blocking (review.md) |
 | Docs | done | 2026-11-22 | overview, 0023, 0028; new report awaits Francisco |
 | Pushed | done | 2026-11-22 | origin/dev/Diogo (`b7726d6`) |
-| Merged | pending | | |
+| Merged | done | 2026-11-22 | into main (`39f5552`) |
 
 ## Log
 Append-only.
@@ -23,3 +23,4 @@ Append-only.
 - 2026-11-22: Deviation: review by the main session, not the reviewer agent.
 - 2026-11-22: Deviation from 03-docs-plan, Diogo's decision: the report is not replaced. The new docx and PDF are added with the suffix `_NOVO` for Francisco to read and approve (changes listed in review.md). Keep only the approved version before the merge into main and the ZIP.
 - 2026-11-22: Pushed dev/Diogo (`b7726d6`) at the request of Diogo, for Francisco to read the new report. main not touched.
+- 2026-11-22: Merged dev/Diogo into main (`39f5552`) at the request of Diogo, so Francisco can fetch it. No conflicts; build and lint pass on main (0 errors). Both report versions are on main: keep only the approved one before the ZIP.
