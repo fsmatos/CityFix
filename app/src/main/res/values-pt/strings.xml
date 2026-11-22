@@ -271,8 +271,6 @@
     <string name="register_location_denied">Os cidadãos registam-se com a sua localização. Permita a localização para a usar. Se não aparecer nenhuma janela, permita-a nas definições da aplicação.</string>
     <string name="register_impact_label">Deteção de impactos</string>
     <string name="register_impact_description">Sugere abrir uma ocorrência quando o telemóvel deteta um impacto vertical forte. Pode alterar mais tarde.</string>
-    <string name="impact_threshold_label">Sensibilidade de impacto: %1$.1f m/s²</string>
-    <string name="impact_threshold_description">Valores mais baixos detetam ressaltos menores. Guardado neste dispositivo.</string>
     <string name="register_submit">Criar conta</string>
     <string name="register_error_name">Introduza o seu nome (pelo menos 2 caracteres).</string>
     <string name="register_error_email_domain">Use um endereço de e-mail terminado em @%1$s.</string>

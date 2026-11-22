@@ -14,7 +14,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,7 +35,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import pt.isec.amov.cityfix.R
-import pt.isec.amov.cityfix.data.ImpactPrefs
 
 /*
  * Form fields shared by Register (D-010) and Profile (D-011): one text field, the password
@@ -164,32 +162,6 @@ internal fun ImpactDetectionRow(
         }
         // The row handles the click and announces the label, so the switch itself is passive.
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)
-    }
-}
-
-/**
- * The impact threshold slider (F-022): [value] in m/s², from [ImpactPrefs.MIN] to [ImpactPrefs.MAX]
- * in steps of [ImpactPrefs.STEP]. A lower value is more sensitive. Stateless: the caller saves it.
- */
-@Composable
-internal fun ImpactThresholdSlider(value: Float, onValueChange: (Float) -> Unit) {
-    val label = stringResource(R.string.impact_threshold_label, value)
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall)
-        Text(
-            text = stringResource(R.string.impact_threshold_description),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = ImpactPrefs.MIN..ImpactPrefs.MAX,
-            // Slider "steps" counts the stops between the two ends: (15 - 3) / 0.5 - 1 = 23.
-            steps = ((ImpactPrefs.MAX - ImpactPrefs.MIN) / ImpactPrefs.STEP).toInt() - 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = label },
-        )
     }
 }
 

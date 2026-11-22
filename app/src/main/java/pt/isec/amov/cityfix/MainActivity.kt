@@ -855,7 +855,6 @@ private fun CityFixApp(
                                 app.usersRepository,
                                 app.authRepository,
                                 app.attachmentStorage,
-                                app.impactPrefs,
                             ),
                         )
                         // As on the former My tickets (F-014): an active citizen's list already
@@ -897,7 +896,6 @@ private fun CityFixApp(
                                 app.usersRepository,
                                 app.authRepository,
                                 app.attachmentStorage,
-                                app.impactPrefs,
                             ),
                         )
                         ProfileScreen(

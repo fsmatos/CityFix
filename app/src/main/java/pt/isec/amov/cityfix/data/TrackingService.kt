@@ -102,7 +102,6 @@ class TrackingService : Service() {
         if (detectImpacts) {
             detector = ImpactDetector(
                 this,
-                threshold = app.impactPrefs::threshold,
                 speed = { if (System.currentTimeMillis() - lastFixAt < FIX_MAX_AGE_MS) lastSpeed else null },
             ).also { it.start { onImpact(app) } }
         }

@@ -271,8 +271,6 @@
     <string name="register_location_denied">Citizens register with their location. Allow location to use it. If no dialog appears, allow it in the app settings.</string>
     <string name="register_impact_label">Impact detection</string>
     <string name="register_impact_description">Suggest opening an issue when the phone detects a strong vertical impact. You can change this later.</string>
-    <string name="impact_threshold_label">Impact sensitivity: %1$.1f m/s²</string>
-    <string name="impact_threshold_description">Lower values detect smaller bumps. Saved on this device.</string>
     <string name="register_submit">Create account</string>
     <string name="register_error_name">Enter your name (at least 2 characters).</string>
     <string name="register_error_email_domain">Use an e-mail address ending in @%1$s.</string>
