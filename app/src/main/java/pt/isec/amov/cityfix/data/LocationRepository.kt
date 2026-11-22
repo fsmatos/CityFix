@@ -7,6 +7,7 @@ import android.location.Location
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -33,8 +34,14 @@ class LocationRepository(context: Context) {
         if (fine != PackageManager.PERMISSION_GRANTED && coarse != PackageManager.PERMISSION_GRANTED) {
             return null
         }
-        return client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
-            ?.let { Coordinates(it.latitude, it.longitude) }
+        return try {
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+                ?.let { Coordinates(it.latitude, it.longitude) }
+        } catch (e: ApiException) {
+            // D-022: Play services can fail or disconnect; the callers treat it as "no fix".
+            Log.w(TAG, "Current location failed", e)
+            null
+        }
     }
 
     fun locationUpdates(intervalMs: Long = 5_000): Flow<Coordinates> =
