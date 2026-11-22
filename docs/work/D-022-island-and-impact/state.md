@@ -1,6 +1,6 @@
 # D-022: Island stuck on the full list, impacts not detected in a car
 Branch: dev/Diogo · Base: 4de36cb
-Remote: not pushed
+Remote: origin/dev/Diogo
 
 | Phase | Status | Date | Notes |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@ Remote: not pushed
 | Code | done | 2026-11-22 | `e21d2fe`, `8e663e9`, `6db0648` |
 | Review | done | 2026-11-22 | main session, 0 blocking (review.md) |
 | Docs | done | 2026-11-22 | overview, 0023, 0028; new report awaits Francisco |
-| Pushed | pending | | |
+| Pushed | done | 2026-11-22 | origin/dev/Diogo (`b7726d6`) |
 | Merged | pending | | |
 
 ## Log
@@ -22,3 +22,4 @@ Append-only.
 - 2026-11-22: Not tested: signed-in citizen and operator (need a login), real phone, car, screen off. Those acceptance checks stay open.
 - 2026-11-22: Deviation: review by the main session, not the reviewer agent.
 - 2026-11-22: Deviation from 03-docs-plan, Diogo's decision: the report is not replaced. The new docx and PDF are added with the suffix `_NOVO` for Francisco to read and approve (changes listed in review.md). Keep only the approved version before the merge into main and the ZIP.
+- 2026-11-22: Pushed dev/Diogo (`b7726d6`) at the request of Diogo, for Francisco to read the new report. main not touched.
