@@ -35,9 +35,6 @@ class TrackingService : Service() {
     private var watchJob: Job? = null
     private var detector: ImpactDetector? = null
 
-    private var lastSpeed = 0f
-    private var lastFixAt = 0L
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Review S1: when the system restarts it (START_REDELIVER_INTENT) the user may have removed
         // the location permission meanwhile; a location service cannot start then (Android 14).
@@ -70,14 +67,8 @@ class TrackingService : Service() {
         val app = application as CityFixApplication
         Log.d(TAG, "start (operator: ${operatorId != null}, impacts: $detectImpacts)")
         watchJob = serviceScope.launch {
-            // One location request shared by the speed reader and the geofence.
+            // Started eagerly for both roles (this is a location service); only the geofence reads it.
             val fixes = app.locationRepository.locationFixes().shareIn(this, SharingStarted.Eagerly)
-            launch {
-                fixes.collect {
-                    lastSpeed = if (it.hasSpeed()) it.speed else 0f
-                    lastFixAt = System.currentTimeMillis()
-                }
-            }
             if (operatorId != null) {
                 launch {
                     // An operator reads every ticket (as TicketsViewModel.setUser does).
@@ -88,10 +79,7 @@ class TrackingService : Service() {
             }
         }
         if (detectImpacts) {
-            detector = ImpactDetector(
-                this,
-                speed = { if (System.currentTimeMillis() - lastFixAt < FIX_MAX_AGE_MS) lastSpeed else null },
-            ).also { it.start { onImpact(app) } }
+            detector = ImpactDetector(this).also { it.start { onImpact(app) } }
         }
     }
 
@@ -124,8 +112,6 @@ class TrackingService : Service() {
         private const val NOTIFICATION_ID = 1001
         private const val EXTRA_OPERATOR_ID = "operatorId"
         private const val EXTRA_DETECT_IMPACTS = "detectImpacts"
-
-        private const val FIX_MAX_AGE_MS = 10_000L
 
         fun start(context: Context, operatorId: String?, detectImpacts: Boolean) {
             val intent = Intent(context, TrackingService::class.java)

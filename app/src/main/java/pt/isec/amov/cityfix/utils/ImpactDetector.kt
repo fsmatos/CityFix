@@ -6,12 +6,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
-import kotlin.math.abs
 
-class ImpactDetector(
-    context: Context,
-    private val speed: () -> Float?,
-) : SensorEventListener {
+class ImpactDetector(context: Context) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -57,13 +53,13 @@ class ImpactDetector(
                     lowPassGravity(gravity, event.values)
                 }
                 val vertical = verticalAcceleration(event.values, gravity)
+                // D-022: gravity is added back, so MIN and MAX are the limits of the class slides,
+                // applied to the vertical axis only. There is no minimum speed.
+                val withGravity = SensorManager.GRAVITY_EARTH + vertical
                 val now = System.currentTimeMillis()
-                if (abs(vertical) > THRESHOLD && now - lastImpact > COOLDOWN_MS) {
-                    val moving = (speed() ?: 0f) > MIN_SPEED_MPS
-                    if (moving) {
-                        lastImpact = now
-                        onImpact()
-                    }
+                if ((withGravity > MAX || withGravity < MIN) && now - lastImpact > COOLDOWN_MS) {
+                    lastImpact = now
+                    onImpact()
                 }
             }
         }
@@ -72,8 +68,8 @@ class ImpactDetector(
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     companion object {
-        const val THRESHOLD = 6f
-        const val MIN_SPEED_MPS = 2f
+        const val MAX = 14f
+        const val MIN = 6f
         const val COOLDOWN_MS = 30_000L
     }
 }
