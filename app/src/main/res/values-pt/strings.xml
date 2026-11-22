@@ -425,4 +425,14 @@
     <string name="notif_operator_nearby">Um operador municipal está perto desta ocorrência.</string>
     <string name="notif_closing_soon">Encerra dentro de 24 horas. Reabra-a agora se o problema não estiver resolvido.</string>
     <string name="notif_closed">Esta ocorrência foi encerrada.</string>
+    <string name="channel_tracking">Localização em segundo plano</string>
+    <string name="channel_impact">Deteção de impactos</string>
+    <string name="tracking_notification_title">O CityFix está a usar a sua localização</string>
+    <string name="tracking_notification_text">O alerta de proximidade da equipa municipal e a deteção de impactos continuam em segundo plano.</string>
+    <string name="impact_notification_title">Possível dano no pavimento</string>
+    <string name="background_location_title">Permitir localização sempre?</string>
+    <string name="background_location_text">O CityFix mantém o alerta de proximidade da equipa municipal e a deteção de impactos com a app fechada. No ecrã seguinte escolha \"Permitir sempre\".</string>
+    <string name="background_location_continue">Continuar</string>
+    <string name="background_location_not_now">Agora não</string>
+    <string name="background_location_denied">Sem localização em segundo plano, o CityFix só funciona aberto.</string>
 </resources>

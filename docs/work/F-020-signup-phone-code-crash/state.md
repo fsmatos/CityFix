@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-21 | review.md: 0 blocking, 3 should-fix, 3 nits |
 | Docs | done | 2026-11-21 | 0026 amendment, overview bullet, report notes |
 | Pushed | done | 2026-11-21 | origin/dev/Francisco (`391f5ca`) |
-| Merged | pending | | |
+| Merged | done | 2026-11-21 | into main (`ffa438f`), pushed by the person |
 
 ## Log
 Append-only.
@@ -25,3 +25,4 @@ Append-only.
 - 2026-11-21: Device check (Mi 9T Pro, real number): no crash any more. "Could not send the code" came from Firebase error 17006 OPERATION_NOT_ALLOWED: the Phone sign-in provider is disabled in the console (Play Integrity token succeeded, so the SHA fingerprints are fine). Not a code issue; decision 0026 already says the provider must stay enabled. The person is to enable it, then retest.
 - 2026-11-21: After the person enabled the Phone sign-in provider in the console, sign-up Send Code worked on the Mi 9T Pro with a real number. The manual test checklist (`docs/testing/`, untracked until now) is committed with this; `.idea/` files stay untracked (person's choice).
 - 2026-11-21: Merged `origin/main` (D-017, D-018) into dev/Francisco. Conflicts: `ShowScreen.kt` and both `strings.xml` (F-018's `MediaViewer` vs D-017's `AttachmentViewer`, same feature). Person's choice: keep `AttachmentViewer`, move F-018's pinch zoom into its photo view, delete `MediaViewer.kt` and the `media_open_photo`/`media_play_video`/`media_viewer_close` strings. Build and lint pass.
+- 2026-11-21: Merged dev/Francisco into main (`ffa438f`, the person asked). The agent's push of main was refused by the settings deny rule; the person pushed main. `origin/main` merged back into dev/Francisco.

@@ -1,39 +1,30 @@
 package pt.isec.amov.cityfix.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import pt.isec.amov.cityfix.utils.ImpactDetector
+import kotlinx.coroutines.launch
 
 /**
- * Owns the [ImpactDetector] (brief I.2.F), so composables never touch the sensor. MainActivity
- * calls [start]/[stop] from ImpactDetectionEffect; [impactDetected] becomes true on an impact and
- * goes back to false when the suggestion is shown ([onSuggestionShown]).
+ * Impact suggestion state for the UI (brief I.2.F). Since F-022 the sensor lives in
+ * TrackingService, so it also works with the app closed; while the app is in front the service
+ * emits on [impacts] (CityFixApplication.impacts) and this turns it into [impactDetected], which
+ * goes back to false when the snackbar is shown ([onSuggestionShown]).
  */
-class ImpactViewModel(context: Context) : ViewModel() {
-
-    // applicationContext: the ViewModel outlives the Activity, so it must not keep it.
-    private val detector = ImpactDetector(context.applicationContext)
+class ImpactViewModel(impacts: SharedFlow<Unit>) : ViewModel() {
 
     private val _impactDetected = MutableStateFlow(false)
 
     val impactDetected: StateFlow<Boolean> = _impactDetected.asStateFlow()
 
-    fun start() {
-        detector.start { _impactDetected.value = true }
-    }
-
-    fun stop() {
-        detector.stop()
+    init {
+        viewModelScope.launch { impacts.collect { _impactDetected.value = true } }
     }
 
     fun onSuggestionShown() {
         _impactDetected.value = false
-    }
-
-    override fun onCleared() {
-        detector.stop()
     }
 }

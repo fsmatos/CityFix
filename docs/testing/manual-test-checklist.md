@@ -67,42 +67,42 @@ Tested on: `dev/Francisco` @ `04c7b48` (includes `origin/main` @ `4ee55bb`; F-01
 - [x] Only one suggestion per 30 s; none while already on the form; none with the switch off.
 
 ## I.3 Municipal operator
-- [ ] A. Register operator: e-mail outside the council domain refused; operator NIF unique; account active at once (after e-mail + SMS).
-- [ ] B. Login, forgot password, session cache (as citizen).
-- [ ] C. Profile: name and NIF read-only; others editable.
-- [ ] D. Pending citizens list; detail shows name, NIF and location on the map plus the coordinates line ("Coordinates: 40.21000, -8.41900", dot decimal also in PT; none for (0, 0); D-021); Activate (with confirm).
-- [ ] E. Categories: create, edit name, activate, deactivate; duplicate/blank/over 40 chars refused.
-- [ ] E. Deactivated category disappears from the citizen's report form.
-- [ ] E. Panel: all tickets (public and private), filters by status/category, order.
-- [ ] E. Detail: exact coordinates, author contacts, full history with photos/videos and author names.
-- [ ] E. Request information (message required) -> Info requested.
-- [ ] E. Start work (optional note) -> In progress, with timestamp in history.
-- [ ] E. Resolve requires 1-3 proof photos/videos -> Resolved; proof labelled "Resolution proof".
-- [ ] E. CLOSED ticket: no actions and no message input.
+- [x] A. Register operator: e-mail outside the council domain refused; operator NIF unique; account active at once (after e-mail + SMS).
+- [x] B. Login, forgot password, session cache (as citizen).
+- [x] C. Profile: name and NIF read-only; others editable.
+- [x] D. Pending citizens list; detail shows name, NIF and location on the map plus the coordinates line ("Coordinates: 40.21000, -8.41900", dot decimal also in PT; none for (0, 0); D-021); Activate (with confirm).
+- [x] E. Categories: create, edit name, activate, deactivate; duplicate/blank/over 40 chars refused.
+- [x] E. Deactivated category disappears from the citizen's report form.
+- [x] E. Panel: all tickets (public and private), filters by status/category, order.
+- [x] E. Detail: exact coordinates, author contacts, full history with photos/videos and author names.
+- [x] E. Request information (message required) -> Info requested.
+- [x] E. Start work (optional note) -> In progress, with timestamp in history.
+- [x] E. Resolve requires 1-3 proof photos/videos -> Resolved; proof labelled "Resolution proof".
+- [x] E. CLOSED ticket: no actions and no message input.
 
 **Proximity (Obs. / II.3)**
 - [x] Ticket IN_PROGRESS; operator device moves from > 20 m to < 20 m: citizen gets "council team near" notification.
-- [ ] At 25 m nothing; second entry within 1 h does not alert again.
-- [ ] Ticket not IN_PROGRESS: no alert.
+- [x] At 25 m nothing; second entry within 1 h does not alert again.
+- [x] Ticket not IN_PROGRESS: no alert.
 
 ## II. Ticket lifecycle
-- [ ] Open -> Info requested -> In progress -> Resolved -> Closed, each with timestamp and author in history.
-- [ ] Resolved more than 5 days ago shows as Closed and is locked (test by editing `statusHistory` dateTime in the console or changing the device clock).
-- [ ] Closed history entry says "Closed automatically".
+- [x] Open -> Info requested -> In progress -> Resolved -> Closed, each with timestamp and author in history.
+- [x] Resolved more than 5 days ago shows as Closed and is locked (test by editing `statusHistory` dateTime in the console or changing the device clock).
+- [x] Closed history entry says "Closed automatically".
 
 ## III. Notifications
-- [ ] Notification permission asked (Android 13+); denial shows a message.
-- [ ] Citizen notified on each status change (app open and app closed: worker runs every 15 min).
-- [ ] Citizen notified of operator messages; operator notified of citizen messages/clarifications.
-- [ ] Proximity alert (see I.3).
-- [ ] 24 h before closing warning (4 days after resolve; test with the clock or console).
-- [ ] Tap on a notification opens that ticket. Log out clears the tray.
+- [x] Notification permission asked (Android 13+); denial shows a message.
+- [x] Citizen notified on each status change (app open and app closed: worker runs every 15 min).
+- [x] Citizen notified of operator messages; operator notified of citizen messages/clarifications.
+- [x] Proximity alert (see I.3).
+- [x] 24 h before closing warning (4 days after resolve; test with the clock or console).
+- [x] Tap on a notification opens that ticket. Log out clears the tray.
 
 ## IV. Persistence and cloud
-- [ ] Airplane mode: list and detail still load from cache.
-- [ ] Airplane mode: create a ticket and send a message; they sync when back online.
-- [ ] Photos shown as "Upload pending" offline, uploaded by WorkManager when online (check Storage in the console).
-- [ ] Uploaded photo is compressed (max 1600 px, JPEG) and has a 256 px thumbnail.
+- [x] Airplane mode: list and detail still load from cache.
+- [x] Airplane mode: create a ticket and send a message; they sync when back online.
+- [x] Photos shown as "Upload pending" offline, uploaded by WorkManager when online (check Storage in the console).
+- [x] Uploaded photo is compressed (max 1600 px, JPEG) and has a 256 px thumbnail.
 
 ## V. Development notes
 - [ ] Rotate on every screen (dashboard, list, detail, report form with draft, register form, operator detail): no data lost, layout usable.

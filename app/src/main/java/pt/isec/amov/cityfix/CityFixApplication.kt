@@ -10,6 +10,7 @@ import com.google.firebase.firestore.firestoreSettings
 import com.google.firebase.firestore.persistentCacheSettings
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.flow.MutableSharedFlow
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.AuthRepository
@@ -55,6 +56,16 @@ class CityFixApplication : Application() {
 
     /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
     val locationRepository: LocationRepository by lazy { LocationRepository(this) }
+
+    /**
+     * True while MainActivity is started (set in its onStart/onStop). TrackingService reads it to
+     * choose between the in-app snackbar and a notification for an impact (F-022).
+     */
+    @Volatile
+    var appInForeground = false
+
+    /** Impacts detected by TrackingService while the app is in front; ImpactViewModel shows them. */
+    val impacts = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 

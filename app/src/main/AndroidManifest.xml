@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- F-016: Android 13+ notification permission (P11). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- F-022: location foreground service (slides 08, P10) and background location (slides 10/11). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
         android:name=".CityFixApplication"
@@ -30,6 +34,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- F-022: operator geofence and impact detection with the app in the background. -->
+        <service
+            android:name=".data.TrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

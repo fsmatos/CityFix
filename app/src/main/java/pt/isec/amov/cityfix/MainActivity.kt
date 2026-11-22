@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withStarted
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -76,11 +77,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.ReportOutcome
+import pt.isec.amov.cityfix.data.TrackingService
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.isActive
 import pt.isec.amov.cityfix.model.isParticipant
-import pt.isec.amov.cityfix.ui.components.ImpactDetectionEffect
+import pt.isec.amov.cityfix.ui.components.BackgroundLocationDialog
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
@@ -136,6 +138,7 @@ import pt.isec.amov.cityfix.ui.screens.TicketDetailScreen
 import pt.isec.amov.cityfix.ui.screens.detailAudience
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
+import pt.isec.amov.cityfix.utils.EXTRA_FROM_IMPACT
 import pt.isec.amov.cityfix.utils.EXTRA_TICKET_ID
 import pt.isec.amov.cityfix.utils.LOCATION_PERMISSIONS
 import pt.isec.amov.cityfix.utils.hasPreciseLocationPermission
@@ -162,8 +165,6 @@ import pt.isec.amov.cityfix.viewmodel.NotificationsViewModel
 import pt.isec.amov.cityfix.viewmodel.NotificationsViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModelFactory
-import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModel
-import pt.isec.amov.cityfix.viewmodel.OperatorProximityViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
 import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModelFactory
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
@@ -193,6 +194,9 @@ class MainActivity : ComponentActivity() {
     /** F-016: ticket a tapped notification asked to open; CityFixApp opens it and clears it. */
     private var openTicketId by mutableStateOf<String?>(null)
 
+    /** F-022: the impact notification was tapped; CityFixApp opens the prefilled report. */
+    private var openFromImpact by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // D-016: light and dark themes, so the default style is used: the system bar icons follow
@@ -201,10 +205,19 @@ class MainActivity : ComponentActivity() {
         // Like ContactsApp in Contacts_#3: the one repository lives in the Application.
         val app = application as CityFixApplication
         // Only on a fresh start: after a rotation the same intent must not open the ticket again.
-        if (savedInstanceState == null) openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
+        if (savedInstanceState == null) {
+            openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
+            openFromImpact = intent.getBooleanExtra(EXTRA_FROM_IMPACT, false)
+        }
         setContent {
             CityFixTheme {
-                CityFixApp(app, openTicketId, onTicketOpened = { openTicketId = null })
+                CityFixApp(
+                    app,
+                    openTicketId,
+                    onTicketOpened = { openTicketId = null },
+                    openFromImpact = openFromImpact,
+                    onImpactOpened = { openFromImpact = false },
+                )
             }
         }
     }
@@ -213,6 +226,19 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
+        openFromImpact = intent.getBooleanExtra(EXTRA_FROM_IMPACT, false)
+    }
+
+    // F-022: TrackingService shows an impact as a snackbar while the app is in front, otherwise
+    // as a notification.
+    override fun onStart() {
+        super.onStart()
+        (application as CityFixApplication).appInForeground = true
+    }
+
+    override fun onStop() {
+        (application as CityFixApplication).appInForeground = false
+        super.onStop()
     }
 }
 
@@ -222,7 +248,13 @@ class MainActivity : ComponentActivity() {
  * shares one instance of each. [app] holds the repositories the ViewModel factories receive.
  */
 @Composable
-private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketOpened: () -> Unit) {
+private fun CityFixApp(
+    app: CityFixApplication,
+    openTicketId: String?,
+    onTicketOpened: () -> Unit,
+    openFromImpact: Boolean,
+    onImpactOpened: () -> Unit,
+) {
     val ticketsViewModel: TicketsViewModel =
         viewModel(factory = TicketsViewModelFactory(app.ticketsRepository, null))
     val tickets by ticketsViewModel.tickets.collectAsStateWithLifecycle()
@@ -267,12 +299,12 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     // backStackEntry, so a back-stack change recomposes this line too (D-005 review N4).
     val canNavigateBack = navController.previousBackStackEntry != null
 
-    // Impact detection (F-015, brief I.2.F): only for an active citizen who turned it on.
-    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app))
+    // Impact detection (F-015, brief I.2.F): only for an active citizen who turned it on. Since
+    // F-022 the sensor runs in TrackingService (started below); this only shows its suggestions.
+    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app.impacts))
     val impactDetected by impactViewModel.impactDetected.collectAsStateWithLifecycle()
     val detectImpacts = role == AccessRole.CITIZEN &&
         (session.ticketsUser as? Citizen)?.impactDetection == true
-    ImpactDetectionEffect(detectImpacts, impactViewModel::start, impactViewModel::stop)
     val impactMessage = stringResource(R.string.impact_suggestion)
     val impactAction = stringResource(R.string.impact_report_action)
     LaunchedEffect(impactDetected) {
@@ -351,6 +383,8 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     var locationAnswered by remember { mutableStateOf(false) }
     // F-016: saveable, so a rotation does not ask (or show the denied snackbar) again.
     var askedNotifications by rememberSaveable { mutableStateOf(false) }
+    // F-022: the background location request waits for the notifications answer.
+    var notificationsAnswered by rememberSaveable { mutableStateOf(false) }
     val locationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -368,6 +402,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val notificationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        notificationsAnswered = true
         if (!granted) {
             snackbarScope.launch { snackbarHostState.showSnackbar(notificationsDeniedMessage) }
         }
@@ -385,25 +420,71 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
         }
     }
 
-    // Brief II.3 (D-014): while an operator with precise location has the app in the foreground,
-    // check the 20 m geofence of the IN_PROGRESS tickets (Gate 1 Q1: foreground only, no
-    // background permission). repeatOnLifecycle stops the location updates when the app goes to
-    // the background and starts them again on return; a new operator or Log out (operator null)
-    // cancels the effect, and with it the watch.
-    val proximityViewModel: OperatorProximityViewModel = viewModel(
-        factory = OperatorProximityViewModelFactory(app.locationRepository, app.ticketsRepository)
-    )
+    // Brief II.3 (D-014) and I.2.F, F-022: the operator's 20 m geofence and the citizen's impact
+    // detection run in TrackingService, a location foreground service that keeps working with the
+    // app in the background or closed. Started here, while the app is visible (Android 12+), and
+    // restarted when the operator or the impact choice changes; Log out (no operator, no
+    // detection) or no precise location stops it. Not while Loading, so an app start does not
+    // stop a running service only to start it again.
     val operator = session.ticketsUser as? Operator
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(operator?.id, hasPrecise) {
-        if (operator != null && hasPrecise) {
-            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                proximityViewModel.watch(operator.id, ticketsViewModel.tickets)
+    val sessionLoading = session == Session.Loading
+    LaunchedEffect(operator?.id, detectImpacts, hasPrecise, sessionLoading) {
+        if (sessionLoading) return@LaunchedEffect
+        if (hasPrecise && (operator != null || detectImpacts)) {
+            // Review S2: Android 12+ forbids starting it from the background, so wait until the
+            // activity is started (the session may finish loading after Home).
+            lifecycleOwner.lifecycle.withStarted {
+                TrackingService.start(context, operator?.id, detectImpacts)
             }
-        } else if (operator != null) {
-            // Q10: no UI; the operator keeps working without the proximity alert.
-            Log.i(TAG, "No precise location: operator proximity watch not started")
+        } else {
+            if (operator != null || detectImpacts) {
+                // Q10 (D-014): no UI; the user keeps working without the geofence or impacts.
+                Log.i(TAG, "No precise location: tracking service not started")
+            }
+            TrackingService.stop(context)
         }
+    }
+
+    // F-022 (Q6): background location (Android 10+), so the service keeps receiving fixes when the
+    // app is closed. As slides 10/11: asked separately, after the foreground location and the
+    // notifications answers (one request at a time), and only after BackgroundLocationDialog
+    // explains why. Once per session; denied -> a snackbar, the app keeps working in front.
+    var askedBackground by rememberSaveable { mutableStateOf(false) }
+    var showBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    val backgroundDeniedMessage = stringResource(R.string.background_location_denied)
+    val backgroundPermissionRequest = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            snackbarScope.launch { snackbarHostState.showSnackbar(backgroundDeniedMessage) }
+        }
+    }
+    val notificationsSettled = notificationsAnswered ||
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    val needsBackground = hasPrecise && (operator != null || detectImpacts)
+    LaunchedEffect(role, needsBackground, locationAnswered, notificationsSettled) {
+        if (role != AccessRole.CITIZEN && role != AccessRole.OPERATOR) {
+            askedBackground = false
+        } else if (!askedBackground && needsBackground && locationAnswered && notificationsSettled &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            askedBackground = true
+            showBackgroundDialog = true
+        }
+    }
+    if (showBackgroundDialog && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        BackgroundLocationDialog(
+            onContinue = {
+                showBackgroundDialog = false
+                backgroundPermissionRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            },
+            onDismiss = { showBackgroundDialog = false },
+        )
     }
 
     // F-016: notifications follow the session's tickets user (active citizen or operator). Not
@@ -414,7 +495,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
         if (!isLoading) notificationsViewModel.onUserChanged(session.ticketsUser)
     }
     // While the app is in the foreground, check the user's tickets for changes (like the
-    // proximity watch below); a new user or Log out cancels it. Anonymous users get nothing.
+    // tracking service above); a new user or Log out cancels it. Anonymous users get nothing.
     val notifiedUser = session.ticketsUser
     LaunchedEffect(notifiedUser?.id) {
         if (notifiedUser != null) {
@@ -967,6 +1048,17 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                 if (openTicketId != null) {
                     navController.navigate(TicketDetailRoute(openTicketId)) { launchSingleTop = true }
                     onTicketOpened()
+                }
+            }
+            // F-022: the impact notification opens the prefilled report, as the snackbar's action.
+            LaunchedEffect(openFromImpact, role) {
+                if (openFromImpact && role == AccessRole.CITIZEN) {
+                    navController.navigate(ReportTicketRoute(fromImpact = true)) { launchSingleTop = true }
+                    onImpactOpened()
+                } else if (openFromImpact && role != AccessRole.LOADING && role != AccessRole.CITIZEN) {
+                    // Review nit: another role (or anonymous) drops it, so a later login does not
+                    // jump to the report form.
+                    onImpactOpened()
                 }
             }
         }
