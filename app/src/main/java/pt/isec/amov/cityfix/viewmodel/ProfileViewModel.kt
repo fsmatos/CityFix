@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AuthRepository
-import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.data.ProfileChanges
 import pt.isec.amov.cityfix.data.UserProfile
 import pt.isec.amov.cityfix.data.UsersRepository
@@ -35,14 +34,12 @@ class ProfileViewModel(
     private val users: UsersRepository,
     private val auth: AuthRepository,
     private val attachmentStorage: AttachmentStorage,
-    private val impactPrefs: ImpactPrefs,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         ProfileUiState(
             email = auth.account.value?.email.orEmpty(),
-            impactThreshold = impactPrefs.threshold(),
             newPhotoPath = savedState.get<String>(KEY_PHOTO)?.takeIf { File(it).exists() },
         ),
     )
@@ -126,15 +123,6 @@ class ProfileViewModel(
     fun onImpactDetectionChange(enabled: Boolean) {
         savedState[KEY_IMPACT] = enabled
         _uiState.update { it.copy(impactDetection = enabled, notice = null) }
-    }
-
-    /**
-     * Impact threshold slider (F-022): a device setting, saved at once in [ImpactPrefs] (not by
-     * Save, which writes the Firestore profile), so the running detector uses it immediately.
-     */
-    fun onImpactThresholdChange(value: Float) {
-        impactPrefs.save(value)
-        _uiState.update { it.copy(impactThreshold = value) }
     }
 
     /** Gallery pick: copied into filesDir/images in viewModelScope, then it replaces the previous pick. */

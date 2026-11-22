@@ -15,17 +15,13 @@ import kotlin.math.abs
  * on a table does not count. Gravity comes from TYPE_GRAVITY or, without it, from a low-pass
  * filter on the accelerometer ([lowPassGravity]).
  *
- * A drop (free fall) can only reach about -9.8 m/s², so a threshold above that reacts only to
- * upward jolts.
- *
- * An impact is |vertical| > [threshold] while the phone moves: [speed] must give more than
+ * An impact is |vertical| > [THRESHOLD] while the phone moves: [speed] must give more than
  * [MIN_SPEED_MPS] (null = no recent GPS fix = not moving). [start] calls onImpact at most once
  * per [COOLDOWN_MS], so one bump gives one suggestion. Without an accelerometer, [start] does
  * nothing.
  */
 class ImpactDetector(
     context: Context,
-    private val threshold: () -> Float,
     private val speed: () -> Float?,
 ) : SensorEventListener {
 
@@ -76,7 +72,7 @@ class ImpactDetector(
                 }
                 val vertical = verticalAcceleration(event.values, gravity)
                 val now = System.currentTimeMillis()
-                if (abs(vertical) > threshold() && now - lastImpact > COOLDOWN_MS) {
+                if (abs(vertical) > THRESHOLD && now - lastImpact > COOLDOWN_MS) {
                     val moving = (speed() ?: 0f) > MIN_SPEED_MPS
                     if (moving) {
                         lastImpact = now
@@ -90,6 +86,12 @@ class ImpactDetector(
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     companion object {
+        /**
+         * Vertical acceleration (m/s², gravity removed) that counts as an impact (F-022 Q1). Set
+         * here, not by the user: lower is more sensitive. A drop (free fall) only reaches about
+         * -9.8 m/s², so a value above that would react to upward jolts only.
+         */
+        const val THRESHOLD = 6f
         /** Minimum GPS speed, in m/s (about 7 km/h), for a jolt to count (F-022 Q2). */
         const val MIN_SPEED_MPS = 2f
         /** At most one suggestion every 30 s. */

@@ -19,7 +19,6 @@ import pt.isec.amov.cityfix.data.FirebaseAuthRepository
 import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
-import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.TicketNotifier
@@ -67,9 +66,6 @@ class CityFixApplication : Application() {
 
     /** Impacts detected by TrackingService while the app is in front; ImpactViewModel shows them. */
     val impacts = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-
-    /** The citizen's impact threshold, a device setting (F-022). */
-    val impactPrefs: ImpactPrefs by lazy { ImpactPrefs(this) }
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 
