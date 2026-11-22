@@ -24,13 +24,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 
-/**
- * Photo, or first video frame with a play badge, cropped to fill [modifier]'s bounds. Shared by
- * the report gallery, the ticket card and the detail (like `ContactAvatar` in Contacts_#3). It
- * draws the thumbnail when there is one (F-013: a local JPEG before upload, a URL after it), so
- * lists load small images. A blank file without a thumbnail (sample tickets) or one that fails to
- * decode shows the placeholder.
- */
 @Composable
 fun AttachmentImage(
     attachment: Attachment,
@@ -82,7 +75,6 @@ fun AttachmentImage(
     }
 }
 
-/** Coil's loading/error slots do not apply the description, so the icon carries it. */
 @Composable
 private fun CenteredPlaceholder(contentDescription: String?) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

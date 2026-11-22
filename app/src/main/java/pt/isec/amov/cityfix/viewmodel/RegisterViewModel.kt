@@ -29,18 +29,6 @@ import pt.isec.amov.cityfix.utils.isValidNif
 import pt.isec.amov.cityfix.utils.passwordProblem
 import java.io.File
 
-/**
- * Register screen ViewModel, created per route (inside composable<RegisterRoute>).
- *
- * Every field except the two passwords is also kept in [savedState], so the form survives process
- * death; rotation keeps the whole ViewModel. A field's error is recomputed as it is typed (only
- * once it is not empty, D-010 Q10); Submit shows every error. A successful registration signs the
- * new user in; CityFixApp holds its redirect while [RegisterUiState.isRegistering] is true, then
- * moves to Account setup. A citizen's location comes from [locationRepository] (F-012), asked
- * for at the point of use; its two coordinates are saved as Doubles. The optional photo is a local
- * copy ([attachmentStorage] copies a gallery pick off the main thread); it is deleted when the
- * form is left without registering, and otherwise handed to the upload worker.
- */
 class RegisterViewModel(
     private val users: UsersRepository,
     private val locationRepository: LocationRepository,
@@ -67,11 +55,6 @@ class RegisterViewModel(
         loadDomain()
     }
 
-    /**
-     * Reads the council's domain: the operator e-mail must be in it (brief I.3.A). Called from
-     * init and again from onRoleSelected(OPERATOR) and submit() while it is missing (offline on a
-     * first install, or no municipality/main yet), so coming back online is enough.
-     */
     private fun loadDomain() {
         _uiState.update { it.copy(isLoadingDomain = true) }
         viewModelScope.launch {
@@ -83,7 +66,6 @@ class RegisterViewModel(
         }
     }
 
-    /** True when the domain is missing and no read is running. */
     private fun domainMissing(): Boolean {
         val state = _uiState.value
         return state.operatorDomain == null && !state.isLoadingDomain
@@ -115,7 +97,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Keeps digits only, at most [FIELD_DIGITS]. */
     fun onPhoneChange(text: String) {
         val digits = text.filter { it.isDigit() }.take(FIELD_DIGITS)
         savedState[KEY_PHONE] = digits
@@ -125,7 +106,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Keeps digits only, at most [FIELD_DIGITS]. */
     fun onNifChange(text: String) {
         val digits = text.filter { it.isDigit() }.take(FIELD_DIGITS)
         savedState[KEY_NIF] = digits
@@ -135,7 +115,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Not saved: passwords never go to the saved state. */
     fun onPasswordChange(text: String) {
         update {
             val changed = copy(password = text, error = null)
@@ -162,7 +141,6 @@ class RegisterViewModel(
         _uiState.update { it.copy(impactDetection = enabled) }
     }
 
-    /** The answer to the permission dialog of "Use my location". */
     fun onLocationPermissionResult(granted: Boolean) {
         if (granted) {
             _uiState.update { it.copy(locationPermissionDenied = false, locationError = null) }
@@ -172,7 +150,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Reads one fix (any accuracy: the residence is not used for grouping). No fix keeps the previous one. */
     fun refreshLocation() {
         if (_uiState.value.isLocating) return
         _uiState.update { it.copy(isLocating = true, locationPermissionDenied = false) }
@@ -193,7 +170,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Gallery pick: copied into filesDir/images in viewModelScope, then it replaces the previous photo. */
     fun onPhotoPicked(uri: Uri) {
         if (_uiState.value.isCopyingPhoto) return
         _uiState.update { it.copy(isCopyingPhoto = true, photoNotice = null) }
@@ -217,7 +193,6 @@ class RegisterViewModel(
         }
     }
 
-    /** [path] is the camera's file in filesDir/images, already written. */
     fun onPhotoCaptured(path: String) {
         setPhoto(path)
     }
@@ -230,7 +205,6 @@ class RegisterViewModel(
         _uiState.update { it.copy(photoNotice = R.string.report_camera_failed) }
     }
 
-    /** Replaces the photo, deleting the previous local copy. */
     private fun setPhoto(path: String?) {
         val previous = _uiState.value.photoPath
         if (previous != null && previous != path) File(previous).delete()
@@ -238,7 +212,6 @@ class RegisterViewModel(
         _uiState.update { it.copy(photoPath = path, photoNotice = null) }
     }
 
-    /** Leaving the form without an account: the photo copy is not needed any more. */
     override fun onCleared() {
         val state = _uiState.value
         if (!state.registered) state.photoPath?.let { File(it).delete() }
@@ -306,7 +279,6 @@ class RegisterViewModel(
         }
     }
 
-    /** Applies [change], then hides the summary once the form is valid. */
     private fun update(change: RegisterUiState.() -> RegisterUiState) {
         _uiState.update { current ->
             val next = current.change()
@@ -314,14 +286,12 @@ class RegisterViewModel(
         }
     }
 
-    /** The location saved before a process death, when both coordinates are there. */
     private fun savedLocation(): Coordinates? {
         val latitude = savedState.get<Double>(KEY_LATITUDE) ?: return null
         val longitude = savedState.get<Double>(KEY_LONGITUDE) ?: return null
         return Coordinates(latitude, longitude)
     }
 
-    /** A field's error while typing: an empty field shows none until Submit (Q10). */
     @StringRes
     private fun ifTyped(text: String, @StringRes error: Int?): Int? = if (text.isEmpty()) null else error
 

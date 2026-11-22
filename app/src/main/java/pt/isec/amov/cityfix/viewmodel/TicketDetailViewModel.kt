@@ -12,16 +12,6 @@ import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.User
 
-/**
- * The participant detail of ticket [ticketId] (F-014): its message thread, the message being typed
- * and the reopen / clarification dialog. Created per destination, like EditContactViewModel in
- * Contacts_#3, and only for a REGISTERED or OPERATOR audience: anonymous and pending users never
- * create it, so they never read the messages (brief I.1.C).
- *
- * [user] is fixed: a role change clears the back stack (D-009), so this ViewModel never outlives
- * its user. The ticket is not stored here; the screen passes the current one from
- * TicketsViewModel's list to [confirmDialog] and [closeIfExpired].
- */
 class TicketDetailViewModel(
     private val repository: TicketsRepository,
     private val ticketId: String,
@@ -44,7 +34,6 @@ class TicketDetailViewModel(
         _uiState.update { it.copy(draft = text) }
     }
 
-    /** Sends the draft; it is cleared once the message is queued (offline too). */
     fun sendMessage() {
         if (repository.sendMessage(ticketId, _uiState.value.draft, user)) {
             _uiState.update { it.copy(draft = "") }
@@ -67,11 +56,6 @@ class TicketDetailViewModel(
         _uiState.update { it.copy(openDialog = null) }
     }
 
-    /**
-     * Runs the open dialog's action on [ticket] with the typed text: reopen (brief II.4) or ask
-     * for clarification (brief II.2). A blank text, or a move the lifecycle rejects (for example
-     * the 5-day window ended meanwhile), keeps the dialog open with an error.
-     */
     fun confirmDialog(ticket: Ticket) {
         val state = _uiState.value
         val dialog = state.openDialog ?: return
@@ -98,12 +82,10 @@ class TicketDetailViewModel(
         _uiState.update { it.copy(openDialog = null, dialogText = "") }
     }
 
-    /** Writes [ticket] as CLOSED if its reopen window has ended (F-014 Q6); nothing otherwise. */
     fun closeIfExpired(ticket: Ticket) {
         repository.closeExpiredTicket(ticket)
     }
 
-    /** Opens [dialog] with an empty text and no error. */
     private fun openDialog(dialog: DetailDialog) {
         _uiState.update { it.copy(openDialog = dialog, dialogText = "", dialogError = null) }
     }

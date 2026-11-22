@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/** Builds [PendingCitizensViewModel] with the app's users repository. */
 class PendingCitizensViewModelFactory(
     private val users: UsersRepository,
 ) : ViewModelProvider.Factory {

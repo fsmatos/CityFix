@@ -9,28 +9,18 @@ import pt.isec.amov.cityfix.model.StatusHistory
 import pt.isec.amov.cityfix.model.Ticket
 import pt.isec.amov.cityfix.model.TicketStatus
 
-/**
- * Sample tickets near Pr. Republica for the previews (`ShowScreenPrivacyPreview`: a raw ticket with
- * author, follower and exact location). Not written to Firestore. Times are fixed UTC epoch ms.
- */
 object SampleTickets {
 
-    /** 2026-10-20 09:00 UTC. */
     private const val SAMPLE_1_CREATED = 1_792_486_800_000L
 
-    /** 2026-10-15 18:30 UTC. */
     private const val SAMPLE_2_CREATED = 1_792_089_000_000L
 
-    /** 2026-10-17 10:00 UTC. */
     private const val SAMPLE_2_IN_PROGRESS = 1_792_231_200_000L
 
-    /** 2026-10-01 08:00 UTC. */
     private const val SAMPLE_3_CREATED = 1_790_841_600_000L
 
-    /** 2026-10-02 08:00 UTC. */
     private const val SAMPLE_3_IN_PROGRESS = 1_790_928_000_000L
 
-    /** 2026-10-04 08:00 UTC: 3 days after creation. */
     private const val SAMPLE_3_RESOLVED = 1_791_100_800_000L
 
     private val sample1 = Ticket(

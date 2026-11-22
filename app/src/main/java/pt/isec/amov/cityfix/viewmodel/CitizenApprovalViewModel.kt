@@ -11,11 +11,6 @@ import pt.isec.amov.cityfix.data.UserProfile
 import pt.isec.amov.cityfix.data.UsersRepository
 import pt.isec.amov.cityfix.model.Citizen
 
-/**
- * The registration of [citizenId] and its activation by [operatorId] (brief I.3.D). Reads the
- * citizen live with observeUser, so an activation by another operator shows at once. Created
- * inside the PendingCitizenRoute guard, so its listener ends with that back-stack entry.
- */
 class CitizenApprovalViewModel(
     private val citizenId: String,
     private val operatorId: String,
@@ -44,7 +39,6 @@ class CitizenApprovalViewModel(
         }
     }
 
-    /** Opens the confirmation dialog: the app has no undo (Q5). */
     fun onActivateClick() {
         val state = _uiState.value
         if (state.canActivate && !state.activated) _uiState.update { it.copy(confirming = true) }
@@ -54,12 +48,6 @@ class CitizenApprovalViewModel(
         _uiState.update { it.copy(confirming = false) }
     }
 
-    /**
-     * Writes the activation (not awaited, so it is queued offline) and calls [onActivated], which
-     * shows the snackbar and goes back to the list. Does nothing unless the confirmation dialog is
-     * open and the citizen is PENDING. Closing the dialog first makes a second tap on Activate
-     * (before the dialog disappears) return here, so it writes, shows and goes back only once.
-     */
     fun activate(onActivated: () -> Unit) {
         val state = _uiState.value
         if (!state.confirming || !state.canActivate) return

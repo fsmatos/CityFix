@@ -32,7 +32,6 @@ import pt.isec.amov.cityfix.ui.theme.Dimens
 
 // D-016: the loading, empty and error states every screen shows the same way.
 
-/** A centred spinner; [descriptionRes] is what TalkBack says ("Loading ..."). */
 @Composable
 fun LoadingState(@StringRes descriptionRes: Int, modifier: Modifier = Modifier) {
     val description = stringResource(descriptionRes)
@@ -43,7 +42,6 @@ fun LoadingState(@StringRes descriptionRes: Int, modifier: Modifier = Modifier) 
     }
 }
 
-/** Nothing to show: a soft icon and the message, centred. */
 @Composable
 fun EmptyState(
     @StringRes messageRes: Int,
@@ -53,7 +51,6 @@ fun EmptyState(
     MessageState(icon = icon, message = stringResource(messageRes), modifier = modifier)
 }
 
-/** Something failed: the message in the error colour and, when [onRetry] is given, "Try again". */
 @Composable
 fun ErrorState(
     @StringRes messageRes: Int,

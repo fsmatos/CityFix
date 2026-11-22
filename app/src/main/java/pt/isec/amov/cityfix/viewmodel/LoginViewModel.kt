@@ -16,15 +16,6 @@ import pt.isec.amov.cityfix.data.CodeSendResult
 import pt.isec.amov.cityfix.data.SecondFactorChallenge
 import pt.isec.amov.cityfix.data.SignInResult
 
-/**
- * Login screen ViewModel, created per route (inside composable<LoginRoute>). The e-mail is also
- * kept in [savedState], so it survives process death; the password is not saved anywhere.
- * A successful sign-in only changes the session: CityFixApp's redirect then navigates home.
- *
- * An enrolled account needs the SMS code: the [challenge] (opaque, from the repository) and the
- * [verificationId] stay in private fields, never in the UI state or saved state. After process
- * death they are gone, so the screen starts again at the credentials step with the e-mail kept.
- */
 class LoginViewModel(
     private val auth: AuthRepository,
     private val savedState: SavedStateHandle,
@@ -87,10 +78,6 @@ class LoginViewModel(
         }
     }
 
-    /**
-     * Sends (or resends) the SMS code. The screen calls it once when the code step opens and on
-     * Resend; [activity] goes straight to the repository (reCAPTCHA fallback) and is not kept.
-     */
     fun sendCode(activity: Activity) {
         val current = challenge
         if (current == null) {
@@ -151,7 +138,6 @@ class LoginViewModel(
         }
     }
 
-    /** Back from the code step: the challenge is dropped, the e-mail and password stay. */
     fun backToCredentials() {
         challenge = null
         verificationId = null

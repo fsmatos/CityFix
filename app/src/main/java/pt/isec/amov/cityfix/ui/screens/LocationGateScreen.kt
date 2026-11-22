@@ -33,12 +33,6 @@ import pt.isec.amov.cityfix.viewmodel.GateStatus
 import pt.isec.amov.cityfix.viewmodel.LocationGateUiState
 import pt.isec.amov.cityfix.viewmodel.LocationGateViewModel
 
-/**
- * Stateful half of the 10 km gate (brief I.1), shown instead of the app while an anonymous user is
- * not known to be inside. [onTryAgainClick] asks for the permission again (MainActivity owns the
- * launcher); its answer reaches [viewModel], which reads the location again. [onLoginClick] opens
- * the login (D-009); when null the button is not shown.
- */
 @Composable
 fun LocationGateScreen(
     viewModel: LocationGateViewModel,
@@ -58,7 +52,6 @@ fun LocationGateScreen(
     )
 }
 
-/** Stateless half of the gate: one message per [LocationGateUiState.status]; previews target it. */
 @Composable
 fun LocationGateContent(
     state: LocationGateUiState,

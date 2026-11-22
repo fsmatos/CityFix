@@ -10,26 +10,16 @@ import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.model.isInsideAnonymousArea
 
-/** Where the anonymous start-up check stands (brief I.1: only within 10 km of Pr. Republica). */
 enum class GateStatus { CHECKING, DENIED, NO_FIX, OUTSIDE, INSIDE }
 
 data class LocationGateUiState(val status: GateStatus = GateStatus.CHECKING)
 
-/**
- * The 10 km gate for anonymous users. MainActivity requests the location permission at start (as
- * in class) and passes the answer to [onPermissionResult]; a granted permission reads one fix and
- * applies [isInsideAnonymousArea]. The fix itself is not kept: the gate only needs the answer.
- */
 class LocationGateViewModel(private val locationRepository: LocationRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocationGateUiState())
 
     val uiState: StateFlow<LocationGateUiState> = _uiState.asStateFlow()
 
-    /**
-     * A rotation asks for the permission again and Android answers at once; when the user is
-     * already inside, the check is not repeated, so the app does not flash the gate.
-     */
     fun onPermissionResult(granted: Boolean) {
         if (!granted) {
             _uiState.value = LocationGateUiState(GateStatus.DENIED)
@@ -52,7 +42,6 @@ class LocationGateViewModel(private val locationRepository: LocationRepository) 
     }
 }
 
-/** Builds [LocationGateViewModel] with the app's LocationRepository, like the other factories. */
 class LocationGateViewModelFactory(
     private val locationRepository: LocationRepository,
 ) : ViewModelProvider.Factory {

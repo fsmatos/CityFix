@@ -36,11 +36,6 @@ import java.text.NumberFormat
 private const val HOUR_MILLIS = 3_600_000L
 private const val DAY_MILLIS = 86_400_000L
 
-/**
- * Anonymous dashboard (brief I.1.A): average repair time, total issues and % active issues.
- * Formats the given DashboardStats only; the figures are computed upstream (TicketsList.stats())
- * and their contract (activeRatio never NaN, null average when nothing is resolved) is trusted.
- */
 @Composable
 fun DashboardScreen(
     stats: DashboardStats,
@@ -175,7 +170,6 @@ private fun StatCard(
     }
 }
 
-/** Average repair time as whole days and hours (both truncated), or "No repairs yet" when null. */
 @Composable
 private fun repairTimeText(millis: Long?): String {
     if (millis == null) return stringResource(R.string.dashboard_repair_time_none)
@@ -245,7 +239,6 @@ private fun DashboardScreenSampleFiguresPreview() {
     }
 }
 
-/** Singular plurals and the shortest duration: "Less than 1 hour", "Based on 1 repair", "0 of 1 issue". */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable

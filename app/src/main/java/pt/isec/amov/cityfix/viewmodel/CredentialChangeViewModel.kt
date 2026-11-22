@@ -21,17 +21,6 @@ import pt.isec.amov.cityfix.utils.PasswordProblem
 import pt.isec.amov.cityfix.utils.isInEmailDomain
 import pt.isec.amov.cityfix.utils.passwordProblem
 
-/**
- * Change password / Change e-mail ViewModel (D-011), created per route. Steps FORM -> CODE ->
- * DONE, modelled on LoginViewModel: Submit re-authenticates with the current password, which
- * for an enrolled account (every account, decision 0015) asks for the SMS code; once the code
- * is accepted the change runs at once.
- *
- * The [challenge] and [verificationId] stay in private fields, never in the UI or saved state.
- * The passwords are never saved; after process death the form step returns with only the new
- * e-mail kept. An operator's new e-mail must stay in `municipality/main.emailDomain`, read on
- * init as on Register (D-010).
- */
 class CredentialChangeViewModel(
     private val change: CredentialChange,
     private val isOperator: Boolean,
@@ -53,21 +42,12 @@ class CredentialChangeViewModel(
     private var challenge: SecondFactorChallenge? = null
     private var verificationId: String? = null
 
-    /**
-     * True while [performChange] runs. The challenge is already gone then, so Back must not
-     * reopen the form: a second Continue would start another re-authentication (and, for the
-     * e-mail, maybe a second link) while the first change is still running.
-     */
     private var changing = false
 
     init {
         if (change == CredentialChange.EMAIL && isOperator) loadDomain()
     }
 
-    /**
-     * Reads the council's domain (operators only). Called from init and again from submit()
-     * while it is missing, so coming back online is enough.
-     */
     private fun loadDomain() {
         _uiState.update { it.copy(isLoadingDomain = true) }
         viewModelScope.launch {
@@ -112,7 +92,6 @@ class CredentialChangeViewModel(
         _uiState.update { it.copy(showPassword = !it.showPassword) }
     }
 
-    /** Checks the form, then re-authenticates with the current password. */
     fun submit() {
         val state = _uiState.value
         if (state.isBusy || state.step != CredentialStep.FORM) return
@@ -180,10 +159,6 @@ class CredentialChangeViewModel(
         }
     }
 
-    /**
-     * Sends (or resends) the SMS code. The screen calls it once when the code step opens and on
-     * Resend; [activity] goes straight to the repository (reCAPTCHA fallback) and is not kept.
-     */
     fun sendCode(activity: Activity) {
         val current = challenge
         if (current == null) {
@@ -215,7 +190,6 @@ class CredentialChangeViewModel(
         _uiState.update { it.copy(code = digits, codeError = null, error = null) }
     }
 
-    /** Completes the re-authentication with the typed code, then runs the change. */
     fun confirmCode() {
         val state = _uiState.value
         val current = challenge
@@ -244,10 +218,6 @@ class CredentialChangeViewModel(
         }
     }
 
-    /**
-     * Back from the code step: the challenge is dropped, the typed values stay. Ignored while
-     * the change runs ([changing]).
-     */
     fun backToForm() {
         if (changing) return
         challenge = null
@@ -266,7 +236,6 @@ class CredentialChangeViewModel(
         }
     }
 
-    /** Runs right after a successful re-authentication; [isBusy] is still true. */
     private suspend fun performChange() {
         changing = true
         challenge = null
@@ -300,11 +269,9 @@ class CredentialChangeViewModel(
         codeRequested = false,
     )
 
-    /** A field's error while typing: an empty field shows none until Submit (as on Register). */
     @StringRes
     private fun ifTyped(text: String, @StringRes error: Int?): Int? = if (text.isEmpty()) null else error
 
-    /** The D-010 e-mail rule, then "same as now", then (operator) the council's domain. */
     @StringRes
     private fun newEmailError(state: CredentialChangeUiState): Int? {
         val email = state.newEmail.trim()

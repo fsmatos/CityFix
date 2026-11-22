@@ -30,15 +30,6 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.utils.formatDateTime
 import java.util.Locale
 
-/**
- * The message thread of a ticket (brief I.2.E, II.2), stateless: the caller owns [messages] and
- * [draft]. Each message is labelled "You" (sent by [currentUserId]), "Municipality" (an operator)
- * or "Citizen" (another participant); author ids are never shown. With [canSend] false (a closed
- * ticket, brief II) the input is replaced by a "locked" note.
- *
- * A plain Column, not a LazyColumn: it sits inside the detail's verticalScroll, and a LazyColumn
- * inside a scrolling Column crashes. D-013 reuses it for the operator's view.
- */
 @Composable
 fun MessageThread(
     messages: List<Message>,
@@ -102,7 +93,6 @@ fun MessageThread(
     }
 }
 
-/** One message bubble: mine on the end side, the others on the start side; read as one item. */
 @Composable
 private fun MessageRow(
     message: Message,
@@ -156,7 +146,6 @@ private fun MessageRow(
     }
 }
 
-/** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_SENT = 1_792_089_000_000L
 
 private val previewMessages = listOf(

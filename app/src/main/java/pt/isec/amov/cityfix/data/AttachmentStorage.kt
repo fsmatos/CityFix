@@ -9,19 +9,10 @@ import pt.isec.amov.cityfix.utils.FileUtils
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * Copies picked photos and videos into filesDir/images off the main thread (a video can take
- * seconds). Goes beyond Contacts_#3, which copies in the launcher callback. Create one per app
- * (CityFixApplication); it keeps the application context only.
- */
 class AttachmentStorage(context: Context) {
 
     private val appContext = context.applicationContext
 
-    /**
-     * Copies [uris] on Dispatchers.IO and returns the paths that copied (a failed one is left out).
-     * If the caller is cancelled (the user left the form), deletes what it copied and rethrows.
-     */
     suspend fun copyToInternalStorage(uris: List<Uri>): List<String> {
         val copied = mutableListOf<String>()
         try {

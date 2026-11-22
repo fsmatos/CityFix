@@ -11,12 +11,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.CategoriesRepository
 import pt.isec.amov.cityfix.model.Category
 
-/**
- * The operator's category management (brief I.3.E): create, rename, activate and deactivate.
- * The list is live, so every write shows at once (also offline). The open dialog is part of the
- * state, so it and its typed name survive rotation (not process death, Q9). Created inside the
- * CategoriesRoute guard, so the only category writes come from an operator's screen.
- */
 class CategoriesViewModel(private val repository: CategoriesRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CategoriesUiState())
@@ -50,11 +44,6 @@ class CategoriesViewModel(private val repository: CategoriesRepository) : ViewMo
         _uiState.update { it.copy(editor = null) }
     }
 
-    /**
-     * Checks the name (Q7): trimmed, not blank, at most [MAX_CATEGORY_NAME_LENGTH] characters and
-     * unique ignoring case among all categories, inactive ones included. On an error the dialog
-     * stays open with it and nothing is written; otherwise adds or renames and closes the dialog.
-     */
     fun onEditorSave() {
         val state = _uiState.value
         val editor = state.editor ?: return
@@ -80,7 +69,6 @@ class CategoriesViewModel(private val repository: CategoriesRepository) : ViewMo
         _uiState.update { it.copy(editor = null) }
     }
 
-    /** The listener updates the row once the write is in the local cache. */
     fun onActiveChange(category: Category, active: Boolean) {
         repository.setActive(category.id, active)
     }

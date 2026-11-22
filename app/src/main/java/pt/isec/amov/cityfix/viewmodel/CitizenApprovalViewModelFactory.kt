@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/** Builds [CitizenApprovalViewModel] for one citizen and the signed-in operator. */
 class CitizenApprovalViewModelFactory(
     private val citizenId: String,
     private val operatorId: String,

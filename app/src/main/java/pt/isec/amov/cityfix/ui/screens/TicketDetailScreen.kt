@@ -41,14 +41,6 @@ import pt.isec.amov.cityfix.viewmodel.DetailDialog
 import pt.isec.amov.cityfix.viewmodel.TicketDetailUiState
 import pt.isec.amov.cityfix.viewmodel.TicketDetailViewModel
 
-/**
- * Stateful participant detail (F-014): collects [viewModel] and passes everything to
- * [TicketDetailContent]. Only for a REGISTERED or OPERATOR audience (MainActivity decides).
- *
- * When the ticket is shown and its 5-day reopen window has ended, it is written as CLOSED once
- * (F-014 Q6, decision 0012 Q4); the listener then returns the CLOSED ticket, so it is not written
- * again.
- */
 @Composable
 fun TicketDetailScreen(
     ticket: Ticket?,
@@ -79,15 +71,6 @@ fun TicketDetailScreen(
     )
 }
 
-/**
- * Stateless participant detail: ShowScreen (exact map, full history) with the actions and the
- * message thread in its slot.
- *
- * Reopen is shown only when `OPEN in allowedTransitions` (brief II.4: a participant, RESOLVED,
- * inside the 5-day window). "Ask for clarification" is shown to citizens when INFO_REQUESTED is
- * allowed (brief II.2: an active participant on an OPEN or IN_PROGRESS ticket); the operator's
- * own moves are D-013's. A closed ticket is read-only: no actions and no new messages (brief II).
- */
 @Composable
 fun TicketDetailContent(
     ticket: Ticket?,
@@ -159,10 +142,6 @@ fun TicketDetailContent(
     }
 }
 
-/**
- * The reopen or clarification dialog (AlertDialog, as in Contacts_#3) with one text field: the
- * reopen justification or the question. The error, if any, is shown under the field.
- */
 @Composable
 private fun TextDialog(
     dialog: DetailDialog,
@@ -217,12 +196,10 @@ private fun TextDialog(
 
 private const val DAY = 86_400_000L
 
-/** 2026-10-15 18:30 UTC: when the preview ticket was resolved. */
 private const val PREVIEW_RESOLVED = 1_792_089_000_000L
 
 private val previewUser = Citizen(id = "c-1", registrationStatus = RegistrationStatus.ACTIVE)
 
-/** A ticket created by [previewUser], RESOLVED at [PREVIEW_RESOLVED]. */
 private val previewResolved = Ticket(
     id = "preview-1",
     description = "The bench in front of the school is broken.",
@@ -270,7 +247,6 @@ private fun PreviewContent(ticket: Ticket, now: Long, state: TicketDetailUiState
     }
 }
 
-/** Day 4 after RESOLVED: Reopen is offered. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
@@ -279,7 +255,6 @@ private fun TicketDetailDay4Preview() {
     PreviewContent(previewResolved, PREVIEW_RESOLVED + 4 * DAY, TicketDetailUiState(messages = previewMessages))
 }
 
-/** Day 6 after RESOLVED: shown as CLOSED, no Reopen, no new messages. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -287,7 +262,6 @@ private fun TicketDetailDay6Preview() {
     PreviewContent(previewResolved, PREVIEW_RESOLVED + 6 * DAY, TicketDetailUiState(messages = previewMessages))
 }
 
-/** IN_PROGRESS: "Ask for clarification" is offered. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -299,7 +273,6 @@ private fun TicketDetailInProgressPreview() {
     PreviewContent(inProgress, PREVIEW_RESOLVED, TicketDetailUiState(messages = previewMessages, draft = "Thanks"))
 }
 
-/** The reopen dialog after Confirm with a blank justification. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -311,7 +284,6 @@ private fun TicketDetailReopenErrorPreview() {
     )
 }
 
-/** The clarification dialog with a question typed. */
 @Preview(showBackground = true)
 @Composable
 private fun TicketDetailClarificationPreview() {

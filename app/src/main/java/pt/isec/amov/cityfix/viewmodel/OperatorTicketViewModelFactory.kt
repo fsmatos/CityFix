@@ -7,7 +7,6 @@ import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 import pt.isec.amov.cityfix.model.Operator
 
-/** Builds [OperatorTicketViewModel] with the app's repositories, the route's ticket id and the operator. */
 class OperatorTicketViewModelFactory(
     private val tickets: TicketsRepository,
     private val users: UsersRepository,

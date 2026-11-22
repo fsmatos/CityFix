@@ -19,31 +19,22 @@ import pt.isec.amov.cityfix.R
  * ResourcesMenusNotify example create the channel, then NotificationCompat.Builder + notify().
  */
 
-/** Status changes, the 24 h warning and the close. */
 const val CHANNEL_TICKETS = "tickets"
 
-/** New messages in a ticket's thread. */
 const val CHANNEL_MESSAGES = "messages"
 
-/** An operator came within 20 m (D-014). */
 const val CHANNEL_PROXIMITY = "proximity"
 
-/** The permanent notification of TrackingService (F-022), low importance (no sound). */
 const val CHANNEL_TRACKING = "tracking"
 
-/** An impact detected with the app closed (F-022). */
 const val CHANNEL_IMPACT = "impact"
 
-/** Intent extra with the ticket a notification opens (read by MainActivity). */
 const val EXTRA_TICKET_ID = "ticketId"
 
-/** Intent extra set by the impact notification: open the prefilled report (F-022). */
 const val EXTRA_FROM_IMPACT = "fromImpact"
 
-/** Notification id of the impact suggestion; a new impact replaces the previous one. */
 private const val IMPACT_NOTIFICATION_ID = 2001
 
-/** Creates the channels (Android 8+). Called once in CityFixApplication.onCreate. */
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -85,11 +76,6 @@ fun createNotificationChannels(context: Context) {
     }
 }
 
-/**
- * Shows one notification. Tapping it opens MainActivity with [ticketId] as [EXTRA_TICKET_ID]
- * (none when null). The same [id] replaces the previous notification instead of adding one.
- * Without the Android 13+ permission it shows nothing, as the class demo checks first.
- */
 fun showNotification(
     context: Context,
     channel: String,
@@ -126,11 +112,6 @@ fun showNotification(
     NotificationManagerCompat.from(context).notify(id, builder.build())
 }
 
-/**
- * The impact suggestion with the app closed (F-022, brief I.2.F): tapping it opens MainActivity
- * with [EXTRA_FROM_IMPACT], which opens the report form prefilled as the snackbar does.
- * Without the Android 13+ permission it shows nothing.
- */
 fun showImpactNotification(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=

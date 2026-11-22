@@ -5,7 +5,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.data.AuthError
 import pt.isec.amov.cityfix.utils.isValidEmail
 
-/** The message for each [AuthError], shared by the login, password reset, account setup and registration screens. */
 @StringRes
 fun AuthError.messageRes(): Int = when (this) {
     AuthError.INVALID_CREDENTIALS -> R.string.auth_error_invalid_credentials
@@ -23,7 +22,6 @@ fun AuthError.messageRes(): Int = when (this) {
     AuthError.UNKNOWN -> R.string.auth_error_unknown
 }
 
-/** The error for a typed e-mail, or null when it looks valid. Shared by Login and Forgot password. */
 @StringRes
 fun emailErrorFor(email: String): Int? = when {
     email.isBlank() -> R.string.login_error_email_blank

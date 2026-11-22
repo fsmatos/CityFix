@@ -60,19 +60,6 @@ import pt.isec.amov.cityfix.viewmodel.RegisterUiState
 import pt.isec.amov.cityfix.viewmodel.RegisterViewModel
 import java.io.File
 
-/**
- * Stateful Register screen: collects [viewModel] and shows [RegisterContent].
- *
- * Firebase signs a new user in as soon as the account is created, which would trigger
- * CityFixApp's redirect before the NIF transaction ends. [onBusyChange] asks CityFixApp to hold
- * the redirect while Submit runs and, after a failure, until [accountSignedIn] is false again
- * (the deleted account has reached the session), so the form keeps its error. Back is ignored
- * while Submit runs; leaving the screen in any other way releases the hold (safety net).
- *
- * The location permission is asked when the citizen taps "Use my location", not before. The
- * photo is picked as on the report form (F-007): PickVisualMedia, or TakePicture into a
- * FileProvider file (no CAMERA permission). Every launcher sits here, above the content.
- */
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel,
@@ -162,7 +149,6 @@ fun RegisterScreen(
     )
 }
 
-/** False when there is no camera app, or Android refuses the launch (as on the report form). */
 private fun launchCamera(
     takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
     uri: Uri,
@@ -175,7 +161,6 @@ private fun launchCamera(
     false
 }
 
-/** Registration form for both roles (brief I.2.A, I.3.A). Stateless and previewable. */
 @Composable
 fun RegisterContent(
     state: RegisterUiState,
@@ -327,7 +312,6 @@ fun RegisterContent(
     }
 }
 
-/** Citizen or operator, as two segmented buttons (48dp high by default). */
 @Composable
 private fun RoleSelector(
     role: RegistrationRole,
@@ -357,7 +341,6 @@ private fun RoleSelector(
     }
 }
 
-/** The council's domain the operator e-mail must use, or why operator registration is closed. */
 @Composable
 private fun OperatorDomainHint(state: RegisterUiState) {
     when {
@@ -370,7 +353,6 @@ private fun OperatorDomainHint(state: RegisterUiState) {
     }
 }
 
-/** The citizen's residence (brief I.2.A georeferencing): the fix with 5 decimals and "Use my location". */
 @Composable
 private fun CitizenLocation(
     state: RegisterUiState,

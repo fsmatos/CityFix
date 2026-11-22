@@ -41,11 +41,6 @@ import pt.isec.amov.cityfix.R
  * field, the impact detection row and the photo block.
  */
 
-/**
- * A single-line text field with its error (also announced by TalkBack). [readOnly] shows a value
- * that cannot be edited (TalkBack reads it as read only). [supportingHint] shows when there is
- * no error.
- */
 @Composable
 internal fun AccountTextField(
     value: String,
@@ -83,7 +78,6 @@ internal fun AccountTextField(
     )
 }
 
-/** A password field; [onToggleShowPassword] null means no Show/Hide button (the confirmation). */
 @Composable
 internal fun PasswordField(
     value: String,
@@ -130,7 +124,6 @@ internal fun PasswordField(
     )
 }
 
-/** The impact detection choice (brief I.2.A). The whole row toggles, so the target is large. */
 @Composable
 internal fun ImpactDetectionRow(
     checked: Boolean,
@@ -165,12 +158,6 @@ internal fun ImpactDetectionRow(
     }
 }
 
-/**
- * The optional photo (brief I.2.A, I.3.A): a preview, Gallery, Camera and Remove.
- * [photo] is the Coil model: a File (local pick) or the https photoPath; null = no photo.
- * [showRemove] shows Remove (only for a photo picked on this screen). [labelRes] is the title
- * ("Photo (optional)" on Register, "Photo" on Profile). The caller shows any notice below it.
- */
 @Composable
 internal fun ProfilePhotoPicker(
     photo: Any?,

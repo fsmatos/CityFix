@@ -63,11 +63,6 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelUiState
 import pt.isec.amov.cityfix.viewmodel.OperatorPanelViewModel
 
-/**
- * The operator's home (brief I.3.E): every ticket, PUBLIC and PRIVATE, any status, with status
- * and category filters and a date sort. [tickets] is the shared list (allTickets() for an
- * operator); the filter lives in [viewModel] so it survives rotation. Stateful half.
- */
 @Composable
 fun OperatorPanelScreen(
     tickets: List<Ticket>,
@@ -93,11 +88,6 @@ fun OperatorPanelScreen(
     )
 }
 
-/**
- * Stateless panel: the filter header scrolls with the list (first item), so in landscape it never
- * takes the whole height. Width capped at 600dp and centred. The badge is the effective status at
- * [now] (decision 0011). PRIVATE tickets get a "Private" label under the card.
- */
 @Composable
 fun OperatorPanelContent(
     tickets: List<Ticket>,
@@ -183,7 +173,6 @@ fun OperatorPanelContent(
     }
 }
 
-/** Status chips (one row, scrolls sideways), category dropdown and the sort chip. */
 @Composable
 private fun FilterHeader(
     state: OperatorPanelUiState,
@@ -239,11 +228,6 @@ private fun FilterHeader(
     }
 }
 
-/**
- * Read-only dropdown: "All categories" plus every category, inactive ones marked, so tickets of a
- * deactivated category can still be found. A selected id that is not in the list yet (categories
- * still loading) shows an empty field, never "All categories" while a filter is active (review N4).
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryFilter(
@@ -308,7 +292,6 @@ private fun categoryLabel(category: Category): String =
 
 private const val DAY = 86_400_000L
 
-/** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_T0 = 1_792_089_000_000L
 
 private val previewCategories = listOf(
@@ -317,7 +300,6 @@ private val previewCategories = listOf(
     Category(id = "c3", name = "Old signs", active = false),
 )
 
-/** OPEN PUBLIC, INFO_REQUESTED PRIVATE, IN_PROGRESS, and RESOLVED at t0 (shown CLOSED at t0 + 6 d). */
 private val previewTickets = listOf(
     Ticket(
         id = "p1",

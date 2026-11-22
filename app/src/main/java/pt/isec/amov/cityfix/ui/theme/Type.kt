@@ -6,11 +6,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import pt.isec.amov.cityfix.R
 
-/**
- * The app's one font family (D-016): Inter 400/500/600, bundled in res/font so it works offline
- * (Google Fonts static files, SIL Open Font License, docs/licenses/Inter-OFL.txt). Every text in
- * the app uses it, because the screens only use MaterialTheme.typography.
- */
 val AppFontFamily = FontFamily(
     Font(R.font.inter_regular, FontWeight.Normal),
     Font(R.font.inter_medium, FontWeight.Medium),
@@ -19,10 +14,6 @@ val AppFontFamily = FontFamily(
 
 private val base = Typography()
 
-/**
- * Material 3 type scale on [AppFontFamily], three weights only: 600 for display and headlines,
- * 500 for titles and labels, 400 for body text.
- */
 val Typography = Typography(
     displayLarge = base.displayLarge.copy(fontFamily = AppFontFamily, fontWeight = FontWeight.SemiBold),
     displayMedium = base.displayMedium.copy(fontFamily = AppFontFamily, fontWeight = FontWeight.SemiBold),

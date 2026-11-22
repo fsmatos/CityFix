@@ -85,18 +85,11 @@ import pt.isec.amov.cityfix.viewmodel.ReportUiState
 import pt.isec.amov.cityfix.viewmodel.ReportViewModel
 import java.io.File
 
-/** Label for a ticket scope ("Alcance" in the brief). */
 fun scopeLabelRes(scope: Scope): Int = when (scope) {
     Scope.PUBLIC -> R.string.scope_public
     Scope.PRIVATE -> R.string.scope_private
 }
 
-/**
- * Stateful half of the report form (brief I.2.E): collects [viewModel], which validates and saves
- * the ticket. [onSubmitted] runs once the report is saved, with what it did; a refused save keeps the form open and
- * shows an error. Location was requested at app start (MainActivity); here the form only checks
- * the answer when it opens, and "Try again" asks again.
- */
 @Composable
 fun ReportScreen(
     viewModel: ReportViewModel,
@@ -177,7 +170,6 @@ fun ReportScreen(
     )
 }
 
-/** False when there is no camera app, or Android refuses the launch. */
 private fun launchCamera(
     takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
     uri: Uri,
@@ -190,10 +182,6 @@ private fun launchCamera(
     false
 }
 
-/**
- * A cancelled capture deletes its file silently; an empty "success" also shows the notice. The
- * limit is checked here too: a pick that started with the camera can take the last slot first.
- */
 private fun attachCaptured(viewModel: ReportViewModel, path: String, success: Boolean) {
     val file = File(path)
     val hasPhoto = success && file.length() > 0
@@ -211,7 +199,6 @@ private fun attachCaptured(viewModel: ReportViewModel, path: String, success: Bo
     }
 }
 
-/** Stateless half of the report form: draws [state]; previews target this. */
 @Composable
 fun ReportContent(
     state: ReportUiState,
@@ -303,7 +290,6 @@ fun ReportContent(
     }
 }
 
-/** Required note, category and situation: the whole form in portrait, the left pane in landscape. */
 @Composable
 private fun ChoicesPane(
     state: ReportUiState,
@@ -337,7 +323,6 @@ private fun ChoicesPane(
     }
 }
 
-/** Description, attachments, location, visibility, errors and Submit: the right pane in landscape. */
 @Composable
 private fun DetailsPane(
     state: ReportUiState,
@@ -400,7 +385,6 @@ private fun DetailsPane(
     }
 }
 
-/** Read-only dropdown of the active categories; disabled with a message when there are none. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryDropdown(
@@ -456,7 +440,6 @@ private fun CategoryDropdown(
     }
 }
 
-/** Titled single-choice group; each row is one 48dp radio item for TalkBack. */
 @Composable
 private fun <T> RadioGroupSection(
     title: String,
@@ -534,7 +517,6 @@ private fun DescriptionField(
     )
 }
 
-/** Photos and videos (brief I.2.E): thumbnails, the ways to add one, error and notice. */
 @Composable
 private fun AttachmentsSection(
     state: ReportUiState,
@@ -584,10 +566,6 @@ private fun AttachmentsSection(
     }
 }
 
-/**
- * The reporter's GPS fix: their own position, so it is shown with 5 decimals (about 1 m).
- * Denied location shows the denied message instead.
- */
 @Composable
 private fun LocationSection(
     state: ReportUiState,
@@ -639,7 +617,6 @@ private fun LocationSection(
     }
 }
 
-/** Form-level error, announced by TalkBack when it appears. */
 @Composable
 private fun ErrorText(@StringRes text: Int, modifier: Modifier = Modifier) {
     Text(
@@ -785,7 +762,6 @@ private fun ReportWithAttachmentsPreview() {
     ReportPreview(withAttachmentsState)
 }
 
-/** The narrow landscape spec gives the grid 2 columns, so the third item needs the grid's scroll. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, device = "spec:width=360dp,height=640dp,orientation=landscape")
 @Composable

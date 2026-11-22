@@ -21,26 +21,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/** The screen the top bar is showing. One value per route in Destinations.kt. */
 enum class TopBarScreen {
     DASHBOARD, ACTIVE_TICKETS, LIST, DETAIL, REPORT, LOGIN, FORGOT_PASSWORD,
     PENDING_VALIDATION, OPERATOR_PANEL, PROFILE, EDIT_PROFILE, APPROVALS, CATEGORIES, ACCOUNT_PROBLEM,
     ACCOUNT_SETUP, REGISTER, CHANGE_PASSWORD, CHANGE_EMAIL, PENDING_CITIZEN,
 }
 
-/** The account button at the end of the bar: Log in for anonymous users, Log out once signed in. */
 enum class AccountAction { NONE, LOG_IN, LOG_OUT }
 
-/**
- * App top bar. Stateless: the caller says which screen is showing and receives the clicks.
- * The toggle appears on the list only, and only when [showExpandToggle]; anonymous users never
- * get it (brief I.1.B, D-007). Reporting is a floating button in the caller's Scaffold, not a
- * bar action (D-015, Q5). [accountAction] picks
- * the Log in / Log out button, which calls [onAccountClick]. The role's screens are tabs of the
- * bottom bar (D-016, MainBottomBar.kt), so there is no overflow menu; Log out is the Material
- * "Logout" icon (res/drawable/ic_logout.xml, not in material-icons-core).
- * The bar knows nothing about navigation.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainTopAppBar(

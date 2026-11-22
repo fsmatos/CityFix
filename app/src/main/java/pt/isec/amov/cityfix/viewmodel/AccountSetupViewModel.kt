@@ -16,22 +16,11 @@ import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.CodeSendResult
 import pt.isec.amov.cityfix.utils.isPortugueseMobile
 
-/**
- * Account setup ViewModel, created per route (inside composable<AccountSetupRoute>).
- *
- * The step follows the same account the session uses: not verified -> VERIFY_EMAIL; verified
- * and no code requested -> PHONE; a code requested -> CODE. When the phone is linked (F-018:
- * verified once, at sign-up, not asked again at login) the session becomes SignedIn and CityFixApp's redirect leaves this
- * screen. The phone digits and the verification id are kept in [savedState], so the step and
- * the typed number survive process death. The Activity passed to [sendCode] goes straight to
- * the repository and is never stored.
- */
 class AccountSetupViewModel(
     private val auth: AuthRepository,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
-    /** Set once the SMS is sent; the code step needs it to confirm. */
     private var verificationId: String? = savedState[KEY_VERIFICATION_ID]
 
     private val _uiState = MutableStateFlow(
@@ -68,7 +57,6 @@ class AccountSetupViewModel(
         }
     }
 
-    /** "I have verified": reloads the account. A verified account moves to the phone step by itself. */
     fun checkVerified() {
         if (_uiState.value.isBusy) return
         _uiState.update { it.copy(isBusy = true, error = null, notice = null) }
@@ -85,20 +73,17 @@ class AccountSetupViewModel(
         }
     }
 
-    /** Keeps digits only, at most [PHONE_DIGITS]. */
     fun onPhoneChange(text: String) {
         val digits = text.filter { it.isDigit() }.take(PHONE_DIGITS)
         savedState[KEY_PHONE] = digits
         _uiState.update { it.copy(phoneDigits = digits, phoneError = null, error = null) }
     }
 
-    /** Keeps digits only, at most [SMS_CODE_DIGITS]. */
     fun onCodeChange(text: String) {
         val digits = text.filter { it.isDigit() }.take(SMS_CODE_DIGITS)
         _uiState.update { it.copy(code = digits, codeError = null, error = null) }
     }
 
-    /** Sends (or resends) the verification SMS to +351 and the typed digits. */
     fun sendCode(activity: Activity) {
         val state = _uiState.value
         if (state.isBusy) return
@@ -177,7 +162,6 @@ class AccountSetupViewModel(
         }
     }
 
-    /** Back from the code step to the phone step, to type another number. */
     fun changeNumber() {
         if (_uiState.value.isBusy) return
         setVerificationId(null)

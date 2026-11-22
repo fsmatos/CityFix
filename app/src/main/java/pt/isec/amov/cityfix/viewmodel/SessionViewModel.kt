@@ -17,17 +17,11 @@ import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.UserProfile
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/**
- * The app's [Session]. Created in CityFixApp above the NavHost (like TicketsViewModel), so every
- * destination shares it and it survives rotation. It combines the Firebase account from [auth]
- * with the `users/{uid}` profile from [users].
- */
 class SessionViewModel(
     private val auth: AuthRepository,
     private val users: UsersRepository,
 ) : ViewModel() {
 
-    /** Bumped by [retry]: a new value restarts the profile listener below. */
     private val retries = MutableStateFlow(0)
 
     // flatMapLatest: when the account changes (login, logout) or Retry is pressed, the listener
@@ -67,7 +61,6 @@ class SessionViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Session.Loading)
 
-    /** Reads the profile again (the "Retry" of the account problem screen). */
     fun retry() {
         retries.update { it + 1 }
     }

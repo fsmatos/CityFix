@@ -5,10 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.TicketsRepository
 import pt.isec.amov.cityfix.model.User
 
-/**
- * Builds [TicketDetailViewModel] with the app's repository, the ticket id from the route and the
- * session user, like EditContactViewModelFactory in Contacts_#3.
- */
 class TicketDetailViewModelFactory(
     private val repository: TicketsRepository,
     private val ticketId: String,

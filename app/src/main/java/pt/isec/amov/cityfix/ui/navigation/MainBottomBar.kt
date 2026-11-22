@@ -44,11 +44,6 @@ import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * One tab of the bottom bar (D-016): its accessible name, its icon (outlined; filled when
- * selected), the route it opens and the screens that belong to it (the tab is shown selected on
- * those). Which tabs a role gets is in RoleAccess.kt.
- */
 enum class BottomTab(
     @StringRes val label: Int,
     val icon: ImageVector,
@@ -100,7 +95,6 @@ enum class BottomTab(
     ),
 }
 
-/** The screens that are a tab's own page: the top bar shows no back arrow on them. */
 val tabRootScreens: Set<TopBarScreen> = setOf(
     TopBarScreen.DASHBOARD,
     TopBarScreen.ACTIVE_TICKETS,
@@ -111,30 +105,14 @@ val tabRootScreens: Set<TopBarScreen> = setOf(
     TopBarScreen.PENDING_VALIDATION,
 )
 
-/** Height of the island: a 56dp tab plus 8dp above and below. */
 val IslandHeight = 72.dp
 
-/** Gap between the island and the system navigation bar (or the bottom of the screen). */
 val IslandBottomMargin = 12.dp
 
-/** What the island takes above the system navigation bar: margin plus island. */
 val IslandClearance = IslandHeight + IslandBottomMargin
 
-/**
- * Bottom padding a scrolling screen adds after its last item, so it can scroll above the island
- * (island, system navigation bar and a gap; also the report button on the Dashboard). 0.dp when
- * no island is shown. Provided by CityFixApp around the NavHost.
- */
 val LocalBottomBarPadding = compositionLocalOf { 0.dp }
 
-/**
- * App bottom bar as a floating "island" (D-016): a pill with the card background, a thin outline
- * and a soft shadow, centred and only as wide as its icons, [IslandBottomMargin] above the system
- * navigation bar (it adds that inset itself). It is drawn over the content, which scrolls under
- * it (see [LocalBottomBarPadding]). Icons only: each tab's label is its contentDescription, and
- * the row is a selectable group of tabs for TalkBack. Stateless: the caller gives the role's
- * [tabs] and the [selected] one, and receives the clicks.
- */
 @Composable
 fun MainBottomBar(
     tabs: List<BottomTab>,
@@ -175,11 +153,6 @@ fun MainBottomBar(
     }
 }
 
-/**
- * One 56dp tab (above the 48dp minimum): the icon, with a discreet circle behind it when
- * selected. The circle is the content colour at low alpha, so it is slightly darker on a light
- * theme and lighter on a dark one.
- */
 @Composable
 private fun IslandTab(tab: BottomTab, isSelected: Boolean, onClick: () -> Unit) {
     val circle by animateColorAsState(

@@ -5,10 +5,8 @@ import androidx.compose.ui.graphics.Color
 // D-016 palette: a neutral base and one accent (indigo). Only Theme.kt and StatusColors.kt read
 // these values; screens use MaterialTheme.colorScheme.
 
-/** The accent: report button and primary actions, in both themes (white text, 7.9:1). */
 val Indigo = Color(0xFF4338CA)
 
-/** A lighter indigo for accent text and selection on dark backgrounds (8.3:1 on the dark card). */
 val IndigoLight = Color(0xFFA5B4FC)
 val IndigoDeep = Color(0xFF1E1A6B)
 

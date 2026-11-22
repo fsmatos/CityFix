@@ -19,10 +19,6 @@ import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * Shown by the gate and the report form when location was denied, with the caller's [message]. "Try again" asks for the
- * permission again; "Open settings" is for "don't ask again", when Android shows no dialog.
- */
 @Composable
 fun LocationDeniedMessage(
     @StringRes message: Int,

@@ -14,11 +14,6 @@ import pt.isec.amov.cityfix.model.InfoRequest
 import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * "Information request" section (D-018, brief II.2): the question, who asked and whether the
- * other side has answered. Stateless: the detail screens pass Ticket.pendingInfoRequest() and
- * InfoRequest.isAnswered(messages).
- */
 @Composable
 fun InfoRequestCard(
     request: InfoRequest,

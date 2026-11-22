@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/** Builds [SessionViewModel] with the app's repositories, like ContactsViewModelFactory in Contacts_#3. */
 class SessionViewModelFactory(
     private val auth: AuthRepository,
     private val users: UsersRepository,

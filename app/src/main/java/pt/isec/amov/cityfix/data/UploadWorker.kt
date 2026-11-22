@@ -17,27 +17,6 @@ import pt.isec.amov.cityfix.model.AttachmentType
 import pt.isec.amov.cityfix.model.UploadState
 import java.io.File
 
-/**
- * Uploads the prepared media of one Firestore document (a ticket, or a joiner's report) to
- * Firebase Storage and marks each entry UPLOADED (brief IV). AttachmentUploader.enqueue creates
- * it with a network constraint, so WorkManager runs it when there is a connection, even after
- * the app was closed.
- *
- * It reads the document and, one entry at a time, uploads every PENDING entry whose local file
- * is on this device (file + thumbnail), then writes that entry back. One worker per document, so
- * the get() then update() calls for that document run one after the other and cannot overwrite
- * each other (Gate 1 Q1: no transaction).
- *
- * As on the slides 08 example: a CoroutineWorker, the document path from inputData,
- * Result.retry() on an exception (WorkManager waits longer each time, exponential backoff); the
- * next run resumes with the entries still PENDING. Beyond class: Storage putFile + downloadUrl
- * (the class names Storage only), and FieldValue.arrayUnion for the public thumbnail. The
- * Firestore entry is changed with a plain get() then update(), like the T8 demo's get/set.
- * After [MAX_ATTEMPTS] failed attempts the entries still PENDING are marked FAILED, so the
- * detail screen can say so instead of "pending" forever.
- *
- * Storage paths (decision 0010): tickets/{ticketId}/{id}.jpg or .mp4, and {id}_thumb.jpg.
- */
 class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -70,7 +49,6 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         }
     }
 
-    /** Uploads [attachment] and its thumbnail, writes the URLs to its entry, deletes the local copies. */
     private suspend fun uploadOne(
         app: CityFixApplication,
         docRef: DocumentReference,
@@ -109,14 +87,12 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         attachment.thumbnail?.let { File(it).delete() }
     }
 
-    /** Uploads the local file to [path] and returns its https download URL. */
     private suspend fun upload(storage: FirebaseStorage, path: String, local: String, type: String): String {
         val ref = storage.reference.child(path)
         ref.putFile(Uri.fromFile(File(local)), storageMetadata { contentType = type }).await()
         return ref.downloadUrl.await().toString()
     }
 
-    /** Sets this device's entries still PENDING to FAILED (paths unchanged). If Firestore cannot be reached, only logs. */
     private suspend fun markFailed(docRef: DocumentReference) {
         try {
             val list = docRef.get().await().attachmentsWith {
@@ -128,10 +104,6 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         }
     }
 
-    /**
-     * PENDING with its file on this device. Another device's PENDING entries (e.g. the creator's
-     * when the operator adds resolution media to the same ticket) are left to that device.
-     */
     private fun isLocalPending(attachment: Attachment): Boolean =
         attachment.uploadState == UploadState.PENDING && File(attachment.file).exists()
 

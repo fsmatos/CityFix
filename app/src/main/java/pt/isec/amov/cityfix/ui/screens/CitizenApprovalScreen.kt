@@ -50,10 +50,6 @@ import pt.isec.amov.cityfix.utils.formatCoordinate
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalUiState
 import pt.isec.amov.cityfix.viewmodel.CitizenApprovalViewModel
 
-/**
- * A pending registration (brief I.3.D), the stateful half: collects the ViewModel state and
- * wires the events. [onActivated] runs after the activation is written (snackbar, back).
- */
 @Composable
 fun CitizenApprovalScreen(
     viewModel: CitizenApprovalViewModel,
@@ -68,11 +64,6 @@ fun CitizenApprovalScreen(
     )
 }
 
-/**
- * The citizen's name, NIF, e-mail, phone, photo and registered location, with Activate behind a
- * confirmation dialog. Nothing is editable. Portrait: one scrolling column. Landscape: details
- * and the button on the left, the map on the right (P07).
- */
 @Composable
 fun CitizenApprovalContent(
     state: CitizenApprovalUiState,
@@ -161,10 +152,6 @@ fun CitizenApprovalContent(
     }
 }
 
-/**
- * Photo, name (the page heading), NIF, e-mail, phone, then Activate or "already active". After
- * this screen's own activation the button stays, disabled, while the screen closes.
- */
 @Composable
 private fun CitizenDetails(
     citizen: Citizen,
@@ -218,7 +205,6 @@ private fun CitizenDetails(
     }
 }
 
-/** A read-only label over its value, read by TalkBack as one item. */
 @Composable
 private fun LabelledValue(label: String, value: String) {
     Column(modifier = Modifier.semantics(mergeDescendants = true) { }) {
@@ -231,10 +217,6 @@ private fun LabelledValue(label: String, value: String) {
     }
 }
 
-/**
- * The registered location on the exact map (F-012) with its coordinates as text (D-021), or
- * "Location not available" for (0, 0).
- */
 @Composable
 private fun CitizenLocation(
     location: Coordinates,
@@ -280,7 +262,6 @@ private fun CitizenLocation(
     }
 }
 
-/** Synthetic preview data only. */
 private val previewCitizen = Citizen(
     id = "c1",
     name = "Ana Exemplo",

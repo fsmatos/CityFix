@@ -21,17 +21,6 @@ import pt.isec.amov.cityfix.model.Situation
 import pt.isec.amov.cityfix.utils.FileUtils
 import java.io.File
 
-/**
- * Form-only ViewModel for the report screen. Create it per route (viewModel() inside
- * composable<ReportTicketRoute>, with ReportViewModelFactory): it survives rotation and is cleared
- * when the user leaves. Saves the ticket through [repository] (like EditContactViewModel.saveContact
- * in Contacts_#3) as reported by [creatorId]; categories come from it too, active ones only, and
- * follow changes while the form is open. Picked media are copied off the main thread by
- * [attachmentStorage]. The ticket's location is the reporter's GPS fix from [locationRepository],
- * read when the form opens and on "Refresh location", so Submit does not wait for GPS.
- * [fromImpact] (F-015): opened from an impact suggestion, so Damage and the Pavement category are
- * chosen; the user can still change them.
- */
 class ReportViewModel(
     private val repository: TicketsRepository,
     private val attachmentStorage: AttachmentStorage,
@@ -60,7 +49,6 @@ class ReportViewModel(
         }
     }
 
-    /** Gallery copies still running; isCopyingAttachments is true while this is above 0. */
     private var copiesInProgress = 0
 
     fun onCategorySelected(category: Category) {
@@ -97,7 +85,6 @@ class ReportViewModel(
         }
     }
 
-    /** Called when the form opens (permission already decided at app start) and after Try again. */
     fun onLocationPermissionResult(granted: Boolean) {
         if (granted) {
             _uiState.update { it.copy(locationPermissionDenied = false, locationError = null) }
@@ -109,7 +96,6 @@ class ReportViewModel(
         }
     }
 
-    /** Reads one fix; without one the previous fix (if any) is kept and an error is shown. */
     fun refreshLocation() {
         if (_uiState.value.isLocating) return
         _uiState.update { it.copy(isLocating = true) }
@@ -126,14 +112,6 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Gallery pick: copies what fits under the limit in viewModelScope (off the main thread), then
-     * attaches what copied. The add buttons and Submit stay disabled until every copy finishes.
-     * The limit is checked again when the copy returns, because a camera photo or another pick
-     * may have taken slots meanwhile: extra copies are deleted and the limit notice shown. If the
-     * form was submitted meanwhile, the copies are deleted. If the user leaves mid-copy,
-     * AttachmentStorage deletes them.
-     */
     fun onMediaPicked(uris: List<Uri>) {
         if (uris.isEmpty()) return
         val accepted = uris.take(_uiState.value.remainingAttachments)
@@ -161,7 +139,6 @@ class ReportViewModel(
         }
     }
 
-    /** [paths] are local copies already in filesDir/images. Empty when every copy failed. */
     fun onPhotosAttached(paths: List<String>) {
         if (paths.isEmpty()) return
         _uiState.update {
@@ -186,7 +163,6 @@ class ReportViewModel(
         _uiState.update { it.copy(attachmentsNotice = R.string.report_camera_failed) }
     }
 
-    /** Deletes the local copy. Removing the last one sets the error, as deleting the description does. */
     fun onRemoveAttachment(attachment: Attachment) {
         File(attachment.file).delete()
         _uiState.update {
@@ -200,14 +176,6 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Sets the error of every missing field, then gates on [ReportUiState.isValid] (P08 slide 15),
-     * so isValid is the one rule that decides. When valid, locks the form (submitted) before the
-     * save starts, so a second tap does nothing, and saves in viewModelScope. A saved report calls
-     * [onSuccess] with its [ReportOutcome] (no id: a PRIVATE ticket must not be opened, D-006); a
-     * refused one unlocks the form and sets submitError = R.string.report_error_not_created.
-     * ALREADY_FOLLOWING wrote nothing, so the draft's local files are deleted.
-     */
     fun submit(onSuccess: (ReportOutcome) -> Unit) {
         val state = _uiState.value
         if (state.submitted || state.isSaving || state.isCopyingAttachments) return
@@ -270,7 +238,6 @@ class ReportViewModel(
         }
     }
 
-    /** Leaving without submitting discards the draft: its files have no ticket to belong to. */
     override fun onCleared() {
         val state = _uiState.value
         if (!state.submitted) {
@@ -284,12 +251,10 @@ class ReportViewModel(
         file = path,
     )
 
-    /** The summary stays only while something is still missing. */
     private fun ReportUiState.withSummaryRefreshed(): ReportUiState =
         copy(showErrorSummary = showErrorSummary && !isValid)
 
     companion object {
-        /** Category id of Pavement in the Firestore `categories` collection (F-015 Q8). */
         const val PAVEMENT_ID = "pavement"
     }
 }

@@ -66,14 +66,6 @@ import pt.isec.amov.cityfix.viewmodel.OperatorTicketViewModel
 import pt.isec.amov.cityfix.viewmodel.PersonContact
 import java.io.File
 
-/**
- * Stateful operator ticket detail (brief I.3.E, D-013): collects [viewModel] and passes everything
- * to [OperatorTicketContent]. Only for an operator (the operator branch of the detail destination).
- *
- * Writes an expired RESOLVED ticket as CLOSED once (as F-014), and keeps one profile listener per
- * person on the ticket (creator, followers, history responsibles, attachment uploaders, D-019).
- * Holds the gallery and camera launchers for the resolution proof, as ReportScreen does.
- */
 @Composable
 fun OperatorTicketScreen(
     ticket: Ticket?,
@@ -164,7 +156,6 @@ fun OperatorTicketScreen(
     )
 }
 
-/** False when there is no camera app, or Android refuses the launch (copied from ReportScreen). */
 private fun launchCamera(
     takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
     uri: Uri,
@@ -177,7 +168,6 @@ private fun launchCamera(
     false
 }
 
-/** A cancelled capture deletes its file silently; an empty "success" also shows the notice. */
 private fun attachCaptured(viewModel: OperatorTicketViewModel, path: String, success: Boolean) {
     val file = File(path)
     if (success && file.length() > 0) {
@@ -188,14 +178,6 @@ private fun attachCaptured(viewModel: OperatorTicketViewModel, path: String, suc
     }
 }
 
-/**
- * Stateless operator detail: ShowScreen with the OPERATOR audience (description, exact map, full
- * history, all media) and, in its slot, the actions, the contacts and the message thread.
- *
- * The actions are exactly allowedTransitions(operator, now) (D-008): INFO_REQUESTED -> "Request
- * information", IN_PROGRESS -> "Start work", RESOLVED -> "Resolve", which opens the proof section
- * in their place. A closed ticket offers none and takes no new messages (brief II).
- */
 @Composable
 fun OperatorTicketContent(
     ticket: Ticket?,
@@ -291,7 +273,6 @@ fun OperatorTicketContent(
     }
 }
 
-/** One button per operator move offered now; wraps to a second line when the pane is narrow. */
 @Composable
 private fun ActionsRow(
     moves: Set<TicketStatus>,
@@ -326,11 +307,6 @@ private fun ActionsRow(
     }
 }
 
-/**
- * "Proof of the finished work" (brief I.3.E): 1 to 3 photos or videos from the gallery or the
- * camera, an optional note, and Confirm, enabled only with at least one proof (no resolution
- * without proof). The gallery has its own height cap, so it is safe inside the scrolling detail.
- */
 @Composable
 private fun ResolveSection(
     state: OperatorTicketUiState,
@@ -411,10 +387,6 @@ private fun ResolveSection(
     }
 }
 
-/**
- * The request-information or start-work dialog (AlertDialog, as F-014's TextDialog) with one
- * text field: the required request or the optional note. The error, if any, is under the field.
- */
 @Composable
 private fun OperatorTextDialog(
     dialog: OperatorDialog,
@@ -474,7 +446,6 @@ private fun OperatorTextDialog(
     )
 }
 
-/** "Contacts": the author and each follower (brief I.3.E). Operators only. */
 @Composable
 private fun ContactsSection(
     ticket: Ticket,
@@ -513,7 +484,6 @@ private fun ContactsSection(
     }
 }
 
-/** One person's name, e-mail and phone, read by TalkBack as one item. */
 @Composable
 private fun ContactRow(
     id: String,
@@ -558,12 +528,10 @@ private fun ContactRow(
 
 private const val DAY = 86_400_000L
 
-/** 2026-10-15 18:30 UTC. */
 private const val PREVIEW_T0 = 1_792_089_000_000L
 
 private val previewOperator = Operator(id = "op-1", name = "Operator One")
 
-/** Synthetic data only: no real names, e-mails or phones. */
 private val previewPeople: Map<String, PersonContact?> = mapOf(
     "c-1" to PersonContact("Citizen One", "citizen.one@example.com", "900000001", false),
     "c-2" to null,
@@ -614,7 +582,6 @@ private fun PreviewContent(ticket: Ticket?, now: Long, state: OperatorTicketUiSt
     }
 }
 
-/** OPEN, with one contact loaded, one unavailable and one still loading. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
@@ -639,14 +606,12 @@ private val previewInProgress = previewOpen.copy(
         StatusHistory(TicketStatus.IN_PROGRESS, PREVIEW_T0 + DAY, null, "op-1"),
 )
 
-/** RESOLVED at t0 + 2 d: shown CLOSED from t0 + 7 d (5-day window). */
 private val previewResolved = previewInProgress.copy(
     currentStatus = TicketStatus.RESOLVED,
     statusHistory = previewInProgress.statusHistory +
         StatusHistory(TicketStatus.RESOLVED, PREVIEW_T0 + 2 * DAY, null, "op-1"),
 )
 
-/** INFO_REQUESTED: only Start work. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -654,7 +619,6 @@ private fun OperatorTicketInfoRequestedPreview() {
     PreviewContent(previewInfoRequested, PREVIEW_T0 + 2 * DAY, OperatorTicketUiState(people = previewPeople))
 }
 
-/** IN_PROGRESS: Resolve and Request information. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
@@ -663,7 +627,6 @@ private fun OperatorTicketInProgressPreview() {
     PreviewContent(previewInProgress, PREVIEW_T0 + 2 * DAY, OperatorTicketUiState(people = previewPeople))
 }
 
-/** Resolve section with no proof: Confirm disabled. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -675,7 +638,6 @@ private fun OperatorTicketResolveEmptyPreview() {
     )
 }
 
-/** Resolve section with two proofs and a note: Confirm enabled. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp,orientation=landscape")
@@ -696,7 +658,6 @@ private fun OperatorTicketResolveWithProofPreview() {
     )
 }
 
-/** Resolve section after a failed confirm. */
 @Preview(showBackground = true)
 @Composable
 private fun OperatorTicketResolveErrorPreview() {
@@ -712,7 +673,6 @@ private fun OperatorTicketResolveErrorPreview() {
     )
 }
 
-/** Request information dialog after Send with a blank text. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -728,7 +688,6 @@ private fun OperatorTicketRequestInfoErrorPreview() {
     )
 }
 
-/** Start work dialog with a note typed. */
 @Preview(showBackground = true)
 @Composable
 private fun OperatorTicketStartWorkPreview() {
@@ -739,14 +698,12 @@ private fun OperatorTicketStartWorkPreview() {
     )
 }
 
-/** RESOLVED inside the window: no actions, thread still open. */
 @Preview(showBackground = true)
 @Composable
 private fun OperatorTicketResolvedPreview() {
     PreviewContent(previewResolved, PREVIEW_T0 + 4 * DAY, OperatorTicketUiState(messages = previewMessages, people = previewPeople))
 }
 
-/** Six days after RESOLVED: shown CLOSED, no actions, locked thread. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable
@@ -754,7 +711,6 @@ private fun OperatorTicketClosedPreview() {
     PreviewContent(previewResolved, PREVIEW_T0 + 8 * DAY, OperatorTicketUiState(messages = previewMessages, people = previewPeople))
 }
 
-/** Offline with nothing cached: every contact unavailable. */
 @Preview(showBackground = true)
 @Preview(showBackground = true, locale = "pt")
 @Composable

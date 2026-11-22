@@ -28,10 +28,6 @@ import pt.isec.amov.cityfix.viewmodel.AccountSetupUiState
 import pt.isec.amov.cityfix.viewmodel.AccountSetupViewModel
 import pt.isec.amov.cityfix.viewmodel.SetupStep
 
-/**
- * Stateful account setup screen. Firebase needs the Activity for the reCAPTCHA fallback when it
- * sends the SMS, so it is read here and handed to the ViewModel call, never stored.
- */
 @Composable
 fun AccountSetupScreen(
     viewModel: AccountSetupViewModel,
@@ -57,7 +53,6 @@ fun AccountSetupScreen(
     )
 }
 
-/** The three setup steps (verify e-mail, phone, code). Stateless and previewable. */
 @Composable
 fun AccountSetupContent(
     state: AccountSetupUiState,

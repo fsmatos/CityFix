@@ -31,14 +31,8 @@ import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 
-/** How many tickets the Active issues tab shows before "See more". */
 const val ACTIVE_TICKETS_SHOWN = 5
 
-/**
- * Active issues tab (D-016): the first [ACTIVE_TICKETS_SHOWN] of [tickets] (already the active
- * ones, in the order given) and, when there are more, "See more", which opens the full list.
- * Empty list: the shared EmptyState. Stateless, like ListScreen.
- */
 @Composable
 fun ActiveTicketsScreen(
     tickets: List<Ticket>,

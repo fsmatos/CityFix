@@ -42,16 +42,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 
-/**
- * Full-screen viewer for one attachment (D-017): the photo at full size (Fit, not cropped, pinch
- * zoom since the F-018 merge), or the
- * video in the platform VideoView with a MediaController (play/pause and seek). The close button
- * and system back call [onDismiss]. A file that cannot be opened (no network, or another device's
- * local path while its upload is pending) shows a message instead.
- *
- * VideoView rather than Media3 ExoPlayer: no new dependency (D-017 plan). Black background in both
- * themes, as in a gallery app, so the media keep their own colours.
- */
 @Composable
 fun AttachmentViewer(
     attachment: Attachment,
@@ -95,10 +85,6 @@ fun AttachmentViewer(
     }
 }
 
-/**
- * The photo fitted to the screen; two fingers zoom it (1x to [MAX_ZOOM]) and move it (from F-018's
- * MediaViewer, which this viewer replaced at the merge).
- */
 @Composable
 private fun PhotoContent(file: String) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -137,10 +123,6 @@ private fun PhotoContent(file: String) {
 
 private const val MAX_ZOOM = 5f
 
-/**
- * The VideoView is created once per [file]; it starts when prepared and is stopped when the
- * viewer leaves the composition (onRelease), so the sound never outlives the dialog.
- */
 @Composable
 private fun VideoContent(file: String) {
     var prepared by remember(file) { mutableStateOf(false) }
@@ -174,7 +156,6 @@ private fun VideoContent(file: String) {
     if (!prepared) Loading()
 }
 
-/** An https download URL as it is; a local absolute path (before upload) as a file:// URI. */
 private fun String.toVideoUri(): Uri =
     if (startsWith("/")) File(this).toUri() else toUri()
 

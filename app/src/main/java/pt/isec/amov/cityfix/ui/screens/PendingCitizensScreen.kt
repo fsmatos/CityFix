@@ -43,7 +43,6 @@ import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensUiState
 import pt.isec.amov.cityfix.viewmodel.PendingCitizensViewModel
 
-/** Registration approvals (brief I.3.D), the stateful half: collects the ViewModel state. */
 @Composable
 fun PendingCitizensScreen(
     viewModel: PendingCitizensViewModel,
@@ -55,10 +54,6 @@ fun PendingCitizensScreen(
     PendingCitizensContent(state = state, onCitizenClick = onCitizenClick, listState = listState)
 }
 
-/**
- * The citizens waiting for validation, one card each with name and NIF; tapping a card opens
- * that registration. Same single column in both orientations, width capped and centred.
- */
 @Composable
 fun PendingCitizensContent(
     state: PendingCitizensUiState,
@@ -94,7 +89,6 @@ fun PendingCitizensContent(
     }
 }
 
-/** One pending citizen: name and NIF, read by TalkBack as one item (a clickable Card merges them). */
 @Composable
 private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
     CityCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
@@ -141,7 +135,6 @@ private fun PendingCitizenCard(citizen: Citizen, onClick: () -> Unit) {
     }
 }
 
-/** Synthetic preview data only. */
 private val previewCitizens = listOf(
     Citizen(id = "c1", name = "Ana Exemplo", nif = "123456789"),
     Citizen(id = "c2", name = "Bruno Teste", nif = "987654321"),
