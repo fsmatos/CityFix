@@ -427,4 +427,14 @@
     <string name="notif_operator_nearby">A municipal operator is near this issue.</string>
     <string name="notif_closing_soon">Closes in 24 hours. Reopen it now if the problem is not solved.</string>
     <string name="notif_closed">This ticket is now closed.</string>
+    <string name="channel_tracking">Location tracking</string>
+    <string name="channel_impact">Impact detection</string>
+    <string name="tracking_notification_title">CityFix is using your location</string>
+    <string name="tracking_notification_text">Municipal team proximity and impact detection stay on in the background.</string>
+    <string name="impact_notification_title">Possible road damage</string>
+    <string name="background_location_title">Allow location all the time?</string>
+    <string name="background_location_text">CityFix keeps the municipal team proximity alert and impact detection working while the app is closed. On the next screen choose \"Allow all the time\".</string>
+    <string name="background_location_continue">Continue</string>
+    <string name="background_location_not_now">Not now</string>
+    <string name="background_location_denied">Without background location, CityFix only works while open.</string>
 </resources>

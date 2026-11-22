@@ -28,10 +28,22 @@ const val CHANNEL_MESSAGES = "messages"
 /** An operator came within 20 m (D-014). */
 const val CHANNEL_PROXIMITY = "proximity"
 
+/** The permanent notification of TrackingService (F-022), low importance (no sound). */
+const val CHANNEL_TRACKING = "tracking"
+
+/** An impact detected with the app closed (F-022). */
+const val CHANNEL_IMPACT = "impact"
+
 /** Intent extra with the ticket a notification opens (read by MainActivity). */
 const val EXTRA_TICKET_ID = "ticketId"
 
-/** Creates the three channels (Android 8+). Called once in CityFixApplication.onCreate. */
+/** Intent extra set by the impact notification: open the prefilled report (F-022). */
+const val EXTRA_FROM_IMPACT = "fromImpact"
+
+/** Notification id of the impact suggestion; a new impact replaces the previous one. */
+private const val IMPACT_NOTIFICATION_ID = 2001
+
+/** Creates the channels (Android 8+). Called once in CityFixApplication.onCreate. */
 fun createNotificationChannels(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -53,6 +65,20 @@ fun createNotificationChannels(context: Context) {
             NotificationChannel(
                 CHANNEL_PROXIMITY,
                 context.getString(R.string.channel_proximity),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ),
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_TRACKING,
+                context.getString(R.string.channel_tracking),
+                NotificationManager.IMPORTANCE_LOW,
+            ),
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_IMPACT,
+                context.getString(R.string.channel_impact),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ),
         )
@@ -98,4 +124,33 @@ fun showNotification(
         .setAutoCancel(true)
 
     NotificationManagerCompat.from(context).notify(id, builder.build())
+}
+
+/**
+ * The impact suggestion with the app closed (F-022, brief I.2.F): tapping it opens MainActivity
+ * with [EXTRA_FROM_IMPACT], which opens the report form prefilled as the snackbar does.
+ * Without the Android 13+ permission it shows nothing.
+ */
+fun showImpactNotification(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+        PackageManager.PERMISSION_GRANTED
+    ) {
+        return
+    }
+    val intent = Intent(context, MainActivity::class.java).putExtra(EXTRA_FROM_IMPACT, true)
+    val pendingIntent = PendingIntent.getActivity(
+        context,
+        IMPACT_NOTIFICATION_ID,
+        intent,
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+    val builder = NotificationCompat.Builder(context, CHANNEL_IMPACT)
+        .setSmallIcon(android.R.drawable.ic_dialog_alert)
+        .setContentTitle(context.getString(R.string.impact_notification_title))
+        .setContentText(context.getString(R.string.impact_suggestion))
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+    NotificationManagerCompat.from(context).notify(IMPACT_NOTIFICATION_ID, builder.build())
 }

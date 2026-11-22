@@ -1,19 +1,15 @@
 package pt.isec.amov.cityfix.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import pt.isec.amov.cityfix.data.ImpactPrefs
-import pt.isec.amov.cityfix.data.LocationRepository
+import kotlinx.coroutines.flow.SharedFlow
 
-/** Builds [ImpactViewModel] with a Context for the SensorManager and the GPS fixes (F-022). */
+/** Builds [ImpactViewModel] with the impacts the TrackingService emits (F-022). */
 class ImpactViewModelFactory(
-    private val context: Context,
-    private val locationRepository: LocationRepository,
-    private val impactPrefs: ImpactPrefs,
+    private val impacts: SharedFlow<Unit>,
 ) : ViewModelProvider.Factory {
     // Only ever asked for ImpactViewModel (viewModel(factory = ...) in MainActivity), so the cast holds.
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        ImpactViewModel(context, locationRepository, impactPrefs) as T
+        ImpactViewModel(impacts) as T
 }
