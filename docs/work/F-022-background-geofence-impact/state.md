@@ -11,7 +11,7 @@ Remote: origin/dev/Francisco
 | Review | done | 2026-11-22 | review.md: 0 blocking, 5 should-fix, 11 nits |
 | Docs | done | 2026-11-22 | decision 0028 (new), 0022/0023 amended, overview, report notes F-022 |
 | Pushed | done | 2026-11-22 | origin/dev/Francisco (`daae3e2`) |
-| Merged | pending | | |
+| Merged | done | 2026-11-22 | into main (`263b05a`), local; main not pushed |
 
 ## Log
 Append-only.
@@ -24,3 +24,4 @@ Append-only.
 - 2026-11-22: Docs (docs-writer): new decision 0028; 0022 and 0023 amended; overview (F-022 section, handover); report notes F-022 section. Fix age updated to 10 s after review S3.
 - 2026-11-22: Emulator test (build `10aa0aa`, API 37; emulator-5554 CityFix_Operator as operator, emulator-5556 Medium_Phone as citizen Francisco). Movement via `emu geo fix ... <knots>` (20 kn = 10.3 m/s), jolts via `emu sensor set acceleration 0:0:24` for 0.3 s (gravity sensor stayed 9.81). Passed: background dialog -> system page -> "Allow all the time" granted; TrackingService foreground type location (0x8) on both; operator task removed (`am stack remove`), service kept running, moving from far into the 20 m circle of "Buraco na estrada" -> citizen got "Pavement: A municipal operator is near this issue"; still jolt (spike registered, fused speed 1.0 m/s) -> nothing; moving jolt with app in front -> snackbar; moving jolt with app in background -> "Possible road damage" notification; tapping it -> prefilled report (Pavement, Damage); threshold 15 -> +14 jolt ignored, threshold 3 -> +5 jolt suggested; slider reset to 6. No crashes in either crash log. Note: one tap opened the dashboard because Android had grouped two CityFix notifications and the tap hit the group summary (launcher intent); tapping the notification itself works. Not tested: real phone, Android < 14, reboot.
 - 2026-11-22: Pushed dev/Francisco to origin (`daae3e2`). Not merged into main. Diogo not told yet (Q4).
+- 2026-11-22: Merged dev/Francisco into main (`263b05a`, the person asked); origin/main had nothing new, no conflicts. Build and lint pass on main (0 errors). dev/Francisco fast-forwarded to main. main not pushed (CLAUDE.md: only when the person asks).
