@@ -1,6 +1,6 @@
 # 0023: Impact detection
 
-Status: accepted (F-015, Gate 1 on 2026-11-19, Q1-Q9 answered with the defaults; Q1/Q2 changed by the person after the first emulator run, see below).
+Status: accepted (F-015, Gate 1 on 2026-11-19, Q1-Q9 answered with the defaults; Q1/Q2 changed by the person after the first emulator run, see below). Amended by F-022 / [0028](0028-background-tracking-and-vertical-impact.md), see the end.
 
 ## Context
 - Brief I.2.F: a citizen who turned on "Deteção de Impactos" (I.2.A, `Citizen.impactDetection`, [0016](0016-registration.md)) gets a suggestion to report a pavement anomaly after a sharp acceleration "no eixo vertical".
@@ -22,3 +22,10 @@ Status: accepted (F-015, Gate 1 on 2026-11-19, Q1-Q9 answered with the defaults;
 - **D-011:** saving the profile toggle updates the session, which starts or stops the detector by itself.
 - **D-012/D-015:** keep a category with id `pavement` when DebugSeed is removed.
 - **Limits:** no detection with the app closed; the suggestion is lost on a rotation during the snackbar; no movement check, so a dropped phone can trigger it.
+
+## Amendment (F-022, 2026-11-22, [0028](0028-background-tracking-and-vertical-impact.md))
+- **Q1/Q2 replaced:** vertical projection on gravity, `(a·g)/|g| - |g|`, gravity from `TYPE_GRAVITY` (slides 10/11) or a low-pass filter; the I.2.F "eixo vertical" departure is fixed.
+- **Speed gate:** counts only with GPS speed > 2 m/s from a fix < 10 s old; a dropped phone at rest no longer counts.
+- **Threshold:** 3-15 m/s², default 6, Profile slider, stored in SharedPreferences (`data/ImpactPrefs`), per device.
+- **Q3/Q5 replaced:** detection runs in `data/TrackingService` (foreground service, slides 08, P10 `ProximityService`); `ImpactDetectionEffect` deleted; app in front -> snackbar, otherwise a notification that opens the prefilled report.
+- **Limits fixed:** app closed, sideways jolts, dropped phone. **Limits now:** needs precise location; no restart after a reboot; rotation during the snackbar still loses it.

@@ -37,6 +37,7 @@ import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.RegistrationStatus
 import pt.isec.amov.cityfix.ui.components.AccountTextField
 import pt.isec.amov.cityfix.ui.components.ImpactDetectionRow
+import pt.isec.amov.cityfix.ui.components.ImpactThresholdSlider
 import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.components.ProfilePhotoPicker
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
@@ -94,6 +95,7 @@ fun ProfileScreen(
         state = state,
         onPhoneChange = viewModel::onPhoneChange,
         onImpactDetectionChange = viewModel::onImpactDetectionChange,
+        onImpactThresholdChange = viewModel::onImpactThresholdChange,
         onPickPhoto = { pickPhoto.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
         onTakePhoto = {
             // A second tap before the camera opens would overwrite the path and orphan its file.
@@ -139,6 +141,7 @@ fun ProfileContent(
     state: ProfileUiState,
     onPhoneChange: (String) -> Unit,
     onImpactDetectionChange: (Boolean) -> Unit,
+    onImpactThresholdChange: (Float) -> Unit,
     onPickPhoto: () -> Unit,
     onTakePhoto: () -> Unit,
     onRemovePhoto: () -> Unit,
@@ -231,6 +234,9 @@ fun ProfileContent(
                 enabled = true,
                 onCheckedChange = onImpactDetectionChange,
             )
+            if (state.impactDetection) {
+                ImpactThresholdSlider(state.impactThreshold, onImpactThresholdChange)
+            }
         }
 
         FormMessage(state.notice, isError = false)
@@ -307,6 +313,7 @@ private fun ProfilePreview(state: ProfileUiState) {
             state = state,
             onPhoneChange = {},
             onImpactDetectionChange = {},
+            onImpactThresholdChange = {},
             onPickPhoto = {},
             onTakePhoto = {},
             onRemovePhoto = {},

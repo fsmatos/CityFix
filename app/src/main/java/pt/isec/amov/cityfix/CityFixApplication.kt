@@ -10,6 +10,7 @@ import com.google.firebase.firestore.firestoreSettings
 import com.google.firebase.firestore.persistentCacheSettings
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.flow.MutableSharedFlow
 import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AttachmentUploader
 import pt.isec.amov.cityfix.data.AuthRepository
@@ -18,6 +19,7 @@ import pt.isec.amov.cityfix.data.FirebaseAuthRepository
 import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
+import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.TicketNotifier
@@ -55,6 +57,19 @@ class CityFixApplication : Application() {
 
     /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
     val locationRepository: LocationRepository by lazy { LocationRepository(this) }
+
+    /**
+     * True while MainActivity is started (set in its onStart/onStop). TrackingService reads it to
+     * choose between the in-app snackbar and a notification for an impact (F-022).
+     */
+    @Volatile
+    var appInForeground = false
+
+    /** Impacts detected by TrackingService while the app is in front; ImpactViewModel shows them. */
+    val impacts = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** The citizen's impact threshold, a device setting (F-022). */
+    val impactPrefs: ImpactPrefs by lazy { ImpactPrefs(this) }
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 
