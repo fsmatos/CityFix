@@ -63,7 +63,8 @@ enum class BottomTab(
         Icons.Outlined.Warning,
         Icons.Filled.Warning,
         ActiveTicketsRoute,
-        setOf(TopBarScreen.ACTIVE_TICKETS, TopBarScreen.LIST),
+        // Not LIST: it also opens from the Dashboard, so it keeps the tab it was opened from (D-022).
+        setOf(TopBarScreen.ACTIVE_TICKETS),
     ),
     PROFILE(
         R.string.nav_profile,
