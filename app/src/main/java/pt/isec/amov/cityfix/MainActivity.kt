@@ -268,7 +268,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val canNavigateBack = navController.previousBackStackEntry != null
 
     // Impact detection (F-015, brief I.2.F): only for an active citizen who turned it on.
-    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app))
+    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app, app.locationRepository))
     val impactDetected by impactViewModel.impactDetected.collectAsStateWithLifecycle()
     val detectImpacts = role == AccessRole.CITIZEN &&
         (session.ticketsUser as? Citizen)?.impactDetection == true

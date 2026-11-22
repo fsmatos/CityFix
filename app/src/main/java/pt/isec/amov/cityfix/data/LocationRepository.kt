@@ -3,6 +3,7 @@ package pt.isec.amov.cityfix.data
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -15,6 +16,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import pt.isec.amov.cityfix.model.Coordinates
 
@@ -46,13 +48,21 @@ class LocationRepository(context: Context) {
     }
 
     /**
-     * Continuous precise fixes every [intervalMs] while collected (D-014, brief II.3); empty
-     * without FINE. Fixes less accurate than [MAX_FIX_ACCURACY_METERS] are dropped, since a 20 m
-     * check needs a precise position. Collecting stops the updates when cancelled (awaitClose). As
-     * P10, but without a service: the caller collects only while the app is in the foreground. If
-     * the updates cannot start (for example no Play services), the flow ends after a log line.
+     * Continuous precise fixes every [intervalMs] while collected (D-014, brief II.3), as
+     * coordinates. See [locationFixes].
      */
-    fun locationUpdates(intervalMs: Long = 5_000): Flow<Coordinates> {
+    fun locationUpdates(intervalMs: Long = 5_000): Flow<Coordinates> =
+        locationFixes(intervalMs).map { Coordinates(it.latitude, it.longitude) }
+
+    /**
+     * Continuous precise fixes every [intervalMs] while collected, as full [Location]s so the
+     * caller can also read the speed (F-022 impact check); empty without FINE. Fixes less
+     * accurate than [MAX_FIX_ACCURACY_METERS] are dropped, since a 20 m check needs a precise
+     * position. Collecting stops the updates when cancelled (awaitClose). As P10; F-022 collects
+     * it inside TrackingService, so it also runs with the app in the background. If the updates
+     * cannot start (for example no Play services), the flow ends after a log line.
+     */
+    fun locationFixes(intervalMs: Long = 5_000): Flow<Location> {
         // Written out, as in currentLocation, for lint's MissingPermission check.
         val fine =
             ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -66,7 +76,7 @@ class LocationRepository(context: Context) {
                 override fun onLocationResult(result: LocationResult) {
                     result.lastLocation
                         ?.takeIf { !it.hasAccuracy() || it.accuracy <= MAX_FIX_ACCURACY_METERS }
-                        ?.let { trySend(Coordinates(it.latitude, it.longitude)) }
+                        ?.let { trySend(it) }
                 }
             }
             client.requestLocationUpdates(request, callback, Looper.getMainLooper())
