@@ -1444,7 +1444,7 @@ Decision: [0023](../decisions/0023-impact-detection.md). Overview: "Impact detec
 - Movement check with GPS speed, so a dropped phone at rest does not count.
 - Threshold set in the profile.
 - Attach the detected location and time to the ticket.
-- Done by F-022: foreground service, vertical projection, GPS speed check, profile threshold.
+- Done by F-022: foreground service, vertical projection, GPS speed check. The threshold stays a constant in code (a Profile slider was tried and removed).
 
 ## F-016: Notifications
 Decision: [0024](../decisions/0024-notifications.md). Overview: "Notifications (F-016)", "Handover (F-016)". Brief III, V, II.2-II.4.
@@ -1648,7 +1648,7 @@ Decision: [0028](../decisions/0028-background-tracking-and-vertical-impact.md) (
 - **Gravity:** `TYPE_GRAVITY` (slides 10/11), or a low-pass filter `g = 0.8·g + 0.2·a` on phones without it.
 - **Why not total magnitude (F-015):** putting the phone down hard or lifting it fast changed `|a|` without any vertical bump.
 - **Speed gate:** a stationary drop is not a pothole; GPS speed > 2 m/s from a fix < 10 s old.
-- **Threshold:** 3-15 m/s², default 6, Profile slider, SharedPreferences (slides 09), read on every sensor event.
+- **Threshold:** fixed 6 m/s², the constant `ImpactDetector.THRESHOLD` (configurable in code, not by the user). A Profile slider was tried and removed: the brief does not ask for it.
 - **One foreground service** (slides 08 `TrackingService`, P10 `ProximityService`): one location request feeds the speed and the operator's 20 m geofence.
 - **Impact suggestion:** snackbar when the app is in front, notification otherwise; both open the prefilled report.
 
@@ -1658,7 +1658,7 @@ Decision: [0028](../decisions/0028-background-tracking-and-vertical-impact.md) (
 - `ACCESS_BACKGROUND_LOCATION` is a separate request (Android 10+), after foreground location; explained first in a dialog (slides 10/11).
 
 ### Options chosen and rejected (Gate 1, 2026-11-22)
-- Chosen: one service for both features; threshold on the device; in-app detector removed; D-014 ViewModel replaced by `OperatorGeofence`.
+- Chosen: one service for both features; fixed threshold in code; in-app detector removed; D-014 ViewModel replaced by `OperatorGeofence`.
 - Rejected: WorkManager (15 min minimum, no sensors); `GeofencingClient` (100-150 m radius, minutes late); two services.
 
 ### Class material vs beyond class
@@ -1673,7 +1673,7 @@ Decision: [0028](../decisions/0028-background-tracking-and-vertical-impact.md) (
 ### Improvement opportunities
 - `BOOT_COMPLETED` receiver to restart after a reboot.
 - Battery-saver guidance for OEMs (ignore battery optimisations).
-- Threshold per account (Firestore) instead of per device.
+- A user-set sensitivity, if testing shows 6 m/s² is wrong for some phones.
 - `GeofencingClient` for the operator when the app is killed.
 - Save the impact location and time in the prefilled report.
 

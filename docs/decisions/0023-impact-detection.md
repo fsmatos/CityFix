@@ -26,6 +26,6 @@ Status: accepted (F-015, Gate 1 on 2026-11-19, Q1-Q9 answered with the defaults;
 ## Amendment (F-022, 2026-11-22, [0028](0028-background-tracking-and-vertical-impact.md))
 - **Q1/Q2 replaced:** vertical projection on gravity, `(a·g)/|g| - |g|`, gravity from `TYPE_GRAVITY` (slides 10/11) or a low-pass filter; the I.2.F "eixo vertical" departure is fixed.
 - **Speed gate:** counts only with GPS speed > 2 m/s from a fix < 10 s old; a dropped phone at rest no longer counts.
-- **Threshold:** 3-15 m/s², default 6, Profile slider, stored in SharedPreferences (`data/ImpactPrefs`), per device.
+- **Threshold:** fixed 6 m/s² (`ImpactDetector.THRESHOLD`), set in code; no user setting (the first F-022 slider was removed, `53a39e6`).
 - **Q3/Q5 replaced:** detection runs in `data/TrackingService` (foreground service, slides 08, P10 `ProximityService`); `ImpactDetectionEffect` deleted; app in front -> snackbar, otherwise a notification that opens the prefilled report.
 - **Limits fixed:** app closed, sideways jolts, dropped phone. **Limits now:** needs precise location; no restart after a reboot; rotation during the snackbar still loses it.
