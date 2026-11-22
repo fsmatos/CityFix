@@ -7,11 +7,6 @@ import androidx.core.content.FileProvider
 import java.io.File
 import java.util.UUID
 
-/**
- * Local copies of the report attachments (P09), all in filesDir/images. Depends on Android, so
- * model/ must not import it. The file name carries the type: VID_ is a video, anything else an
- * image, so a saved path is enough to tell them apart.
- */
 object FileUtils {
 
     private const val MEDIA_FOLDER = "images"
@@ -21,10 +16,6 @@ object FileUtils {
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
 
-    /**
-     * Blocking: call off the main thread (AttachmentStorage does). Null on any failure, including
-     * a null stream; deletes a partial file.
-     */
     fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {
         val mimeType = context.contentResolver.getType(sourceUri)
         val target = File(mediaFolder(context), fileNameFor(mimeType))
@@ -40,7 +31,6 @@ object FileUtils {
         }
     }
 
-    /** Empty slot for the camera: the file, and the FileProvider Uri to hand to TakePicture. */
     fun createTempImageFile(context: Context): Pair<File, Uri> {
         val file = File(mediaFolder(context), "$CAPTURE_PREFIX${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -49,7 +39,6 @@ object FileUtils {
 
     fun isVideoPath(path: String): Boolean = File(path).name.startsWith(VIDEO_PREFIX)
 
-    /** The file called [name] in filesDir/images (compressed photos, videos and thumbnails, F-013). */
     fun mediaFile(context: Context, name: String): File = File(mediaFolder(context), name)
 
     private fun mediaFolder(context: Context): File =

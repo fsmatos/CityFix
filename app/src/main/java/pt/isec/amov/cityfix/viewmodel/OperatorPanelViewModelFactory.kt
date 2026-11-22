@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.CategoriesRepository
 
-/** Builds [OperatorPanelViewModel] with the app's categories repository. */
 class OperatorPanelViewModelFactory(
     private val categories: CategoriesRepository,
 ) : ViewModelProvider.Factory {

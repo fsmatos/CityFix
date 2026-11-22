@@ -18,23 +18,10 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-/**
- * Prepares report media for upload (brief IV): compressed copy and thumbnail in filesDir/images,
- * named by a new UUID; then enqueues one UploadWorker per Firestore document. One entry point
- * for the citizen's report (F-013) and the operator's resolution proof (D-013). Create one per
- * app (CityFixApplication); it keeps the application context only.
- */
 class AttachmentUploader(context: Context) {
 
     private val appContext = context.applicationContext
 
-    /**
-     * Runs on Dispatchers.IO. Photo: compressed JPEG + thumbnail (ImageCompression), the original
-     * deleted. Video: moved as recorded to the new name, plus a thumbnail of one frame (a missing
-     * thumbnail alone does not fail the video). Returns the attachment with the new id, paths,
-     * PENDING and [uploadedById]; FAILED (original path and id kept) when the photo cannot be
-     * compressed or the video cannot be moved.
-     */
     suspend fun prepare(attachment: Attachment, uploadedById: String): Attachment =
         withContext(Dispatchers.IO) {
             val id = UUID.randomUUID().toString()
@@ -66,14 +53,6 @@ class AttachmentUploader(context: Context) {
             }
         }
 
-    /**
-     * One OneTimeWorkRequest for all the PENDING media of [documentPath] (slides 08: inputData,
-     * Constraints, enqueue): it runs only with a network connection and, after a failed attempt,
-     * waits 30 s, then longer each time (exponential backoff). Call once, after the batch that
-     * stores the media in [documentPath] (the ticket, or the joiner's report). One worker per
-     * document keeps its writes sequential. [addPublicThumbnail] = the thumbnails also go to
-     * publicTickets/{ticketId} (creator's REPORT media of a PUBLIC ticket).
-     */
     fun enqueue(documentPath: String, ticketId: String, addPublicThumbnail: Boolean) {
         val request = OneTimeWorkRequestBuilder<UploadWorker>()
             .setInputData(

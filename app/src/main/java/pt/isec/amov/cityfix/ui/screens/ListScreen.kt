@@ -21,10 +21,6 @@ import pt.isec.amov.cityfix.ui.navigation.LocalBottomBarPadding
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 
-/**
- * Public active tickets (brief I.1.B), shown in the order given; filtering, sorting and the
- * anonymous projection happen upstream (TicketsViewModel.tickets). Expanded cards also show the description.
- */
 @Composable
 fun ListScreen(
     tickets: List<Ticket>,

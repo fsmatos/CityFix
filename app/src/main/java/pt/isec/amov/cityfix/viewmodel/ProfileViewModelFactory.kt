@@ -8,10 +8,6 @@ import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/**
- * Builds [ProfileViewModel] for the signed-in [uid]. Uses the CreationExtras overload because the
- * ViewModel needs a SavedStateHandle, which the back stack entry supplies.
- */
 class ProfileViewModelFactory(
     private val uid: String,
     private val users: UsersRepository,

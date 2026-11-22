@@ -23,15 +23,6 @@ import pt.isec.amov.cityfix.utils.isInEmailDomain
 import pt.isec.amov.cityfix.utils.nationalPhoneDigits
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * [UsersRepository] over the `users/{uid}` documents (fields in decision 0010). [firestore] is the
- * instance from CityFixApplication, which has the persistent cache on, so a profile read once
- * online is still served offline. [auth] creates (and, on failure, deletes) the account at
- * registration; [photoUploader] queues the optional photo once the profile exists.
- *
- * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException, as in
- * FirebaseAuthRepository.
- */
 class FirestoreUsersRepository(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
@@ -159,11 +150,6 @@ class FirestoreUsersRepository(
             .addOnFailureListener { Log.w(TAG, "activation refused", it) }
     }
 
-    /**
-     * The `users/{uid}` fields of decision 0010 and the draft create rule. No `photoPath` (set by
-     * the upload later) and no `validatedBy` / `validatedAt` (set by the operator who validates).
-     * An operator has no `registrationStatus`: the account is active at once (brief I.3.A).
-     */
     private fun userDocument(registration: Registration, name: String, email: String): Map<String, Any> {
         val fields = mutableMapOf<String, Any>(
             "name" to name,
@@ -186,11 +172,6 @@ class FirestoreUsersRepository(
         return fields
     }
 
-    /**
-     * Best effort: the new account goes away when its profile could not be written. If the delete
-     * fails too (offline), the user is signed out and the Auth user stays orphaned (D-010 Q11).
-     * Called inside NonCancellable, so it finishes even when the screen is gone.
-     */
     private suspend fun deleteNewUser(user: FirebaseUser) {
         try {
             user.delete().await()
@@ -199,13 +180,8 @@ class FirestoreUsersRepository(
         }
     }
 
-    /** Thrown inside the transaction when the NIF is taken; aborts it without retries. */
     private class NifTakenException : Exception("NIF already registered for this role")
 
-    /**
-     * Mapped by hand, not with toObject(): the `role` string picks the type, and `role` is not a
-     * field of the model (decision 0010).
-     */
     private fun DocumentSnapshot.toProfile(): UserProfile {
         if (!exists()) {
             // Offline, a document that was never read looks like a missing one: say "unavailable",
@@ -248,7 +224,6 @@ class FirestoreUsersRepository(
         }
     }
 
-    /** An unknown or absent value counts as PENDING: never give report access by mistake. */
     private fun registrationStatusOf(value: String?): RegistrationStatus =
         RegistrationStatus.entries.firstOrNull { it.name == value } ?: RegistrationStatus.PENDING
 

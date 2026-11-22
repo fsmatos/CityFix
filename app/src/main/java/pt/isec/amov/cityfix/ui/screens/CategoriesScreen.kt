@@ -59,7 +59,6 @@ import pt.isec.amov.cityfix.viewmodel.CategoriesViewModel
 import pt.isec.amov.cityfix.viewmodel.CategoryEditor
 import pt.isec.amov.cityfix.viewmodel.MAX_CATEGORY_NAME_LENGTH
 
-/** Categories (brief I.3.E), the stateful half: collects the ViewModel state and wires the events. */
 @Composable
 fun CategoriesScreen(
     viewModel: CategoriesViewModel,
@@ -79,11 +78,6 @@ fun CategoriesScreen(
     )
 }
 
-/**
- * Every category, active and inactive: name ("Inactive" under it when off), Edit and an active
- * switch. The FAB adds one; Add and Edit open the same name dialog. Same single column in both
- * orientations, width capped and centred so rows are not stretched in landscape.
- */
 @Composable
 fun CategoriesContent(
     state: CategoriesUiState,
@@ -150,7 +144,6 @@ fun CategoriesContent(
     }
 }
 
-/** Name and status, an Edit button and the active switch (the switch area is one toggle). */
 @Composable
 private fun CategoryRow(
     category: Category,
@@ -204,7 +197,6 @@ private fun CategoryRow(
     }
 }
 
-/** Add or edit one name: Save checks it in the ViewModel and shows the error under the field. */
 @Composable
 private fun CategoryEditorDialog(
     editor: CategoryEditor,
@@ -265,7 +257,6 @@ private fun CategoryEditorDialog(
     )
 }
 
-/** Synthetic preview data only. */
 private val previewCategories = listOf(
     Category(id = "k1", name = "Pavement", active = true),
     Category(id = "k2", name = "Public lighting", active = true),

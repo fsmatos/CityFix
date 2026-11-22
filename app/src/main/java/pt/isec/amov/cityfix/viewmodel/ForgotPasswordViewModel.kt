@@ -11,10 +11,6 @@ import kotlinx.coroutines.launch
 import pt.isec.amov.cityfix.data.AuthError
 import pt.isec.amov.cityfix.data.AuthRepository
 
-/**
- * Password reset ViewModel, created per route. [initialEmail] comes from ForgotPasswordRoute
- * (what was typed on Login); later edits are kept in [savedState].
- */
 class ForgotPasswordViewModel(
     private val auth: AuthRepository,
     private val savedState: SavedStateHandle,

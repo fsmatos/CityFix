@@ -54,11 +54,6 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 
-/**
- * Stateful Profile tab (D-016): reads the profile from [viewModel] (the same ProfileViewModel as
- * Edit profile, used here read-only) and shows [ProfileOverviewContent]. [myTickets] are the
- * tickets a citizen created or follows (the former My tickets screen, F-014), null for an operator.
- */
 @Composable
 fun ProfileOverviewScreen(
     viewModel: ProfileViewModel,
@@ -85,11 +80,6 @@ fun ProfileOverviewScreen(
     )
 }
 
-/**
- * The user's details, "Edit details" and, for citizens, their tickets, in one scrolling list.
- * The cards' badge is the effective status at [now] (decision 0011), as on My tickets.
- * Stateless and previewable.
- */
 @Composable
 fun ProfileOverviewContent(
     profile: User?,
@@ -168,7 +158,6 @@ fun ProfileOverviewContent(
     }
 }
 
-/** Photo (or a person icon), name and role of the user. */
 @Composable
 private fun ProfileHeader(profile: User, photo: Any?, modifier: Modifier = Modifier) {
     Row(
@@ -212,7 +201,6 @@ private fun ProfileHeader(profile: User, photo: Any?, modifier: Modifier = Modif
     }
 }
 
-/** The read-only details, one label/value pair per line. */
 @Composable
 private fun ProfileDetails(profile: User, email: String, modifier: Modifier = Modifier) {
     CityCard(modifier = modifier) {

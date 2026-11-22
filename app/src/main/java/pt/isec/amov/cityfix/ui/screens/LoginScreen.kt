@@ -46,12 +46,6 @@ import pt.isec.amov.cityfix.viewmodel.LoginStep
 import pt.isec.amov.cityfix.viewmodel.LoginUiState
 import pt.isec.amov.cityfix.viewmodel.LoginViewModel
 
-/**
- * Stateful login screen: collects [viewModel] and shows [LoginContent] or, for an enrolled
- * account, the SMS code step ([MfaCodeContent]). [onForgotPassword] receives the typed e-mail,
- * so the reset form starts with it; [onCreateAccount] opens the Register screen (D-010). Firebase needs the Activity for the reCAPTCHA fallback when
- * it sends the SMS, so it is read here and handed to the ViewModel call, never stored.
- */
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
@@ -100,7 +94,6 @@ fun LoginScreen(
     )
 }
 
-/** E-mail and password form (brief I.2.B, I.3.B). Stateless and previewable. */
 @Composable
 fun LoginContent(
     state: LoginUiState,
@@ -184,11 +177,6 @@ fun LoginContent(
     }
 }
 
-/**
- * The column every D-009 form and message screen uses: it scrolls in portrait and landscape,
- * imePadding() comes before verticalScroll so the keyboard never hides the focused field (report
- * form lesson), and the content is at most 480dp wide, centred, so it does not stretch in landscape.
- */
 @Composable
 internal fun FormColumn(
     modifier: Modifier = Modifier,
@@ -214,7 +202,6 @@ internal fun FormColumn(
     }
 }
 
-/** E-mail field shared by Login and Forgot password. [onImeAction] replaces the keyboard's default action. */
 @Composable
 internal fun EmailField(
     value: String,
@@ -246,7 +233,6 @@ internal fun EmailField(
     )
 }
 
-/** A result or error line that TalkBack announces when it appears. Draws nothing for null. */
 @Composable
 internal fun FormMessage(@StringRes messageRes: Int?, isError: Boolean) {
     if (messageRes == null) return

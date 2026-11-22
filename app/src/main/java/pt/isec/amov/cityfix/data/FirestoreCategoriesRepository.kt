@@ -9,11 +9,6 @@ import kotlinx.coroutines.flow.map
 import pt.isec.amov.cityfix.model.Category
 import java.text.Collator
 
-/**
- * [CategoriesRepository] over the `categories/{id}` documents, reusing F-011's mapping
- * (toCategory, toCategoryDocument). [firestore] has the persistent cache on, so the list is
- * served offline and the writes below are queued until the device is online.
- */
 class FirestoreCategoriesRepository(
     private val firestore: FirebaseFirestore,
 ) : CategoriesRepository {

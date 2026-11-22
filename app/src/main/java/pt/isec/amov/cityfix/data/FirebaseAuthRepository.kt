@@ -21,25 +21,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 
-/**
- * [AuthRepository] over Firebase Auth. Created once in CityFixApplication, so it lives for the
- * whole process: the AuthStateListener registered in `init` is never removed, and there is no
- * screen or activity it could leak.
- *
- * Phone at sign-up (F-018, decision 0026): [sendPhoneCode] and [linkPhone] verify the phone once
- * and link it to the account (a phone provider), not as an MFA factor, so later logins need only
- * e-mail and password. Accounts created before F-018 still have the phone enrolled as a factor:
- * Firebase then throws the multi-factor exception at sign-in, and [resolveSecondFactor] finishes
- * both that sign-in and a re-authentication (D-011): the resolver comes from [signIn] or
- * [reauthenticate].
- *
- * The listener fires on sign-in and sign-out only. `reload()` and linking change the same
- * FirebaseUser without firing it, so those calls update [account] themselves.
- *
- * Every `catch (e: Exception)` is preceded by a rethrow of CancellationException: `await()`
- * throws it when the caller's scope is cancelled (a screen closed), and turning it into an
- * AuthError would break structured concurrency.
- */
 class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
 
     private val _account = MutableStateFlow(auth.currentUser?.toAccount())
@@ -64,10 +45,6 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             SignInResult.Failure(e.toAuthError())
         }
 
-    /**
-     * Re-authentication (D-011) works like [signIn]: an enrolled account throws the multi-factor
-     * exception, and [resolveSecondFactor] with its resolver completes the re-authentication.
-     */
     override suspend fun reauthenticate(password: String): SignInResult {
         val user = auth.currentUser ?: return SignInResult.Failure(AuthError.UNKNOWN)
         return try {
@@ -108,7 +85,6 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         }
     }
 
-    /** Accounts have one phone factor (D-009 Q13), so the first phone hint is the one. */
     private fun challengeOf(e: FirebaseAuthMultiFactorException): SignInResult {
         val hint = e.resolver.hints.filterIsInstance<PhoneMultiFactorInfo>().firstOrNull()
             ?: return SignInResult.Failure(AuthError.UNKNOWN)
@@ -211,7 +187,6 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     override suspend fun linkPhone(verificationId: String, code: String): AuthError? =
         linkCredential(PhoneAuthProvider.getCredential(verificationId, code))
 
-    /** Links the phone [credential] to the signed-in account and re-emits [account]. Null on success. */
     private suspend fun linkCredential(credential: PhoneAuthCredential): AuthError? {
         val user = auth.currentUser ?: return AuthError.UNKNOWN
         return try {
@@ -240,26 +215,11 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
         auth.signOut()
     }
 
-    /** What [requestCode] got back: a send result, or a phone Firebase verified by itself. */
     private sealed interface SmsOutcome {
         data class Done(val result: CodeSendResult) : SmsOutcome
         data class Verified(val credential: PhoneAuthCredential) : SmsOutcome
     }
 
-    /**
-     * Sends an SMS code with [builder] (phone or hint, session and activity already set) and
-     * waits for Firebase's callbacks.
-     *
-     * [mfa] is true for the second-factor code (sign-in and re-authentication): it adds
-     * requireSmsValidation(true), so the code is always typed and onVerificationCompleted never
-     * comes. Firebase accepts that option only with a multi-factor session, so the sign-up
-     * phone ([mfa] false) must not set it (F-020); there an onVerificationCompleted before
-     * onCodeSent returns [SmsOutcome.Verified]. One that comes after onCodeSent is ignored:
-     * the user types the code as usual.
-     *
-     * The callbacks are bound to the activity, so a rotation during the send can lose
-     * onCodeSent: after [SEND_TIMEOUT_MS] the result is CODE_NOT_SENT and the screen offers Resend.
-     */
     private suspend fun requestCode(builder: PhoneAuthOptions.Builder, mfa: Boolean): SmsOutcome =
         withTimeoutOrNull(SEND_TIMEOUT_MS) {
             suspendCancellableCoroutine { continuation ->

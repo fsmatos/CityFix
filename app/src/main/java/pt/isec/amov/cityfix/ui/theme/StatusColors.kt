@@ -5,11 +5,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import pt.isec.amov.cityfix.model.TicketStatus
 
-/**
- * The colours of the small status dots (D-016). The status is always written next to the dot in
- * neutral text, so the colour only supports it. Soft tones, one set per theme; CityFixTheme
- * provides the right one through [LocalStatusColors].
- */
 @Immutable
 data class StatusColors(
     val open: Color,
@@ -27,7 +22,6 @@ data class StatusColors(
     }
 }
 
-/** Ochre, terracotta, green, blue and grey, dark enough for the white card. */
 val LightStatusColors = StatusColors(
     open = Color(0xFFB8862A),
     infoRequested = Color(0xFFC0604A),
@@ -36,7 +30,6 @@ val LightStatusColors = StatusColors(
     closed = Color(0xFF8A8A86),
 )
 
-/** The same hues, lighter for the dark card. */
 val DarkStatusColors = StatusColors(
     open = Color(0xFFD9A945),
     infoRequested = Color(0xFFD9785F),

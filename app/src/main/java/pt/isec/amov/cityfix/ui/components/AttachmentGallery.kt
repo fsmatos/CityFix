@@ -24,11 +24,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Attachment
 import pt.isec.amov.cityfix.model.AttachmentType
 
-/**
- * Thumbnails of the report attachments, each with a remove button (P09 slide 27). The height cap
- * must stay: an unbounded lazy grid crashes inside the scrolling form. When the rows do not fit
- * under the cap (2 columns in narrow landscape), the grid scrolls on its own.
- */
 @Composable
 fun AttachmentGallery(
     attachments: List<Attachment>,
@@ -55,7 +50,6 @@ fun AttachmentGallery(
     }
 }
 
-/** [position] counts from 1, so TalkBack can tell the tiles apart. */
 @Composable
 private fun AttachmentTile(
     attachment: Attachment,

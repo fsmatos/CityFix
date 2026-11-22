@@ -14,14 +14,6 @@ import kotlinx.coroutines.CancellationException
 import pt.isec.amov.cityfix.CityFixApplication
 import java.util.concurrent.TimeUnit
 
-/**
- * Checks the user's tickets while the app is closed (brief III, F-016 Gate 1 Q2, Q7): every
- * 15 minutes (the WorkManager minimum) with a network connection, it reads the tickets once and
- * hands them to TicketNotifier, which also covers the 24 h warning and the close (Q5).
- *
- * As the slides 10/11 example and our UploadWorker: a CoroutineWorker, the user from inputData,
- * Result.retry() on an exception. A citizen reads their own tickets, an operator all of them.
- */
 class TicketCheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -53,10 +45,6 @@ class TicketCheckWorker(context: Context, params: WorkerParameters) : CoroutineW
         private const val KEY_UID = "uid"
         private const val KEY_IS_OPERATOR = "isOperator"
 
-        /**
-         * Starts (or replaces, for a new user) the periodic check. Unique work, so calling it
-         * again after a rotation or a new start does not add a second one.
-         */
         fun schedule(context: Context, uid: String, isOperator: Boolean) {
             val request = PeriodicWorkRequestBuilder<TicketCheckWorker>(15, TimeUnit.MINUTES)
                 .setInputData(workDataOf(KEY_UID to uid, KEY_IS_OPERATOR to isOperator))
@@ -66,7 +54,6 @@ class TicketCheckWorker(context: Context, params: WorkerParameters) : CoroutineW
                 .enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
-        /** Stops the periodic check (Log out, or a user who gets no notifications). */
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }

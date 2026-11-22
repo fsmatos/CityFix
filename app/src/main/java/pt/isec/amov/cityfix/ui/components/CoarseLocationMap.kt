@@ -20,11 +20,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * "Approximate location" section for [location] (already rounded for anonymous users, decision 0006).
- * Since F-012 a real map (TicketMap, coarse: far zoom, a circle, no marker, no gestures) and a
- * caption, never coordinate text. Shows "Location not available" for the unset (0, 0) (decision 0003).
- */
 @Composable
 fun CoarseLocationMap(location: Coordinates, modifier: Modifier = Modifier) {
     val mapDescription = stringResource(R.string.cd_ticket_map)

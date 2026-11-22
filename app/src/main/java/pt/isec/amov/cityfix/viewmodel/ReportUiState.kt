@@ -7,29 +7,18 @@ import pt.isec.amov.cityfix.model.Coordinates
 import pt.isec.amov.cityfix.model.Scope
 import pt.isec.amov.cityfix.model.Situation
 
-/** Photos and videos allowed on one report, counted across every pick and the camera. */
 const val MAX_REPORT_ATTACHMENTS = 3
 
-/**
- * Report form (brief I.2.E). Nothing is preselected: null / blank means "not chosen".
- * Errors are string resource ids, so the ViewModel holds no text and they are localised.
- * attachmentsError is the required rule and blocks; attachmentsNotice only informs.
- */
 data class ReportUiState(
-    /** Active categories only (I.3.E). */
     val categories: List<Category> = emptyList(),
     val categoryId: String = "",
     val categoryName: String = "",
     val situation: Situation? = null,
     val description: String = "",
     val scope: Scope? = null,
-    /** Local copies in filesDir/images; `file` is an absolute path. */
     val attachments: List<Attachment> = emptyList(),
-    /** The reporter's GPS fix, read when the form opens and on Refresh; null until there is one. */
     val location: Coordinates? = null,
-    /** True while the fix is being read. */
     val isLocating: Boolean = false,
-    /** True when location is not allowed; the form then shows the denied message. */
     val locationPermissionDenied: Boolean = false,
     @StringRes val locationError: Int? = null,
     @StringRes val categoryError: Int? = null,
@@ -38,15 +27,10 @@ data class ReportUiState(
     @StringRes val scopeError: Int? = null,
     @StringRes val attachmentsError: Int? = null,
     @StringRes val attachmentsNotice: Int? = null,
-    /** Shown after a Submit with missing fields; TalkBack announces it. */
     val showErrorSummary: Boolean = false,
-    /** Set when the repository could not create the ticket. */
     @StringRes val submitError: Int? = null,
-    /** True after a valid submit; blocks a second one. Cleared only when the save fails. */
     val submitted: Boolean = false,
-    /** True while the repository saves the ticket. */
     val isSaving: Boolean = false,
-    /** True while picked media are copied into filesDir/images; blocks adding more and Submit. */
     val isCopyingAttachments: Boolean = false,
 ) {
     val remainingAttachments: Int

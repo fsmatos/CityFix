@@ -6,7 +6,6 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import pt.isec.amov.cityfix.data.AuthRepository
 
-/** Builds [ForgotPasswordViewModel] with the e-mail from the route and a SavedStateHandle. */
 class ForgotPasswordViewModelFactory(
     private val auth: AuthRepository,
     private val initialEmail: String,

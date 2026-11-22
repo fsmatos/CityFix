@@ -28,17 +28,6 @@ import pt.isec.amov.cityfix.utils.CHANNEL_TRACKING
 import pt.isec.amov.cityfix.utils.ImpactDetector
 import pt.isec.amov.cityfix.utils.showImpactNotification
 
-/**
- * Foreground service of type location (F-022), shaped like the TrackingService of class slides 08
- * and the ProximityService of sheet P10: a permanent notification, startForeground within 5 s and
- * a serviceScope cancelled in onDestroy. It keeps working with the app in the background or
- * closed, and runs two things on one stream of GPS fixes:
- * - the operator's 20 m geofence ([OperatorGeofence]) when started with an operator id;
- * - impact detection ([ImpactDetector]) for a citizen who turned it on; the fixes give the speed.
- * On an impact with the app in front it emits CityFixApplication.impacts (snackbar); otherwise it
- * shows a notification that opens the prefilled report. MainActivity starts and stops it from the
- * session ([start], [stop]); each start replaces what was running.
- */
 class TrackingService : Service() {
 
     // Main: the sensor and location callbacks arrive on the main thread; Firestore calls suspend.
@@ -46,7 +35,6 @@ class TrackingService : Service() {
     private var watchJob: Job? = null
     private var detector: ImpactDetector? = null
 
-    /** Speed (m/s) and time of the last GPS fix, for the impact movement check. */
     private var lastSpeed = 0f
     private var lastFixAt = 0L
 
@@ -137,16 +125,8 @@ class TrackingService : Service() {
         private const val EXTRA_OPERATOR_ID = "operatorId"
         private const val EXTRA_DETECT_IMPACTS = "detectImpacts"
 
-        /**
-         * A GPS fix older than this (ms) says nothing about the current speed (F-022 Q2). Twice
-         * the 5 s location interval (review S3), so a late or dropped fix does not hide a jolt.
-         */
         private const val FIX_MAX_AGE_MS = 10_000L
 
-        /**
-         * Starts the service, or updates what it runs, as P10 does with startForegroundService.
-         * Must be called while the app is visible (Android 12+ forbids it from the background).
-         */
         fun start(context: Context, operatorId: String?, detectImpacts: Boolean) {
             val intent = Intent(context, TrackingService::class.java)
                 .putExtra(EXTRA_OPERATOR_ID, operatorId)

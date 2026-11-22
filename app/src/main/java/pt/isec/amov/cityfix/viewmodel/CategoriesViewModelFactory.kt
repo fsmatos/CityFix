@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pt.isec.amov.cityfix.data.CategoriesRepository
 
-/** Builds [CategoriesViewModel] with the app's categories repository. */
 class CategoriesViewModelFactory(
     private val repository: CategoriesRepository,
 ) : ViewModelProvider.Factory {

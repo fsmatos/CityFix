@@ -25,15 +25,6 @@ import pt.isec.amov.cityfix.model.allowedTransitions
 import pt.isec.amov.cityfix.utils.FileUtils
 import java.io.File
 
-/**
- * The operator's detail of ticket [ticketId] (brief I.3.E, D-013): the message thread, the
- * contacts of the people on the ticket and the lifecycle actions (request information, start
- * work, resolve with proof). Created inside the operator branch of the ticket detail
- * destination, so it exists only for an operator and its listeners end with the entry.
- *
- * [operator] is fixed: a role change clears the back stack (D-009). The ticket is not stored
- * here; the screen passes the current one from TicketsViewModel's list.
- */
 class OperatorTicketViewModel(
     private val tickets: TicketsRepository,
     private val users: UsersRepository,
@@ -45,7 +36,6 @@ class OperatorTicketViewModel(
     private val _uiState = MutableStateFlow(OperatorTicketUiState())
     val uiState: StateFlow<OperatorTicketUiState> = _uiState.asStateFlow()
 
-    /** Ids already being listened to, so each profile has one listener. */
     private val watched = mutableSetOf<String>()
 
     init {
@@ -61,18 +51,12 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(draft = text) }
     }
 
-    /** Sends the draft as the municipality (byOperator); cleared once queued (offline too). */
     fun sendMessage() {
         if (tickets.sendMessage(ticketId, _uiState.value.draft, operator)) {
             _uiState.update { it.copy(draft = "") }
         }
     }
 
-    /**
-     * Starts one live users/{uid} read per new id in [ids] (creator, followers, history
-     * responsibles, attachment uploaders). Blank ids and the automatic close's "system" are
-     * skipped. Called again when the ticket changes, so a new follower appears without reopening.
-     */
     fun watchPeople(ids: Set<String>) {
         for (id in ids) {
             if (id.isBlank() || id == SYSTEM_RESPONSIBLE_ID || id in watched) continue
@@ -101,13 +85,6 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(openDialog = null) }
     }
 
-    /**
-     * Runs the open dialog's action on [ticket], the current one from the list.
-     * Request information (brief II.2): the text is required; it becomes the history
-     * justification and a message by the operator in one batch (askForClarification, reused).
-     * Start work (brief II.3): the note is optional. A move the lifecycle rejects (the status
-     * changed meanwhile) keeps the dialog open with an error.
-     */
     fun confirmDialog(ticket: Ticket) {
         val state = _uiState.value
         val dialog = state.openDialog ?: return
@@ -128,12 +105,10 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(openDialog = null, dialogText = "") }
     }
 
-    /** Opens the Resolve section (brief I.3.E: photo/video of the finished work). */
     fun onResolveClick() {
         _uiState.update { it.copy(resolving = true, resolveError = null) }
     }
 
-    /** Closes the Resolve section and deletes the draft's local copies (nothing was written). */
     fun onCancelResolve() {
         val draft = _uiState.value.proof
         _uiState.update { it.copy(resolving = false, proof = emptyList(), resolveNote = "", resolveError = null) }
@@ -144,10 +119,6 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(resolveNote = text) }
     }
 
-    /**
-     * Copies the picked media into filesDir/images off the main thread (as ReportViewModel),
-     * keeping at most [MAX_PROOF_ATTACHMENTS]; extra or failed files show a notice.
-     */
     fun onMediaPicked(uris: List<Uri>) {
         if (uris.isEmpty()) return
         val accepted = uris.take(MAX_PROOF_ATTACHMENTS - _uiState.value.proof.size)
@@ -170,7 +141,6 @@ class OperatorTicketViewModel(
         }
     }
 
-    /** A camera photo already saved at [path]; deleted when no slot is left. */
     fun onPhotoTaken(path: String) {
         if (_uiState.value.proof.size >= MAX_PROOF_ATTACHMENTS) {
             File(path).delete()
@@ -184,18 +154,11 @@ class OperatorTicketViewModel(
         _uiState.update { it.copy(resolveError = R.string.resolve_camera_unavailable) }
     }
 
-    /** Removes one proof from the draft and deletes its local copy. */
     fun onRemoveProof(attachment: Attachment) {
         _uiState.update { it.copy(proof = it.proof - attachment) }
         deleteFiles(listOf(attachment))
     }
 
-    /**
-     * Resolves [ticket], the current one from the list, with the draft proof (resolveTicket:
-     * prepare, one batch, background upload). isResolving is set before the launch, so a second
-     * tap does nothing. On success the draft is cleared without deleting the files: they now
-     * belong to the upload. On failure the draft stays with an error.
-     */
     fun resolve(ticket: Ticket) {
         val state = _uiState.value
         if (!state.canConfirmResolve) return
@@ -217,10 +180,6 @@ class OperatorTicketViewModel(
         }
     }
 
-    /**
-     * Leaving without resolving discards the draft: its files have no ticket to belong to. After
-     * a successful resolve the draft is already empty, so the uploaded files are kept.
-     */
     override fun onCleared() {
         // Kept on the main thread on purpose (review N2): viewModelScope is already cancelled here,
         // so a coroutine launched on it would never run, and the app has no application scope.
@@ -228,19 +187,16 @@ class OperatorTicketViewModel(
         _uiState.value.proof.forEach { File(it.file).delete() }
     }
 
-    /** Writes [ticket] as CLOSED if its reopen window has ended (as F-014); nothing otherwise. */
     fun closeIfExpired(ticket: Ticket) {
         tickets.closeExpiredTicket(ticket)
     }
 
-    /** A draft proof entry for a local copy; the type comes from the file name (FileUtils). */
     private fun proofFor(path: String): Attachment = Attachment(
         id = File(path).name,
         type = if (FileUtils.isVideoPath(path)) AttachmentType.VIDEO else AttachmentType.IMAGE,
         file = path,
     )
 
-    /** Deletes the local copies of [attachments] off the main thread. */
     private fun deleteFiles(attachments: List<Attachment>) {
         if (attachments.isEmpty()) return
         viewModelScope.launch {
@@ -248,7 +204,6 @@ class OperatorTicketViewModel(
         }
     }
 
-    /** Opens [dialog] with an empty text and no error. */
     private fun openDialog(dialog: OperatorDialog) {
         _uiState.update { it.copy(openDialog = dialog, dialogText = "", dialogError = null) }
     }

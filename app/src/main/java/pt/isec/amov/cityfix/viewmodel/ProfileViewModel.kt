@@ -19,16 +19,6 @@ import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.utils.isPortuguesePhone
 import java.io.File
 
-/**
- * Profile screen ViewModel (D-011), created per route for the signed-in [uid].
- *
- * It listens to `users/[uid]` itself (the cache serves it and the session's listener). Every
- * snapshot refreshes the read-only fields and the stored photo; the editable values (phone,
- * impact detection) are taken from the first snapshot only, unless [savedState] restored them,
- * so a later snapshot never overwrites what the user is typing. Save writes only what changed,
- * without waiting (works offline). A photo picked here is a local copy, deleted when the screen
- * is left without saving, and otherwise handed to the upload worker.
- */
 class ProfileViewModel(
     private val uid: String,
     private val users: UsersRepository,
@@ -45,16 +35,10 @@ class ProfileViewModel(
     )
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    /** False until the first profile snapshot has set the editable values. */
     private var initialised = false
 
-    /** True once [reloadAccount] ran for this visit. */
     private var reloaded = false
 
-    /**
-     * The stored photo's version when Save queued a new one; a different value means the upload
-     * finished. Not the URL: an overwrite may keep the same download URL (D-011 R4).
-     */
     private var photoUpdatedAtSave: Long? = null
 
     init {
@@ -95,11 +79,6 @@ class ProfileViewModel(
         initialised = true
     }
 
-    /**
-     * Best effort, once per visit: reloads the account, so an e-mail changed through the link
-     * (maybe on another device) shows up and the session syncs it. If the link revoked this
-     * device's token, the reload signs the user out (the decision 0015 involuntary path).
-     */
     fun reloadAccount() {
         // The ViewModel outlives a rotation, the screen's LaunchedEffect does not.
         if (reloaded) return
@@ -107,7 +86,6 @@ class ProfileViewModel(
         viewModelScope.launch { auth.reloadAccount() }
     }
 
-    /** Keeps digits only, at most [FIELD_DIGITS]; the D-010 phone rule while typing. */
     fun onPhoneChange(text: String) {
         val digits = text.filter { it.isDigit() }.take(FIELD_DIGITS)
         savedState[KEY_PHONE] = digits
@@ -125,7 +103,6 @@ class ProfileViewModel(
         _uiState.update { it.copy(impactDetection = enabled, notice = null) }
     }
 
-    /** Gallery pick: copied into filesDir/images in viewModelScope, then it replaces the previous pick. */
     fun onPhotoPicked(uri: Uri) {
         if (_uiState.value.isCopyingPhoto) return
         _uiState.update { it.copy(isCopyingPhoto = true, photoNotice = null, notice = null) }
@@ -140,12 +117,10 @@ class ProfileViewModel(
         }
     }
 
-    /** [path] is the camera's file in filesDir/images, already written. */
     fun onPhotoCaptured(path: String) {
         setPhoto(path)
     }
 
-    /** Discards the photo picked in this visit (the stored one stays; D-011 Q7). */
     fun onRemoveNewPhoto() {
         setPhoto(null)
     }
@@ -154,7 +129,6 @@ class ProfileViewModel(
         _uiState.update { it.copy(photoNotice = R.string.report_camera_failed) }
     }
 
-    /** Replaces the picked photo, deleting the previous local copy. */
     private fun setPhoto(path: String?) {
         val previous = _uiState.value.newPhotoPath
         if (previous != null && previous != path) File(previous).delete()
@@ -197,7 +171,6 @@ class ProfileViewModel(
         }
     }
 
-    /** Leaving the screen without saving: the picked photo copy is not needed any more. */
     override fun onCleared() {
         _uiState.value.newPhotoPath?.let { File(it).delete() }
     }

@@ -6,10 +6,8 @@ package pt.isec.amov.cityfix.model
  * reads with the time of its last check ([since]) and notifies what happened in between.
  */
 
-/** What happened to a ticket. */
 enum class TicketEventKind { STATUS, MESSAGE, OPERATOR_NEARBY, CLOSING_SOON, CLOSED }
 
-/** One thing to notify. [status] and [justification] only for STATUS. */
 data class TicketEvent(
     val ticketId: String,
     val categoryName: String,
@@ -18,22 +16,6 @@ data class TicketEvent(
     val justification: String? = null,
 )
 
-/**
- * The events of this ticket after [since] and up to [now] for user [userId]; never their own
- * actions. Empty for a projected ticket (decision 0006) and for a citizen who is not a
- * participant.
- *
- * - STATUS: each history entry after the first, dated in (since, now], made by someone else,
- *   except CLOSED (the CLOSED event below covers it).
- * - MESSAGE: a newest message after [since] by someone else; dropped when it is the message of
- *   an info request, i.e. a history entry with a justification has the same time (both are
- *   written with one `now`), because the STATUS event already shows that text (Gate 1 Q10).
- * - Operator (Gate 1 Q2): STATUS and MESSAGE only when a citizen participant did it, so one
- *   operator's action does not notify the other operators.
- * - Citizen only: OPERATOR_NEARBY when an operator came within 20 m after [since] and less than
- *   an hour ago (decision 0022); CLOSING_SOON when the 24 h warning time is in (since, now] and
- *   the ticket is not closed yet; CLOSED when the end of the reopen window is in (since, now].
- */
 fun Ticket.eventsFor(userId: String, isOperator: Boolean, since: Long, now: Long): List<TicketEvent> {
     if (statusHistory.isEmpty()) return emptyList()
     if (!isOperator && !isParticipant(userId)) return emptyList()

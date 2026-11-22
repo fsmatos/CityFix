@@ -8,10 +8,6 @@ import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/**
- * Builds [RegisterViewModel]. Uses the CreationExtras overload because the ViewModel needs a
- * SavedStateHandle, which the back stack entry supplies.
- */
 class RegisterViewModelFactory(
     private val users: UsersRepository,
     private val locationRepository: LocationRepository,

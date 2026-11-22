@@ -15,22 +15,6 @@ import pt.isec.amov.cityfix.utils.ImageCompression
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * Uploads the profile photo chosen at registration to `users/{uid}/photo.jpg` and stores its https
- * download URL in `users/{uid}.photoPath` (decision 0010, D-010 Q4), with `photoUpdatedAt` (epoch
- * ms) in the same update: an overwrite may keep the same URL, so the Profile screen uses the time
- * as the photo's version (D-011 R4). ProfilePhotoUploader enqueues it with a network constraint,
- * after the registration transaction committed (D-010) or after Save on Profile (D-011).
- *
- * Each attempt compresses the picked file with ImageCompression (long side 1600 px, JPEG, no EXIF;
- * the thumbnail it also writes is not needed and is deleted), uploads, then updates the document.
- * An exception means Result.retry() (exponential backoff); after [MAX_ATTEMPTS] the photo is given
- * up: the account is fine without it. Some failures are final at once, because a retry cannot
- * succeed: the signed-in user is no longer [KEY_UID] (logged out before the upload ran; the rules
- * let only the owner write the photo and the document), or Storage / Firestore refuse the write.
- * The photo is then dropped without a message (optional; noted in the docs). The local files are
- * deleted in every final case.
- */
 class ProfilePhotoWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -85,7 +69,6 @@ class ProfilePhotoWorker(context: Context, params: WorkerParameters) : Coroutine
         }
     }
 
-    /** The rules refused the write: retrying with the same account cannot help. */
     private fun isRefused(e: Exception): Boolean = when (e) {
         is StorageException ->
             e.errorCode == StorageException.ERROR_NOT_AUTHORIZED ||

@@ -28,28 +28,12 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import pt.isec.amov.cityfix.model.Coordinates
 
-/** Far zoom for the approximate area (brief I.1.C: "mapa com zoom afastado"). */
 private const val COARSE_ZOOM = 14f
 
-/** The class zoom (Contacts_#3 ShowScreen) for an exact location. */
 private const val EXACT_ZOOM = 15f
 
-/** Radius of the circle drawn around a coarse location (F-012 Q9). */
 private const val COARSE_RADIUS_METERS = 750.0
 
-/**
- * A Google map of [location], as in Contacts_#3 (GoogleMap + rememberCameraPositionState).
- * Coarse ([exact] = false, anonymous users): far zoom, a circle, no marker, and every gesture off
- * (MapUiSettings), so the map cannot be moved or zoomed in. Exact (participants F-014, operators
- * D-013): a Marker at zoom 15 and the normal gestures. Previews cannot draw a Google map, so they
- * show a placeholder. Without a valid Maps key in the manifest the map shows grey tiles.
- *
- * [onTouchChange] (F-018) is called with true when a finger goes down on the map and false when
- * the last one lifts. The screens put the map inside a verticalScroll column, which would take
- * any gesture that moves up or down (a pinch included); they turn their scroll off while true.
- * The Box reads the touches in the Initial pass (before the map) and consumes nothing, so the
- * map still gets every gesture.
- */
 @Composable
 fun TicketMap(
     location: Coordinates,

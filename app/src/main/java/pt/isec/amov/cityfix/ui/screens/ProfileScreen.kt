@@ -46,12 +46,6 @@ import pt.isec.amov.cityfix.viewmodel.ProfileUiState
 import pt.isec.amov.cityfix.viewmodel.ProfileViewModel
 import java.io.File
 
-/**
- * Stateful Profile screen (D-011): collects [viewModel] and shows [ProfileContent]. The photo is
- * picked as on Register (PickVisualMedia, or TakePicture into a FileProvider file); the launchers
- * sit here, above the content. [onChangeEmail] and [onChangePassword] open their routes;
- * [onLogOut] is CityFixApp's logOut helper.
- */
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
@@ -116,7 +110,6 @@ fun ProfileScreen(
     )
 }
 
-/** False when there is no camera app, or Android refuses the launch (as on Register). */
 private fun launchProfileCamera(
     takePhoto: ManagedActivityResultLauncher<Uri, Boolean>,
     uri: Uri,
@@ -129,11 +122,6 @@ private fun launchProfileCamera(
     false
 }
 
-/**
- * The signed-in user's profile (brief I.2.C, I.3.C). Name, NIF, role, e-mail and, for citizens,
- * the registration status and georeferencing are read-only; phone, photo and (citizen) impact
- * detection are editable and saved together. Stateless and previewable.
- */
 @Composable
 fun ProfileContent(
     state: ProfileUiState,
@@ -253,11 +241,6 @@ fun ProfileContent(
     }
 }
 
-/**
- * The Coil model of the stored profile photo. Its cache key includes [photoUpdatedAt]: an
- * overwrite may keep the same URL, and Coil would otherwise show the cached old image (D-011 R4).
- * Shared by Edit profile and the Profile tab (D-016).
- */
 @Composable
 internal fun rememberProfilePhotoModel(photo: String?, photoUpdatedAt: Long?): Any? {
     val context = LocalContext.current
@@ -275,7 +258,6 @@ internal fun rememberProfilePhotoModel(photo: String?, photoUpdatedAt: Long?): A
     }
 }
 
-/** A value the user cannot change: the text field reads "read only" and opens no keyboard. */
 @Composable
 private fun ReadOnlyField(value: String, @StringRes labelRes: Int) {
     AccountTextField(

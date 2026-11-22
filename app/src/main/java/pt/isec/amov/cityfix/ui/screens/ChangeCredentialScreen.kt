@@ -29,12 +29,6 @@ import pt.isec.amov.cityfix.viewmodel.CredentialChangeUiState
 import pt.isec.amov.cityfix.viewmodel.CredentialChangeViewModel
 import pt.isec.amov.cityfix.viewmodel.CredentialStep
 
-/**
- * Stateful Change password / Change e-mail screen (D-011): the form, then the SMS code of the
- * re-authentication ([MfaCodeContent], as on Login), then the result. Firebase needs the Activity
- * for the reCAPTCHA fallback when it sends the SMS, so it is read here and handed to the
- * ViewModel call, never stored. [onDone] leaves the screen ("Back to profile").
- */
 @Composable
 fun ChangeCredentialScreen(
     viewModel: CredentialChangeViewModel,
@@ -82,7 +76,6 @@ fun ChangeCredentialScreen(
     )
 }
 
-/** The form step or the result (the code step is [MfaCodeContent]). Stateless and previewable. */
 @Composable
 fun ChangeCredentialContent(
     state: CredentialChangeUiState,
@@ -171,7 +164,6 @@ fun ChangeCredentialContent(
     }
 }
 
-/** PASSWORD: the new password (the D-010 rule) and its confirmation. */
 @Composable
 private fun NewPasswordFields(
     state: CredentialChangeUiState,
@@ -203,7 +195,6 @@ private fun NewPasswordFields(
     )
 }
 
-/** EMAIL, operators: the council's domain the new e-mail must use, or why it cannot be checked. */
 @Composable
 private fun OperatorDomainLine(state: CredentialChangeUiState) {
     when {

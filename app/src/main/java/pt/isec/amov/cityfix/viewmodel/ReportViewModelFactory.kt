@@ -6,11 +6,6 @@ import pt.isec.amov.cityfix.data.AttachmentStorage
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.TicketsRepository
 
-/**
- * Builds [ReportViewModel] with the app's repository, attachment storage, location repository and
- * the reporter's id, like
- * EditContactViewModelFactory in Contacts_#3. [fromImpact] comes from ReportTicketRoute.
- */
 class ReportViewModelFactory(
     private val repository: TicketsRepository,
     private val attachmentStorage: AttachmentStorage,

@@ -7,10 +7,6 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import pt.isec.amov.cityfix.data.AuthRepository
 import pt.isec.amov.cityfix.data.UsersRepository
 
-/**
- * Builds [CredentialChangeViewModel] for one [change] (one per route). Uses the CreationExtras
- * overload because the ViewModel needs a SavedStateHandle, which the back stack entry supplies.
- */
 class CredentialChangeViewModelFactory(
     private val change: CredentialChange,
     private val isOperator: Boolean,

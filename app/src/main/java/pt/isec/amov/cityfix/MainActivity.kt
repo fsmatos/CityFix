@@ -187,14 +187,11 @@ import pt.isec.amov.cityfix.viewmodel.ticketsUser
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModel
 import pt.isec.amov.cityfix.viewmodel.TicketsViewModelFactory
 
-/** Logcat tag for CityFixApp (D-014). Never log coordinates with it. */
 private const val TAG = "CityFixApp"
 
 class MainActivity : ComponentActivity() {
-    /** F-016: ticket a tapped notification asked to open; CityFixApp opens it and clears it. */
     private var openTicketId by mutableStateOf<String?>(null)
 
-    /** F-022: the impact notification was tapped; CityFixApp opens the prefilled report. */
     private var openFromImpact by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -222,7 +219,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** singleTop (manifest): a notification tapped while the app is open arrives here. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         openTicketId = intent.getStringExtra(EXTRA_TICKET_ID)
@@ -242,11 +238,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * The app's navigation and shared state. The screens are stateless; this is their stateful half.
- * TicketsViewModel and SessionViewModel are created here, above the NavHost, so every destination
- * shares one instance of each. [app] holds the repositories the ViewModel factories receive.
- */
 @Composable
 private fun CityFixApp(
     app: CityFixApplication,
@@ -1092,11 +1083,6 @@ private fun CityFixApp(
     }
 }
 
-/**
- * D-020: runs [scrollToTop] each time the selected tab is tapped again on its own screen. Placed
- * in a tab's root destination; it collects only while that entry is resumed, so the screen that
- * fades out during a tab change does not scroll too (review N1).
- */
 @Composable
 private fun ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend () -> Unit) {
     val owner = LocalLifecycleOwner.current
@@ -1105,7 +1091,6 @@ private fun ScrollToTopOnReselect(reselects: Flow<Unit>, scrollToTop: suspend ()
     }
 }
 
-/** Maps the current destination to the bar's enum. Add new routes here: `else` will not warn. */
 private fun NavDestination?.toTopBarScreen(): TopBarScreen = when {
     this == null -> TopBarScreen.DASHBOARD
     hasRoute<ActiveTicketsRoute>() -> TopBarScreen.ACTIVE_TICKETS

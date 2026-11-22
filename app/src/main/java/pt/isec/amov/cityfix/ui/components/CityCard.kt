@@ -14,11 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import pt.isec.amov.cityfix.ui.theme.Dimens
 
-/**
- * The app's card (D-016): neutral surface, thin outline, 16dp corners, no shadow. Clickable when
- * [onClick] is given (the whole card is then one touch target). Used by every card-like block, so
- * the look is defined once.
- */
 @Composable
 fun CityCard(
     modifier: Modifier = Modifier,
@@ -50,10 +45,6 @@ fun CityCard(
     }
 }
 
-/**
- * A [CityCard] holding one section of a detail screen (D-016): the content in a column with the
- * card padding and section spacing.
- */
 @Composable
 fun SectionCard(
     modifier: Modifier = Modifier,

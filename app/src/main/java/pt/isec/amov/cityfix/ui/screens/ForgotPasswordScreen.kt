@@ -16,7 +16,6 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordUiState
 import pt.isec.amov.cityfix.viewmodel.ForgotPasswordViewModel
 
-/** Stateful password reset screen. */
 @Composable
 fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel,
@@ -31,7 +30,6 @@ fun ForgotPasswordScreen(
     )
 }
 
-/** Asks for the e-mail and sends the Firebase reset link (brief I.2.B, I.3.B). */
 @Composable
 fun ForgotPasswordContent(
     state: ForgotPasswordUiState,

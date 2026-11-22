@@ -10,11 +10,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * Home of a citizen whose registration is still pending (brief I.2.A, D-009 Q2). They have the
- * anonymous features only, so the button opens the public dashboard. When an operator validates
- * the account, the session changes and the redirect moves them to the citizen home. Stateless.
- */
 @Composable
 fun PendingValidationScreen(
     onBrowseClick: () -> Unit,

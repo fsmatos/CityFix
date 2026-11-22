@@ -8,14 +8,6 @@ import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 
-/**
- * One place for the Firebase exception -> AuthError mapping, shared by [FirebaseAuthRepository]
- * (sign-in, MFA) and [FirestoreUsersRepository] (sign-up). With e-mail enumeration protection,
- * a wrong e-mail and a wrong password both arrive as invalid credentials.
- *
- * FirebaseAuthWeakPasswordException extends FirebaseAuthInvalidCredentialsException, so it is
- * checked first.
- */
 internal fun Exception.toAuthError(): AuthError = when (this) {
     is FirebaseAuthWeakPasswordException -> AuthError.WEAK_PASSWORD
     is FirebaseAuthInvalidCredentialsException -> when (errorCode) {

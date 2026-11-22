@@ -30,7 +30,6 @@ import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 import pt.isec.amov.cityfix.utils.formatDate
 
-/** Returns the string resource id with the localised label of [situation]. */
 fun situationLabelRes(situation: Situation): Int = when (situation) {
     Situation.DAMAGE -> R.string.situation_damage
     Situation.BREAKDOWN -> R.string.situation_breakdown
@@ -38,12 +37,6 @@ fun situationLabelRes(situation: Situation): Int = when (situation) {
     Situation.THEFT -> R.string.situation_theft
 }
 
-/**
- * Clickable ticket summary (brief I.1.B): thumbnail, category, situation and status dot on the
- * app card (D-016); [isExpanded] also shows the description and date.
- * [status] is the badge; My tickets passes `ticket.effectiveStatus(now)` so an expired RESOLVED
- * ticket shows CLOSED (decision 0011).
- */
 @Composable
 fun TicketCard(
     ticket: Ticket,
@@ -100,7 +93,6 @@ fun TicketCard(
     }
 }
 
-/** First attachment of the ticket, or the placeholder icon when it has none. */
 @Composable
 private fun TicketThumbnail(attachment: Attachment?) {
     Box(

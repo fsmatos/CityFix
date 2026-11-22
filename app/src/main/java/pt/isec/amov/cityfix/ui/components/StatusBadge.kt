@@ -22,7 +22,6 @@ import pt.isec.amov.cityfix.model.TicketStatus
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 import pt.isec.amov.cityfix.ui.theme.Dimens
 
-/** Returns the string resource id with the localised label of [status]. */
 fun statusLabelRes(status: TicketStatus): Int = when (status) {
     TicketStatus.OPEN -> R.string.status_open
     TicketStatus.INFO_REQUESTED -> R.string.status_info_requested
@@ -31,11 +30,6 @@ fun statusLabelRes(status: TicketStatus): Int = when (status) {
     TicketStatus.CLOSED -> R.string.status_closed
 }
 
-/**
- * Non-clickable status of a ticket (D-016): a small coloured dot and the localised name in
- * neutral text, no coloured chip. The dot colour comes from the theme (CityFixTheme.statusColors)
- * and is decorative: the text alone says the status.
- */
 @Composable
 fun StatusBadge(status: TicketStatus, modifier: Modifier = Modifier) {
     Row(

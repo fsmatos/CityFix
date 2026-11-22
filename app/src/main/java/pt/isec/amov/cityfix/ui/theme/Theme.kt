@@ -89,10 +89,6 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainerHighest = DarkContainerHighest,
 )
 
-/**
- * The app theme (D-016): light or dark following the system setting. Dynamic colour is not used,
- * so the CityFix palette is the same on every device. Also provides the status dot colours.
- */
 @Composable
 fun CityFixTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -110,7 +106,6 @@ fun CityFixTheme(
     }
 }
 
-/** Shortcut for the status dot colours of the current theme: `CityFixTheme.statusColors`. */
 object CityFixTheme {
     val statusColors: StatusColors
         @Composable

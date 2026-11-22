@@ -8,18 +8,6 @@ import android.hardware.SensorManager
 import android.util.Log
 import kotlin.math.abs
 
-/**
- * Impact detector (brief I.2.F), based on the "PotholeDetector" of class slides 10/11. Only the
- * vertical axis counts (F-022, decision 0023): the accelerometer reading is projected onto the
- * gravity direction ([verticalAcceleration]), so a sideways jolt such as putting the phone down
- * on a table does not count. Gravity comes from TYPE_GRAVITY or, without it, from a low-pass
- * filter on the accelerometer ([lowPassGravity]).
- *
- * An impact is |vertical| > [THRESHOLD] while the phone moves: [speed] must give more than
- * [MIN_SPEED_MPS] (null = no recent GPS fix = not moving). [start] calls onImpact at most once
- * per [COOLDOWN_MS], so one bump gives one suggestion. Without an accelerometer, [start] does
- * nothing.
- */
 class ImpactDetector(
     context: Context,
     private val speed: () -> Float?,
@@ -29,10 +17,8 @@ class ImpactDetector(
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val gravitySensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
 
-    /** Latest gravity vector, from TYPE_GRAVITY or the low-pass filter. */
     private val gravity = FloatArray(3)
 
-    /** False until the low-pass filter got its first reading (review S4). */
     private var gravityStarted = false
 
     private var onImpact: () -> Unit = {}
@@ -86,15 +72,8 @@ class ImpactDetector(
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     companion object {
-        /**
-         * Vertical acceleration (m/s², gravity removed) that counts as an impact (F-022 Q1). Set
-         * here, not by the user: lower is more sensitive. A drop (free fall) only reaches about
-         * -9.8 m/s², so a value above that would react to upward jolts only.
-         */
         const val THRESHOLD = 6f
-        /** Minimum GPS speed, in m/s (about 7 km/h), for a jolt to count (F-022 Q2). */
         const val MIN_SPEED_MPS = 2f
-        /** At most one suggestion every 30 s. */
         const val COOLDOWN_MS = 30_000L
     }
 }

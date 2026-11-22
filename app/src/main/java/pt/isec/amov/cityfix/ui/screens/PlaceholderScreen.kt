@@ -23,13 +23,6 @@ import pt.isec.amov.cityfix.R
 import pt.isec.amov.cityfix.ui.components.PrimaryButton
 import pt.isec.amov.cityfix.ui.theme.CityFixTheme
 
-/**
- * A simple message screen: decorative icon, heading, message and optional [actions]. Used by
- * Pending validation and Account problem. Stateless.
- *
- * The name is historical: it first stood in for screens that later tasks built. It now holds
- * real text only, and keeps the name so the callers and the docs stay unchanged.
- */
 @Composable
 fun PlaceholderScreen(
     @StringRes titleRes: Int,
@@ -64,10 +57,6 @@ fun PlaceholderScreen(
     }
 }
 
-/**
- * Content of AccountProblemRoute. [canRetry] is true when the profile could not be loaded
- * (offline): then Retry reads it again. A missing profile only offers Log out.
- */
 @Composable
 fun AccountProblemScreen(
     canRetry: Boolean,
