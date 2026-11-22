@@ -15,6 +15,9 @@ import kotlin.math.abs
  * on a table does not count. Gravity comes from TYPE_GRAVITY or, without it, from a low-pass
  * filter on the accelerometer ([lowPassGravity]).
  *
+ * A drop (free fall) can only reach about -9.8 m/s², so a threshold above that reacts only to
+ * upward jolts.
+ *
  * An impact is |vertical| > [threshold] while the phone moves: [speed] must give more than
  * [MIN_SPEED_MPS] (null = no recent GPS fix = not moving). [start] calls onImpact at most once
  * per [COOLDOWN_MS], so one bump gives one suggestion. Without an accelerometer, [start] does
@@ -33,6 +36,9 @@ class ImpactDetector(
     /** Latest gravity vector, from TYPE_GRAVITY or the low-pass filter. */
     private val gravity = FloatArray(3)
 
+    /** False until the low-pass filter got its first reading (review S4). */
+    private var gravityStarted = false
+
     private var onImpact: () -> Unit = {}
     private var lastImpact = 0L
 
@@ -48,6 +54,7 @@ class ImpactDetector(
     }
 
     fun stop() {
+        gravityStarted = false
         accelerometer?.let {
             sensorManager.unregisterListener(this)
             Log.d("CityFix", "ImpactDetector stop")
@@ -58,7 +65,15 @@ class ImpactDetector(
         when (event?.sensor?.type) {
             Sensor.TYPE_GRAVITY -> event.values.copyInto(gravity, endIndex = 3)
             Sensor.TYPE_ACCELEROMETER -> {
-                if (gravitySensor == null) lowPassGravity(gravity, event.values)
+                if (gravitySensor == null) {
+                    // Review S4: start the filter at the first reading, not at zero, so the first
+                    // events after start do not look like a jolt.
+                    if (!gravityStarted) {
+                        event.values.copyInto(gravity, endIndex = 3)
+                        gravityStarted = true
+                    }
+                    lowPassGravity(gravity, event.values)
+                }
                 val vertical = verticalAcceleration(event.values, gravity)
                 val now = System.currentTimeMillis()
                 if (abs(vertical) > threshold() && now - lastImpact > COOLDOWN_MS) {

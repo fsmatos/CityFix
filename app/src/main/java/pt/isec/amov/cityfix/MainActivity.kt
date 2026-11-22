@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.withStarted
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -431,7 +432,11 @@ private fun CityFixApp(
     LaunchedEffect(operator?.id, detectImpacts, hasPrecise, sessionLoading) {
         if (sessionLoading) return@LaunchedEffect
         if (hasPrecise && (operator != null || detectImpacts)) {
-            TrackingService.start(context, operator?.id, detectImpacts)
+            // Review S2: Android 12+ forbids starting it from the background, so wait until the
+            // activity is started (the session may finish loading after Home).
+            lifecycleOwner.lifecycle.withStarted {
+                TrackingService.start(context, operator?.id, detectImpacts)
+            }
         } else {
             if (operator != null || detectImpacts) {
                 // Q10 (D-014): no UI; the user keeps working without the geofence or impacts.
@@ -490,7 +495,7 @@ private fun CityFixApp(
         if (!isLoading) notificationsViewModel.onUserChanged(session.ticketsUser)
     }
     // While the app is in the foreground, check the user's tickets for changes (like the
-    // proximity watch below); a new user or Log out cancels it. Anonymous users get nothing.
+    // tracking service above); a new user or Log out cancels it. Anonymous users get nothing.
     val notifiedUser = session.ticketsUser
     LaunchedEffect(notifiedUser?.id) {
         if (notifiedUser != null) {
@@ -1051,6 +1056,10 @@ private fun CityFixApp(
             LaunchedEffect(openFromImpact, role) {
                 if (openFromImpact && role == AccessRole.CITIZEN) {
                     navController.navigate(ReportTicketRoute(fromImpact = true)) { launchSingleTop = true }
+                    onImpactOpened()
+                } else if (openFromImpact && role != AccessRole.LOADING && role != AccessRole.CITIZEN) {
+                    // Review nit: another role (or anonymous) drops it, so a later login does not
+                    // jump to the report form.
                     onImpactOpened()
                 }
             }

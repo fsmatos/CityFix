@@ -1,6 +1,7 @@
 package pt.isec.amov.cityfix.viewmodel
 
 import androidx.annotation.StringRes
+import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.User
 import pt.isec.amov.cityfix.utils.isPortuguesePhone
@@ -20,7 +21,7 @@ data class ProfileUiState(
     val phone: String = "",
     val impactDetection: Boolean = false,
     /** Impact threshold in m/s² (F-022), from ImpactPrefs; saved at once, not by Save. */
-    val impactThreshold: Float = 6f,
+    val impactThreshold: Float = ImpactPrefs.DEFAULT,
     /** A photo picked in this visit, not saved yet. */
     val newPhotoPath: String? = null,
     /** True while a gallery pick is copied; the photo buttons and Save wait for it. */

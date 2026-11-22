@@ -1,8 +1,10 @@
 package pt.isec.amov.cityfix.data
 
+import android.Manifest
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -49,6 +51,13 @@ class TrackingService : Service() {
     private var lastFixAt = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Review S1: when the system restarts it (START_REDELIVER_INTENT) the user may have removed
+        // the location permission meanwhile; a location service cannot start then (Android 14).
+        val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        if (fine != PackageManager.PERMISSION_GRANTED) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val notification = NotificationCompat.Builder(this, CHANNEL_TRACKING)
             .setContentTitle(getString(R.string.tracking_notification_title))
             .setContentText(getString(R.string.tracking_notification_text))
@@ -129,8 +138,11 @@ class TrackingService : Service() {
         private const val EXTRA_OPERATOR_ID = "operatorId"
         private const val EXTRA_DETECT_IMPACTS = "detectImpacts"
 
-        /** A GPS fix older than this (ms) says nothing about the current speed (F-022 Q2). */
-        private const val FIX_MAX_AGE_MS = 5_000L
+        /**
+         * A GPS fix older than this (ms) says nothing about the current speed (F-022 Q2). Twice
+         * the 5 s location interval (review S3), so a late or dropped fix does not hide a jolt.
+         */
+        private const val FIX_MAX_AGE_MS = 10_000L
 
         /**
          * Starts the service, or updates what it runs, as P10 does with startForegroundService.
