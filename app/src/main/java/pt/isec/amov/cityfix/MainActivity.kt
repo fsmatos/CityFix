@@ -268,7 +268,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
     val canNavigateBack = navController.previousBackStackEntry != null
 
     // Impact detection (F-015, brief I.2.F): only for an active citizen who turned it on.
-    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app, app.locationRepository))
+    val impactViewModel: ImpactViewModel = viewModel(factory = ImpactViewModelFactory(app, app.locationRepository, app.impactPrefs))
     val impactDetected by impactViewModel.impactDetected.collectAsStateWithLifecycle()
     val detectImpacts = role == AccessRole.CITIZEN &&
         (session.ticketsUser as? Citizen)?.impactDetection == true
@@ -774,6 +774,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                                 app.usersRepository,
                                 app.authRepository,
                                 app.attachmentStorage,
+                                app.impactPrefs,
                             ),
                         )
                         // As on the former My tickets (F-014): an active citizen's list already
@@ -815,6 +816,7 @@ private fun CityFixApp(app: CityFixApplication, openTicketId: String?, onTicketO
                                 app.usersRepository,
                                 app.authRepository,
                                 app.attachmentStorage,
+                                app.impactPrefs,
                             ),
                         )
                         ProfileScreen(

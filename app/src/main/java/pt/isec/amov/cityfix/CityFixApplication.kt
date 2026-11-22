@@ -18,6 +18,7 @@ import pt.isec.amov.cityfix.data.FirebaseAuthRepository
 import pt.isec.amov.cityfix.data.FirestoreCategoriesRepository
 import pt.isec.amov.cityfix.data.FirestoreTicketsRepository
 import pt.isec.amov.cityfix.data.FirestoreUsersRepository
+import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.data.ProfilePhotoUploader
 import pt.isec.amov.cityfix.data.TicketNotifier
@@ -55,6 +56,9 @@ class CityFixApplication : Application() {
 
     /** One-off GPS fixes for the 10 km gate and the report form (F-012). */
     val locationRepository: LocationRepository by lazy { LocationRepository(this) }
+
+    /** The citizen's impact threshold, a device setting (F-022). */
+    val impactPrefs: ImpactPrefs by lazy { ImpactPrefs(this) }
 
     val auth: FirebaseAuth by lazy { Firebase.auth }
 

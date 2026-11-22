@@ -19,6 +19,8 @@ data class ProfileUiState(
     /** Digits only, at most 9. */
     val phone: String = "",
     val impactDetection: Boolean = false,
+    /** Impact threshold in m/s² (F-022), from ImpactPrefs; saved at once, not by Save. */
+    val impactThreshold: Float = 6f,
     /** A photo picked in this visit, not saved yet. */
     val newPhotoPath: String? = null,
     /** True while a gallery pick is copied; the photo buttons and Save wait for it. */

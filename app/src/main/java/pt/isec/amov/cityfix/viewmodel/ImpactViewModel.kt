@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import pt.isec.amov.cityfix.data.ImpactPrefs
 import pt.isec.amov.cityfix.data.LocationRepository
 import pt.isec.amov.cityfix.utils.ImpactDetector
 
@@ -20,6 +21,7 @@ import pt.isec.amov.cityfix.utils.ImpactDetector
 class ImpactViewModel(
     context: Context,
     private val locationRepository: LocationRepository,
+    impactPrefs: ImpactPrefs,
 ) : ViewModel() {
 
     /** Speed (m/s) and time of the last GPS fix; a fix older than [FIX_MAX_AGE_MS] is ignored. */
@@ -30,7 +32,7 @@ class ImpactViewModel(
     // applicationContext: the ViewModel outlives the Activity, so it must not keep it.
     private val detector = ImpactDetector(
         context.applicationContext,
-        threshold = { DEFAULT_THRESHOLD },
+        threshold = impactPrefs::threshold,
         speed = { if (System.currentTimeMillis() - lastFixAt < FIX_MAX_AGE_MS) lastSpeed else null },
     )
 
@@ -64,8 +66,6 @@ class ImpactViewModel(
     }
 
     private companion object {
-        /** Vertical acceleration (m/s², gravity removed) that counts as an impact. */
-        const val DEFAULT_THRESHOLD = 6f
         /** A GPS fix older than this (ms) says nothing about the current speed (F-022 Q2). */
         const val FIX_MAX_AGE_MS = 5_000L
     }
