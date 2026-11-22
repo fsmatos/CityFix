@@ -81,6 +81,7 @@ import pt.isec.amov.cityfix.model.Citizen
 import pt.isec.amov.cityfix.model.Operator
 import pt.isec.amov.cityfix.model.isActive
 import pt.isec.amov.cityfix.model.isParticipant
+import pt.isec.amov.cityfix.ui.components.BackgroundLocationDialog
 import pt.isec.amov.cityfix.ui.navigation.AccountAction
 import pt.isec.amov.cityfix.ui.navigation.AccountProblemRoute
 import pt.isec.amov.cityfix.ui.navigation.AccountSetupRoute
@@ -381,6 +382,8 @@ private fun CityFixApp(
     var locationAnswered by remember { mutableStateOf(false) }
     // F-016: saveable, so a rotation does not ask (or show the denied snackbar) again.
     var askedNotifications by rememberSaveable { mutableStateOf(false) }
+    // F-022: the background location request waits for the notifications answer.
+    var notificationsAnswered by rememberSaveable { mutableStateOf(false) }
     val locationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -398,6 +401,7 @@ private fun CityFixApp(
     val notificationPermissionRequest = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
+        notificationsAnswered = true
         if (!granted) {
             snackbarScope.launch { snackbarHostState.showSnackbar(notificationsDeniedMessage) }
         }
@@ -435,6 +439,47 @@ private fun CityFixApp(
             }
             TrackingService.stop(context)
         }
+    }
+
+    // F-022 (Q6): background location (Android 10+), so the service keeps receiving fixes when the
+    // app is closed. As slides 10/11: asked separately, after the foreground location and the
+    // notifications answers (one request at a time), and only after BackgroundLocationDialog
+    // explains why. Once per session; denied -> a snackbar, the app keeps working in front.
+    var askedBackground by rememberSaveable { mutableStateOf(false) }
+    var showBackgroundDialog by rememberSaveable { mutableStateOf(false) }
+    val backgroundDeniedMessage = stringResource(R.string.background_location_denied)
+    val backgroundPermissionRequest = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            snackbarScope.launch { snackbarHostState.showSnackbar(backgroundDeniedMessage) }
+        }
+    }
+    val notificationsSettled = notificationsAnswered ||
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    val needsBackground = hasPrecise && (operator != null || detectImpacts)
+    LaunchedEffect(role, needsBackground, locationAnswered, notificationsSettled) {
+        if (role != AccessRole.CITIZEN && role != AccessRole.OPERATOR) {
+            askedBackground = false
+        } else if (!askedBackground && needsBackground && locationAnswered && notificationsSettled &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            askedBackground = true
+            showBackgroundDialog = true
+        }
+    }
+    if (showBackgroundDialog && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        BackgroundLocationDialog(
+            onContinue = {
+                showBackgroundDialog = false
+                backgroundPermissionRequest.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            },
+            onDismiss = { showBackgroundDialog = false },
+        )
     }
 
     // F-016: notifications follow the session's tickets user (active citizen or operator). Not
